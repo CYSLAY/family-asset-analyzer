@@ -1,4 +1,5 @@
 import type { CashFlowEntry, CustomerProfile } from '../types/domain'
+import { estimateEducationGoalCash } from './educationCosts'
 
 export type HealthLevel = 'critical' | 'warning' | 'attention' | 'healthy' | 'strong' | 'neutral'
 
@@ -61,7 +62,11 @@ export function analyzeCustomer(customer: CustomerProfile): FinancialAnalysis {
   const investmentExpenses = customer.expenses.filter((item) => /投资|储蓄|保险|基金|股票|定投|理财/.test(`${item.category}${item.name}`)).reduce((sum, item) => sum + annualize(item), 0)
   const annualSurplus = annualIncome - annualExpenses - annualDebtPayments
   const emergencyTarget = getEmergencyTarget(customer)
-  const educationFutureCost = customer.educationGoals.reduce((sum, goal) => sum + goal.annualCostToday * Math.pow(1 + goal.inflationRate / 100, goal.yearsUntilStart) * goal.durationYears, 0)
+  const educationFutureCost = customer.educationGoals.reduce((sum, goal) => {
+    const routeCashTotal = estimateEducationGoalCash(goal).cashTotal
+    const currentCashNeed = routeCashTotal > 0 ? routeCashTotal : goal.annualCostToday * goal.durationYears
+    return sum + currentCashNeed * Math.pow(1 + goal.inflationRate / 100, goal.yearsUntilStart)
+  }, 0)
   const educationPrepared = customer.educationGoals.reduce((sum, goal) => sum + goal.preparedAmount, 0)
 
   const metrics = [

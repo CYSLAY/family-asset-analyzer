@@ -15,6 +15,7 @@ import {
   type LiabilityEntry,
 } from '../types/domain'
 import { useCustomerStore } from '../stores/customerStore'
+import { estimateEducationGoalCash, estimateEducationStage } from '../lib/educationCosts'
 
 export type FinancialSection = 'fixed' | 'liquid' | 'cashflow' | 'goals'
 
@@ -373,6 +374,8 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
     <EntrySection title="子女教育路线" description="每位子女一张路线表，常见阶段年限已经预设，可随时修改资金假设。" action="添加子女规划" onAdd={() => onUpdate({ educationGoals: [...customer.educationGoals, createEducationGoal()] })}>
       {customer.educationGoals.length ? customer.educationGoals.map((goal) => {
         const childName = customer.members.find((member) => member.id === goal.childMemberId)?.name
+        const educationPlans = plansFor(goal)
+        const educationCash = estimateEducationGoalCash({ ...goal, stagePlans: educationPlans })
         return <article className="entry-card education-card" key={goal.id}>
         <EntryHeader name={childName ? `${childName}的教育规划` : '子女教育规划'} onDelete={() => onUpdate({ educationGoals: customer.educationGoals.filter((item) => item.id !== goal.id) })} />
         <div className="form-grid three-columns education-basics">
@@ -382,7 +385,8 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
         </div>
 
         <div className="education-pathway" aria-label="教育路线设置">
-          {plansFor(goal).map((plan) => {
+          {educationPlans.map((plan) => {
+            const estimate = estimateEducationStage(plan)
             return <div className="education-stage-row" key={plan.stage}>
               <div className="education-stage-label">
                 <strong>{plan.stage}</strong>
@@ -399,15 +403,35 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
                   </select></label> : null}
                 </div> : null}
               </div>
+              <div className={plan.route ? 'education-stage-estimate has-estimate' : 'education-stage-estimate'} title={estimate.basis || undefined}>
+                <strong>{plan.route ? `${formatMoney(estimate.annualTotal)}/年` : '选择路线后估算'}</strong>
+                {plan.route
+                  ? <>
+                    <small>学费／课程 {formatMoney(estimate.annualTuition)} · 食宿／生活 {formatMoney(estimate.annualLiving)}</small>
+                    {estimate.oneTimeFees ? <small>一次性入学费 {formatMoney(estimate.oneTimeFees)}</small> : null}
+                    <small>{plan.durationYears} 年现金小计 {formatMoney(estimate.cashTotal)}</small>
+                  </>
+                  : <small>按现价估算</small>}
+              </div>
             </div>
           })}
+        </div>
+
+        <div className="education-cost-summary" aria-label="教育现金总计">
+          <div><span>路线费用</span><strong>{formatMoney(educationCash.routeCashTotal)}</strong></div>
+          <div><span>额外培训</span><strong>{formatMoney(educationCash.extraTrainingTotal)}</strong></div>
+          <div className="education-cost-total">
+            <span>教育现金总计</span>
+            <strong>{educationCash.selectedYears ? formatMoney(educationCash.cashTotal) : '待选择路线'}</strong>
+            <small>按当前学制和现价估算，标准来自参考图及公开市场中位数；不含未来通胀、汇率波动及奖学金。</small>
+          </div>
         </div>
 
         <div className="education-funding">
           <div className="education-funding-heading"><strong>资金假设（可选）</strong><span>填写后可估算教育资金准备度</span></div>
           <div className="form-grid four-columns">
           <Field label="距离开始年数"><input type="number" min="0" value={goal.yearsUntilStart} onChange={(e) => updateGoal(goal.id, { yearsUntilStart: numberValue(e.target.value) })} /></Field>
-          <MoneyField label="当前每年费用" value={goal.annualCostToday} onChange={(value) => updateGoal(goal.id, { annualCostToday: value })} />
+          <MoneyField label="自定义年度费用（备用）" value={goal.annualCostToday} onChange={(value) => updateGoal(goal.id, { annualCostToday: value })} />
           <Field label="学费年增长率"><input type="number" min="0" value={goal.inflationRate} onChange={(e) => updateGoal(goal.id, { inflationRate: numberValue(e.target.value) })} /><span className="input-suffix">%</span></Field>
           <MoneyField label="已准备资金" value={goal.preparedAmount} onChange={(value) => updateGoal(goal.id, { preparedAmount: value })} />
           </div>

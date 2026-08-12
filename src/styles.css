@@ -250,7 +250,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .education-card > .member-card-heading { margin: 0; padding: 20px 22px; border-bottom: 1px solid var(--line); background: var(--surface-muted); }
 .education-basics { padding: 22px; }
 .education-pathway { margin: 0 22px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-.education-stage-row { min-height: 70px; padding: 11px 16px; display: grid; grid-template-columns: 188px minmax(0, 1fr); align-items: center; gap: 16px; }
+.education-stage-row { min-height: 78px; padding: 11px 16px; display: grid; grid-template-columns: 188px minmax(260px, 1fr) 168px; align-items: center; gap: 16px; }
 .education-stage-row + .education-stage-row { border-top: 1px solid var(--line); }
 .education-stage-label { min-width: 0; display: grid; grid-template-columns: minmax(52px, 1fr) 88px; align-items: center; gap: 10px; }
 .education-stage-label strong { color: var(--ink); font-size: 14px; }
@@ -266,6 +266,19 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .education-destination-control { width: 88px; height: 36px; flex: 0 0 88px; }
 .study-abroad-combo .education-destination-control select { border-color: #e4aeb2; border-radius: 0 8px 8px 0; color: var(--accent-strong); background: #fffafa; }
 .study-abroad-combo .education-destination-control select:focus { position: relative; z-index: 2; }
+.education-stage-estimate { min-width: 0; padding-left: 14px; border-left: 1px solid var(--line); text-align: right; }
+.education-stage-estimate strong, .education-stage-estimate small { display: block; }
+.education-stage-estimate strong { color: var(--ink-muted); font-size: 12px; line-height: 1.35; }
+.education-stage-estimate.has-estimate strong { color: var(--accent-strong); }
+.education-stage-estimate small { margin-top: 5px; color: var(--ink-muted); font-size: 9px; line-height: 1.35; }
+.education-cost-summary { margin: 16px 22px 0; padding: 16px 18px; display: grid; grid-template-columns: repeat(2, minmax(110px, .75fr)) minmax(260px, 1.35fr); gap: 18px; align-items: center; border: 1px solid #eadbdd; border-radius: 12px; background: linear-gradient(135deg, #fffafa, #fff); }
+.education-cost-summary > div { min-width: 0; }
+.education-cost-summary span, .education-cost-summary strong, .education-cost-summary small { display: block; }
+.education-cost-summary span { color: var(--ink-muted); font-size: 10px; }
+.education-cost-summary strong { margin-top: 5px; color: var(--ink); font-size: 15px; }
+.education-cost-summary .education-cost-total { padding-left: 18px; border-left: 1px solid #e4d6d8; }
+.education-cost-summary .education-cost-total strong { color: var(--accent-strong); font-size: 22px; }
+.education-cost-summary small { margin-top: 5px; color: var(--ink-muted); font-size: 9px; line-height: 1.45; }
 .education-funding { margin-top: 22px; padding: 22px; border-top: 1px solid var(--line); background: #fffafa; }
 .education-funding-heading { margin-bottom: 18px; display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
 .education-funding-heading strong { color: var(--ink); font-size: 14px; }
@@ -540,7 +553,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .cashflow-sheet.income-sheet .sheet-row { min-width: 680px; }
   .compact-flow-grid { column-gap: 18px; }
   .compact-flow-field { grid-template-columns: 96px minmax(0, 1fr); gap: 10px; }
-  .education-stage-row { grid-template-columns: 168px minmax(0, 1fr); }
+  .education-stage-row { grid-template-columns: 168px minmax(245px, 1fr) 150px; }
   .education-stage-label { grid-template-columns: minmax(58px, 1fr) 88px; gap: 8px; }
   .create-customer-panel { grid-template-columns: 1fr 1.4fr; }
   .create-customer-panel .form-actions { grid-column: 1 / -1; }
@@ -602,6 +615,9 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .education-card > .member-card-heading, .education-basics, .education-funding { padding: 18px 14px; }
   .education-pathway { margin-inline: 14px; }
   .education-stage-row { grid-template-columns: 1fr; gap: 10px; }
+  .education-stage-estimate { padding: 9px 0 0; border-top: 1px solid var(--line); border-left: 0; text-align: left; }
+  .education-cost-summary { margin-inline: 14px; grid-template-columns: 1fr 1fr; }
+  .education-cost-summary .education-cost-total { grid-column: 1 / -1; padding: 14px 0 0; border-top: 1px solid #e4d6d8; border-left: 0; }
   .education-stage-label { grid-template-columns: minmax(52px, 1fr) 88px; }
   .education-route-options { display: flex; flex-wrap: nowrap; gap: 7px; }
   .route-chip { padding-inline: 8px; }
