@@ -25,7 +25,11 @@ export interface FinancialAnalysis {
     annualSurplus: number
     emergencyFunds: number
     liquidAssets: number
+    fixedAssets: number
+    dueWithinOneYear: number
     necessaryMonthlyOutflow: number
+    workIncome: number
+    investmentExpenses: number
     educationFutureCost: number
     educationGap: number
   }
@@ -52,6 +56,7 @@ export function analyzeCustomer(customer: CustomerProfile): FinancialAnalysis {
   const necessaryMonthlyOutflow = necessaryAnnualExpenses / 12 + annualDebtPayments / 12
   const dueWithinOneYear = customer.liabilities.reduce((sum, item) => sum + item.dueWithinOneYear, 0)
   const workIncome = customer.incomes.filter((item) => /工作|工资|经营|佣金|奖金/.test(`${item.category}${item.name}`)).reduce((sum, item) => sum + annualize(item), 0)
+  const investmentExpenses = customer.expenses.filter((item) => /投资|储蓄|保险|基金|股票|定投|理财/.test(`${item.category}${item.name}`)).reduce((sum, item) => sum + annualize(item), 0)
   const annualSurplus = annualIncome - annualExpenses - annualDebtPayments
   const emergencyTarget = getEmergencyTarget(customer)
   const educationFutureCost = customer.educationGoals.reduce((sum, goal) => sum + goal.annualCostToday * Math.pow(1 + goal.inflationRate / 100, goal.yearsUntilStart) * goal.durationYears, 0)
@@ -66,6 +71,7 @@ export function analyzeCustomer(customer: CustomerProfile): FinancialAnalysis {
     emergencyMetric(emergencyFunds, necessaryMonthlyOutflow, emergencyTarget),
     savingsMetric(annualIncome, annualSurplus),
     incomeConcentrationMetric(annualIncome, workIncome),
+    investmentExpenseMetric(annualIncome, investmentExpenses),
     educationMetric(educationFutureCost, educationPrepared, customer.educationGoals.length),
   ]
 
@@ -80,7 +86,7 @@ export function analyzeCustomer(customer: CustomerProfile): FinancialAnalysis {
     .map((metric) => metric.key)
 
   return {
-    totals: { assets, liabilities, netWorth: assets - liabilities, annualIncome, annualExpenses: annualExpenses + annualDebtPayments, annualSurplus, emergencyFunds, liquidAssets, necessaryMonthlyOutflow, educationFutureCost, educationGap: Math.max(0, educationFutureCost - educationPrepared) },
+    totals: { assets, liabilities, netWorth: assets - liabilities, annualIncome, annualExpenses: annualExpenses + annualDebtPayments, annualSurplus, emergencyFunds, liquidAssets, fixedAssets, dueWithinOneYear, necessaryMonthlyOutflow, workIncome, investmentExpenses, educationFutureCost, educationGap: Math.max(0, educationFutureCost - educationPrepared) },
     metrics,
     score,
     overallLevel: score === null ? 'neutral' : score < 40 ? 'critical' : score < 60 ? 'warning' : score < 75 ? 'attention' : score < 90 ? 'healthy' : 'strong',
@@ -122,11 +128,11 @@ function fixedAssetMetric(assets: number, fixed: number): MetricResult {
 }
 
 function liquidCoverageMetric(liquid: number, due: number): MetricResult {
-  if (due <= 0) return metric('liquid_coverage', '一年期偿债覆盖', null, 'ratio', 'healthy', '没有录入一年内到期债务', '当前不存在需要用流动资产覆盖的明确短期到期金额。', '仍需核对月供是否完整。', '流动资产 / 未来一年应还债务', '1倍是基础，2倍以上更有缓冲')
+  if (due <= 0) return metric('liquid_coverage', '资产负债健康度', null, 'ratio', 'neutral', '一年内债务资料不足', '没有一年内应还债务金额，暂时不能判断短期偿债覆盖。', '补充各笔债务未来一年应还金额；确认无债务时可保持为空。', '流动资产 / 未来一年应还债务', '低于1倍风险较高，1-3倍需关注，3倍及以上较健康')
   const ratio = liquid / due
   if (ratio < 1) return metric('liquid_coverage', '一年期偿债覆盖', ratio, 'ratio', 'critical', '流动资产不足以覆盖短期债务', '未来一年应还金额高于当前流动资产。', '优先提高现金储备或调整到期债务安排。', '流动资产 / 未来一年应还债务', '1倍是基础，2倍以上更有缓冲')
-  if (ratio < 2) return metric('liquid_coverage', '一年期偿债覆盖', ratio, 'ratio', 'attention', '短期偿债覆盖有限', '流动资产能够覆盖已录入的一年期债务，但剩余缓冲不多。', '保留还款专用资金，避免投入高波动或长期资产。', '流动资产 / 未来一年应还债务', '1倍是基础，2倍以上更有缓冲')
-  return metric('liquid_coverage', '一年期偿债覆盖', ratio, 'ratio', 'healthy', '短期偿债覆盖较充足', '流动资产对一年内债务有较好的覆盖。', '继续核对利率并优先处理高息负债。', '流动资产 / 未来一年应还债务', '1倍是基础，2倍以上更有缓冲')
+  if (ratio < 3) return metric('liquid_coverage', '资产负债健康度', ratio, 'ratio', 'attention', '短期偿债覆盖有限', '流动资产可以覆盖一年内债务，但距离3倍健康参考线仍有差距。', '保留还款专用资金，并逐步增加高流动性资产。', '流动资产 / 未来一年应还债务', '低于1倍风险较高，1-3倍需关注，3倍及以上较健康')
+  return metric('liquid_coverage', '资产负债健康度', ratio, 'ratio', ratio >= 5 ? 'strong' : 'healthy', ratio >= 5 ? '短期偿债缓冲充足' : '短期偿债结构健康', '流动资产对一年内债务形成较充分覆盖。', '继续核对债务到期结构，并保持流动资金可随时使用。', '流动资产 / 未来一年应还债务', '低于1倍风险较高，1-3倍需关注，3倍及以上较健康')
 }
 
 function debtServiceMetric(income: number, payments: number, liabilities: number): MetricResult {
@@ -152,13 +158,14 @@ function emergencyMetric(funds: number, monthly: number, target: number): Metric
 }
 
 function savingsMetric(income: number, surplus: number): MetricResult {
-  if (income <= 0) return metric('savings_rate', '年度储蓄率', null, 'percent', 'neutral', '等待收入数据', '收入为零时不能把储蓄率错误显示为0%。', '补充家庭收入后再计算。', '偿债后年度结余 / 家庭年收入', '低于0%为赤字，20%以上通常具备较好积累能力')
+  const reference = '低于0%为赤字，0%-30%偏低，30%-50%合理，50%以上较强'
+  if (income <= 0) return metric('savings_rate', '年度结余率', null, 'percent', 'neutral', '等待收入数据', '收入为零时不能把结余率错误显示为0%。', '补充家庭收入后再计算。', '偿债后年度结余 / 家庭年收入', reference)
   const rate = surplus / income * 100
-  if (rate < 0) return metric('savings_rate', '年度储蓄率', rate, 'percent', 'critical', '家庭现金流持续赤字', '年度支出和强制还款超过收入，正在消耗存量资产或增加负债。', '先削减可调整支出，并处理高额月供。', '偿债后年度结余 / 家庭年收入', '低于0%为赤字，20%以上通常具备较好积累能力')
-  if (rate < 10) return metric('savings_rate', '年度储蓄率', rate, 'percent', 'warning', '年度结余缓冲较弱', '收入的大部分已被支出和偿债占用。', '先把储蓄率提升到10%，建立稳定正结余。', '偿债后年度结余 / 家庭年收入', '低于0%为赤字，20%以上通常具备较好积累能力')
-  if (rate < 20) return metric('savings_rate', '年度储蓄率', rate, 'percent', 'attention', '家庭正在积累', '已有稳定正结余，但对多个长期目标的支持能力仍有限。', '逐步向20%或个性化目标靠近。', '偿债后年度结余 / 家庭年收入', '低于0%为赤字，20%以上通常具备较好积累能力')
-  if (rate < 30) return metric('savings_rate', '年度储蓄率', rate, 'percent', 'healthy', '储蓄能力较好', '家庭能够把较稳定的一部分收入用于未来目标。', '明确分配应急、教育和养老资金。', '偿债后年度结余 / 家庭年收入', '低于0%为赤字，20%以上通常具备较好积累能力')
-  return metric('savings_rate', '年度储蓄率', rate, 'percent', 'strong', '储蓄能力较强', '家庭当前具有较强的年度资金积累能力。', '检查高储蓄是否来自遗漏支出，并为结余设定明确目标。', '偿债后年度结余 / 家庭年收入', '低于0%为赤字，20%以上通常具备较好积累能力')
+  if (rate < 0) return metric('savings_rate', '年度结余率', rate, 'percent', 'critical', '家庭现金流持续赤字', '年度支出和强制还款超过收入，正在消耗存量资产或增加负债。', '先削减可调整支出，并处理高额月供。', '偿债后年度结余 / 家庭年收入', reference)
+  if (rate < 10) return metric('savings_rate', '年度结余率', rate, 'percent', 'warning', '年度结余缓冲较弱', '收入的大部分已被支出和偿债占用。', '先把结余率提升到10%，建立稳定正结余。', '偿债后年度结余 / 家庭年收入', reference)
+  if (rate < 30) return metric('savings_rate', '年度结余率', rate, 'percent', 'attention', '家庭正在积累', '已有稳定正结余，但距离30%的合理参考线仍有差距。', '逐步压缩可调整支出，把结余率提升到30%。', '偿债后年度结余 / 家庭年收入', '低于0%为赤字，0%-30%偏低，30%-50%合理，50%以上较强')
+  if (rate < 50) return metric('savings_rate', '年度结余率', rate, 'percent', 'healthy', '年度结余较合理', '家庭能够把较稳定的一部分收入用于未来目标。', '明确分配应急、教育和养老资金。', '偿债后年度结余 / 家庭年收入', '低于0%为赤字，0%-30%偏低，30%-50%合理，50%以上较强')
+  return metric('savings_rate', '年度结余率', rate, 'percent', 'strong', '储蓄能力较强', '家庭当前具有较强的年度资金积累能力。', '检查高结余是否来自遗漏支出，并为结余设定明确目标。', '偿债后年度结余 / 家庭年收入', '低于0%为赤字，0%-30%偏低，30%-50%合理，50%以上较强')
 }
 
 function incomeConcentrationMetric(income: number, workIncome: number): MetricResult {
@@ -167,6 +174,18 @@ function incomeConcentrationMetric(income: number, workIncome: number): MetricRe
   if (ratio >= 90) return metric('income_concentration', '工作收入集中度', ratio, 'percent', 'attention', '收入来源较集中', '家庭收入主要依赖工作或经营，一旦中断会直接影响现金流。', '提高应急储备，并逐步培养可持续的其他收入来源。', '工作及经营收入 / 家庭年收入', '这是集中度指标，不是越低越健康')
   if (ratio >= 60) return metric('income_concentration', '工作收入集中度', ratio, 'percent', 'healthy', '收入结构以工作为主', '工作收入仍是核心，同时已有其他来源提供一定分散。', '继续核实其他收入是否稳定和可持续。', '工作及经营收入 / 家庭年收入', '这是集中度指标，不是越低越健康')
   return metric('income_concentration', '工作收入集中度', ratio, 'percent', 'neutral', '非工作收入占比较高', '收入来源较分散，但需要判断租金、投资或养老金是否稳定。', '逐项评估其他收入的波动和持续时间。', '工作及经营收入 / 家庭年收入', '这是集中度指标，不是越低越健康')
+}
+
+function investmentExpenseMetric(income: number, investment: number): MetricResult {
+  const formula = '年度投资、储蓄及保障类支出 / 家庭年收入'
+  const reference = '低于10%偏弱，10%-20%起步，20%-30%较合理，30%以上较强；需先保证现金流为正'
+  if (income <= 0) return metric('investment_rate', '投资支出健康度', null, 'percent', 'neutral', '等待收入数据', '没有家庭年收入，无法判断投资支出的可持续性。', '先补充收入与投资、储蓄或保障类支出。', formula, reference)
+  const rate = investment / income * 100
+  if (rate === 0) return metric('investment_rate', '投资支出健康度', rate, 'percent', 'critical', '尚未形成长期投入', '现有支出中没有识别到投资、储蓄或保障类项目。', '在现金流允许的情况下，建立持续且可负担的长期投入。', formula, reference)
+  if (rate < 10) return metric('investment_rate', '投资支出健康度', rate, 'percent', 'warning', '长期投入偏少', '用于长期目标的资金占收入比例较低。', '先逐步提高到收入的10%，并保留足够应急资金。', formula, reference)
+  if (rate < 20) return metric('investment_rate', '投资支出健康度', rate, 'percent', 'attention', '长期投入已经起步', '家庭已开始为长期目标持续投入，但积累速度仍有限。', '结合年度结余逐步提高投入比例。', formula, reference)
+  if (rate < 30) return metric('investment_rate', '投资支出健康度', rate, 'percent', 'healthy', '长期投入较合理', '投资、储蓄及保障类支出已经形成稳定安排。', '继续检查投入是否符合目标期限和风险承受能力。', formula, reference)
+  return metric('investment_rate', '投资支出健康度', rate, 'percent', 'strong', '长期投入能力较强', '长期投入占收入达到较高水平。', '确认生活支出、偿债和现金储备没有因此受到挤压。', formula, reference)
 }
 
 function educationMetric(cost: number, prepared: number, count: number): MetricResult {

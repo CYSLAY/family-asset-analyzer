@@ -1,89 +1,146 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import * as echarts from 'echarts/core'
-import { BarChart, PieChart } from 'echarts/charts'
-import { AriaComponent, GridComponent, TooltipComponent } from 'echarts/components'
+import { GaugeChart, PieChart } from 'echarts/charts'
+import { AriaComponent, TooltipComponent } from 'echarts/components'
 import { SVGRenderer } from 'echarts/renderers'
 import type { ComposeOption } from 'echarts/core'
-import type { BarSeriesOption, PieSeriesOption } from 'echarts/charts'
-import type { GridComponentOption, TooltipComponentOption } from 'echarts/components'
-import { ArrowRightIcon, CaretDownIcon, CheckCircleIcon, InfoIcon, PrinterIcon, WarningCircleIcon } from '@phosphor-icons/react'
-import { analyzeCustomer, type HealthLevel, type MetricResult } from '../lib/analysis'
+import type { GaugeSeriesOption, PieSeriesOption } from 'echarts/charts'
+import type { TooltipComponentOption } from 'echarts/components'
+import { ArrowRightIcon, CheckCircleIcon, InfoIcon, PrinterIcon } from '@phosphor-icons/react'
+import { analyzeCustomer, annualize, type HealthLevel, type MetricResult } from '../lib/analysis'
 import { useCustomerStore } from '../stores/customerStore'
 import type { CustomerProfile } from '../types/domain'
 
 interface Props { onChooseCustomer: () => void }
+interface BreakdownItem { name: string; value: number; color: string }
 
-const levelLabels: Record<HealthLevel, string> = { critical: '紧急', warning: '偏弱', attention: '需关注', healthy: '良好', strong: '较强', neutral: '待判断' }
-echarts.use([BarChart, PieChart, AriaComponent, GridComponent, TooltipComponent, SVGRenderer])
-type ChartOption = ComposeOption<BarSeriesOption | PieSeriesOption | GridComponentOption | TooltipComponentOption>
+const levelLabels: Record<HealthLevel, string> = { critical: '紧急', warning: '偏弱', attention: '需关注', healthy: '良好', strong: '较强', neutral: '资料不足' }
+const liabilityLabels: Record<string, string> = { mortgage: '房贷', car_loan: '车贷', consumer_loan: '消费贷款', credit_card: '信用卡', private_loan: '私人借款', other: '其他负债' }
+const palette = ['#c91d2a', '#e56a73', '#ef9ea5', '#f2c4c8', '#8d1720', '#b9a1a3', '#d7c9ca']
+
+echarts.use([GaugeChart, PieChart, AriaComponent, TooltipComponent, SVGRenderer])
+type ChartOption = ComposeOption<GaugeSeriesOption | PieSeriesOption | TooltipComponentOption>
 
 export function AnalysisDashboard({ onChooseCustomer }: Props) {
   const { customers, selectedCustomerId } = useCustomerStore()
   const customer = customers.find((item) => item.id === selectedCustomerId) ?? null
-  const [topic, setTopic] = useState<'all' | 'balance' | 'cashflow' | 'goals'>('all')
   const analysis = useMemo(() => customer ? analyzeCustomer(customer) : null, [customer])
 
   if (!customer || !analysis) return <section className="empty-state financial-empty"><InfoIcon size={34} /><h2>请先选择客户</h2><p>分析报告只读取当前客户的原始资料。</p><button className="primary-action compact" type="button" onClick={onChooseCustomer}>选择客户 <ArrowRightIcon size={18} /></button></section>
 
-  const priorityMetrics = analysis.priorityKeys.map((key) => analysis.metrics.find((item) => item.key === key)).filter(Boolean) as MetricResult[]
-  const filteredMetrics = analysis.metrics.filter((metric) => topic === 'all' || topic === 'balance' && ['net_worth','debt_ratio','fixed_asset_ratio','liquid_coverage','debt_service_ratio','emergency_months'].includes(metric.key) || topic === 'cashflow' && ['savings_rate','income_concentration'].includes(metric.key) || topic === 'goals' && metric.key === 'education_readiness')
+  const metric = (key: string) => analysis.metrics.find((item) => item.key === key) as MetricResult
+  const assetBreakdown = buildAssetBreakdown(customer)
+  const liabilityBreakdown = groupEntries(customer.liabilities.map((item) => ({ name: liabilityLabels[item.category], value: item.balance })))
+  const incomeBreakdown = groupEntries(customer.incomes.map((item) => ({ name: classifyIncome(`${item.category}${item.name}`), value: annualize(item) })))
+  const expenseRows = customer.expenses.map((item) => ({ name: classifyExpense(`${item.category}${item.name}`), value: annualize(item) }))
+  const annualDebtPayments = customer.liabilities.reduce((sum, item) => sum + item.monthlyPayment * 12, 0)
+  const fixedDebtPayments = customer.liabilities.filter((item) => item.category === 'mortgage' || item.category === 'car_loan').reduce((sum, item) => sum + item.monthlyPayment * 12, 0)
+  if (fixedDebtPayments > 0) expenseRows.push({ name: '固定资产按揭', value: fixedDebtPayments })
+  if (annualDebtPayments - fixedDebtPayments > 0) expenseRows.push({ name: '流动负债偿还', value: annualDebtPayments - fixedDebtPayments })
+  const expenseBreakdown = groupEntries(expenseRows)
+  const flowDebt = flowVsDebtMetric(analysis.totals.liquidAssets, analysis.totals.liabilities)
+  const priorityMetrics = [flowDebt.level === 'critical' || flowDebt.level === 'warning' ? flowDebt : null, ...analysis.priorityKeys.map((key) => metric(key))].filter(Boolean).slice(0, 3) as MetricResult[]
 
-  return <div className="analysis-page">
+  return <div className="analysis-page detailed-report">
     <section className="analysis-hero">
       <div>
-        <span className="quiet-label">{customer.householdName}的财务诊断</span>
-        <h1>结论、原因和行动放在同一页</h1>
-        <p>结果由当前原始数据实时计算。参考区间用于识别风险，不代表投资或贷款审批建议。</p>
+        <span className="quiet-label">{customer.householdName}的财务分析报告</span>
+        <h1>资产结构与现金流诊断</h1>
+        <p>所有图表根据当前已录入资料实时计算；缺少数据的板块会明确标示，不使用固定结论代替判断。</p>
         <button className="report-print-button" type="button" onClick={() => window.print()}><PrinterIcon size={17} /> 打印或保存 PDF</button>
       </div>
-      <div className={`score-block level-${analysis.overallLevel}`}><span>结构健康度</span><strong>{analysis.score ?? '资料不足'}</strong><small>{analysis.score === null ? '已展示当前可计算项目' : '内部启发式，满分 100'}</small></div>
+      <div className={`score-block level-${analysis.overallLevel}`}><span>综合健康度</span><strong>{analysis.score ?? '资料不足'}</strong><small>{analysis.score === null ? '已展示可计算项目' : '满分 100 · 严重风险不被平均'}</small></div>
     </section>
 
-    {analysis.score === null ? <section className="positive-banner data-gap-banner"><InfoIcon size={22} weight="fill" /><div><strong>报告已按现有资料生成</strong><p>暂时无法计算的指标会标为“资料不足”，继续录入后会自动更新。</p></div></section> : priorityMetrics.length ? <section className="priority-section"><div className="section-heading plain"><div><h2>优先处理</h2><p>严重问题不会被其他高分项目抵消。</p></div></div><div className="priority-list">{priorityMetrics.map((metric, index) => <article key={metric.key}><span>{index + 1}</span><div><strong>{metric.title}</strong><p>{metric.action}</p></div></article>)}</div></section> : <section className="positive-banner"><CheckCircleIcon size={22} weight="fill" /><div><strong>暂未发现紧急问题</strong><p>仍建议定期更新原始数据，并逐项查看指标依据。</p></div></section>}
+    {analysis.score === null ? <section className="positive-banner data-gap-banner"><InfoIcon size={22} weight="fill" /><div><strong>报告已按现有资料生成</strong><p>继续补充资产、负债或收支后，健康度和结论文案会自动更新。</p></div></section> : priorityMetrics.length ? <section className="priority-section"><div className="section-heading plain"><div><h2>优先处理</h2><p>以下问题对家庭财务安全影响最大。</p></div></div><div className="priority-list">{priorityMetrics.map((item, index) => <article key={item.key}><span>{index + 1}</span><div><strong>{item.title}</strong><p>{item.action}</p></div></article>)}</div></section> : <section className="positive-banner"><CheckCircleIcon size={22} weight="fill" /><div><strong>暂未发现紧急问题</strong><p>仍建议定期更新资料，并逐项查看指标依据。</p></div></section>}
 
-    <section className="analysis-charts">
-      <ChartPanel title="资产与负债结构"><AssetChart customer={customer} /></ChartPanel>
-      <ChartPanel title="年度现金流"><CashFlowChart income={analysis.totals.annualIncome} expenses={analysis.totals.annualExpenses} surplus={analysis.totals.annualSurplus} /></ChartPanel>
-    </section>
+    <nav className="report-section-nav" aria-label="报告章节"><a href="#balance-report">资产负债</a><a href="#cashflow-report">收支储蓄</a>{customer.educationGoals.length ? <a href="#education-report">教育目标</a> : null}</nav>
 
-    <section className="metric-report">
-      <div className="report-toolbar"><div><h2>指标解释</h2><p>点击指标查看公式、参考区间和建议。</p></div><div className="topic-tabs" role="tablist">{([['all','全部'],['balance','资产负债'],['cashflow','收支储蓄'],['goals','教育目标']] as const).map(([value,label]) => <button role="tab" aria-selected={topic === value} className={topic === value ? 'is-active' : ''} type="button" key={value} onClick={() => setTopic(value)}>{label}</button>)}</div></div>
-      <div className="metric-grid">{filteredMetrics.map((metric) => <MetricCard metric={metric} key={metric.key} />)}</div>
-    </section>
+    <ReportSection id="balance-report" index="01" title="资产负债分析" description="先看家庭净资产，再检查资产配置、债务结构和短期偿债能力。">
+      <div className="report-grid two-columns">
+        <ComparisonPanel title="净资产" leftLabel="总资产" leftValue={analysis.totals.assets} rightLabel="总负债" rightValue={analysis.totals.liabilities} resultLabel="净资产" resultValue={analysis.totals.netWorth} resultPercent={analysis.totals.assets > 0 ? analysis.totals.netWorth / analysis.totals.assets * 100 : null} metric={metric('net_worth')} />
+        <ComparisonPanel title="流动资产 VS 负债" leftLabel="流动资产" leftValue={analysis.totals.liquidAssets} rightLabel="总负债" rightValue={analysis.totals.liabilities} resultLabel="差值" resultValue={analysis.totals.liquidAssets - analysis.totals.liabilities} resultPercent={analysis.totals.liquidAssets > 0 ? (analysis.totals.liquidAssets - analysis.totals.liabilities) / analysis.totals.liquidAssets * 100 : null} metric={flowDebt} />
+      </div>
+
+      <div className="report-grid two-columns report-distributions">
+        <DistributionPanel title="资产分布图" totalLabel="总资产" items={assetBreakdown} />
+        <DistributionPanel title="负债分布图" totalLabel="总负债" items={liabilityBreakdown} />
+      </div>
+
+      <div className="health-grid">
+        <HealthPanel metric={metric('fixed_asset_ratio')} max={100} healthyRange="固定资产低于50%通常较灵活，超过70%需关注流动性" />
+        <HealthPanel metric={metric('emergency_months')} max={12} healthyRange="3–6个月是基础参考，家庭责任和收入波动会提高目标" />
+        <HealthPanel metric={metric('liquid_coverage')} max={10} healthyRange="流动资产达到一年内债务的3倍及以上较健康" />
+        <HealthPanel metric={metric('debt_ratio')} max={100} healthyRange="0%–30%较低，30%–50%需关注，超过50%压力上升" />
+      </div>
+    </ReportSection>
+
+    <ReportSection id="cashflow-report" index="02" title="收支储蓄分析" description="查看收入来源、支出去向、年度结余以及长期投入能力。">
+      <div className="report-grid two-columns report-distributions">
+        <DistributionPanel title="家庭年收入" totalLabel="年收入" items={incomeBreakdown} />
+        <DistributionPanel title="家庭年支出" totalLabel="年支出" items={expenseBreakdown} />
+      </div>
+
+      <ComparisonPanel title="家庭年结余" leftLabel="家庭年收入" leftValue={analysis.totals.annualIncome} rightLabel="家庭年支出" rightValue={analysis.totals.annualExpenses} resultLabel="年度结余" resultValue={analysis.totals.annualSurplus} resultPercent={analysis.totals.annualIncome > 0 ? analysis.totals.annualSurplus / analysis.totals.annualIncome * 100 : null} metric={metric('savings_rate')} />
+
+      <div className="health-grid three-up">
+        <HealthPanel metric={metric('income_concentration')} max={100} healthyRange="工作收入越接近100%，家庭越依赖持续工作能力" />
+        <HealthPanel metric={metric('savings_rate')} max={100} healthyRange="30%以上较合理，50%以上表示积累能力较强" />
+        <HealthPanel metric={metric('investment_rate')} max={100} healthyRange="长期投入达到年收入30%以上较强，但应先确保现金流为正" />
+      </div>
+    </ReportSection>
+
+    {customer.educationGoals.length ? <ReportSection id="education-report" index="03" title="教育目标准备" description="教育路线已经纳入档案；资金准备度只在费用假设完整时计算。"><div className="health-grid one-up"><HealthPanel metric={metric('education_readiness')} max={100} healthyRange="目标越临近，已准备资金覆盖比例应越高" /></div></ReportSection> : null}
   </div>
 }
 
-function MetricCard({ metric }: { metric: MetricResult }) {
-  const [open, setOpen] = useState(false)
-  return <article className={`metric-card level-${metric.level}`}>
-    <button className="metric-card-main" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-      <span className="metric-topline"><span>{metric.label}</span><span className="level-badge">{levelLabels[metric.level]}</span></span>
-      <strong>{formatMetric(metric)}</strong>
-      <span className="metric-title">{metric.title}</span>
-      <p>{metric.explanation}</p>
-      <CaretDownIcon className={open ? 'disclosure-icon is-open' : 'disclosure-icon'} size={18} />
-    </button>
-    {open ? <div className="metric-details"><div><span>计算公式</span><strong>{metric.formula}</strong></div><div><span>参考区间</span><strong>{metric.reference}</strong></div><div className="metric-action"><WarningCircleIcon size={18} /><p>{metric.action}</p></div></div> : null}
+function ReportSection({ id, index, title, description, children }: { id: string; index: string; title: string; description: string; children: React.ReactNode }) {
+  return <section className="report-section" id={id}><header className="report-section-heading"><span>{index}</span><div><h2>{title}</h2><p>{description}</p></div></header>{children}</section>
+}
+
+function ComparisonPanel({ title, leftLabel, leftValue, rightLabel, rightValue, resultLabel, resultValue, resultPercent, metric }: { title: string; leftLabel: string; leftValue: number; rightLabel: string; rightValue: number; resultLabel: string; resultValue: number; resultPercent: number | null; metric: MetricResult }) {
+  const hasData = leftValue > 0 || rightValue > 0
+  const maximum = Math.max(leftValue, rightValue, 1)
+  const option: ChartOption = {
+    aria: { enabled: true },
+    series: [
+      { type: 'gauge', startAngle: 180, endAngle: 0, min: 0, max: maximum, center: ['50%', '72%'], radius: '88%', pointer: { show: false }, progress: { show: true, width: 18, roundCap: false, itemStyle: { color: '#c91d2a' } }, axisLine: { lineStyle: { width: 18, color: [[1, '#f3e8e9']] } }, splitLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false }, detail: { show: false }, data: [{ value: leftValue }] },
+      { type: 'gauge', startAngle: 180, endAngle: 0, min: 0, max: maximum, center: ['50%', '72%'], radius: '66%', pointer: { show: false }, progress: { show: true, width: 15, roundCap: false, itemStyle: { color: '#efadb2' } }, axisLine: { lineStyle: { width: 15, color: [[1, '#f3eeee']] } }, splitLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false }, detail: { show: false }, data: [{ value: rightValue }] },
+    ],
+  }
+  return <article className={`report-panel comparison-panel level-${metric.level}`}>
+    <PanelHeader title={title} metric={metric} />
+    <div className="comparison-visual"><EChart option={option} empty={!hasData} /><div className="comparison-result"><span>{resultLabel}</span><strong className={resultValue < 0 ? 'negative-value' : ''}>{hasData ? formatMoney(resultValue) : '资料不足'}</strong>{resultPercent !== null ? <small>{formatPercent(resultPercent)}</small> : null}</div></div>
+    <div className="comparison-legend"><span><i className="legend-primary" />{leftLabel}<strong>{formatMoney(leftValue)}</strong></span><span><i className="legend-secondary" />{rightLabel}<strong>{formatMoney(rightValue)}</strong></span></div>
+    <MetricNarrative metric={metric} />
   </article>
 }
 
-function ChartPanel({ title, children }: { title: string; children: React.ReactNode }) { return <article className="chart-panel"><h2>{title}</h2>{children}</article> }
-
-function AssetChart({ customer }: { customer: CustomerProfile }) {
-  const data = [
-    { name: '现金与银行', value: customer.assets.filter((a) => a.category === 'cash' || a.category === 'bank').reduce((s,a) => s+a.currentValue,0) },
-    { name: '金融资产', value: customer.assets.filter((a) => ['fund','stock','bond','pension'].includes(a.category)).reduce((s,a) => s+a.currentValue,0) },
-    { name: '固定资产', value: customer.assets.filter((a) => a.category === 'property' || a.category === 'vehicle').reduce((s,a) => s+a.currentValue,0) },
-    { name: '其他资产', value: customer.assets.filter((a) => a.category === 'other' || a.category === 'receivable').reduce((s,a) => s+a.currentValue,0) },
-  ].filter((item) => item.value > 0)
-  return <EChart option={{ aria: { enabled: true }, tooltip: { trigger: 'item', valueFormatter: (value: unknown) => formatMoney(Number(value)) }, color: ['#cf1f2c','#e36a72','#f0a4aa','#d8d8d8'], series: [{ type:'pie', radius:['54%','78%'], center:['50%','48%'], avoidLabelOverlap:true, itemStyle:{borderColor:'#fff',borderWidth:3}, label:{show:false}, data }] }} empty={!data.length} />
+function DistributionPanel({ title, totalLabel, items }: { title: string; totalLabel: string; items: BreakdownItem[] }) {
+  const total = items.reduce((sum, item) => sum + item.value, 0)
+  const option: ChartOption = { aria: { enabled: true }, tooltip: { trigger: 'item', valueFormatter: (value: unknown) => formatMoney(Number(value)) }, color: items.map((item) => item.color), series: [{ type: 'pie', radius: ['58%', '79%'], center: ['50%', '48%'], itemStyle: { borderColor: '#fff', borderWidth: 3 }, label: { show: false }, data: items }] }
+  return <article className="report-panel distribution-panel"><PanelHeader title={title} /><div className="donut-wrap"><EChart option={option} empty={!items.length} /><div className="donut-total"><span>{totalLabel}</span><strong>{items.length ? formatMoney(total) : '资料不足'}</strong></div></div><BreakdownTable items={items} total={total} /></article>
 }
 
-function CashFlowChart({ income, expenses, surplus }: { income: number; expenses: number; surplus: number }) {
-  return <EChart option={{ aria:{enabled:true}, tooltip:{trigger:'axis',valueFormatter:(value:unknown)=>formatMoney(Number(value))}, grid:{left:8,right:8,top:18,bottom:28,containLabel:true}, xAxis:{type:'category',data:['年收入','年支出','年结余'],axisLine:{show:false},axisTick:{show:false}}, yAxis:{type:'value',show:false}, color:['#cf1f2c'], series:[{type:'bar',barWidth:34,data:[{value:income,itemStyle:{color:'#cf1f2c'}},{value:expenses,itemStyle:{color:'#ef9ca2'}},{value:surplus,itemStyle:{color:surplus<0?'#8f111b':'#b94049'}}],label:{show:true,position:'top',formatter:(item)=>compactMoney(Number(item.value ?? 0))}}] }} empty={income === 0 && expenses === 0} />
+function HealthPanel({ metric, max, healthyRange }: { metric: MetricResult; max: number; healthyRange: string }) {
+  const value = metric.value === null ? null : Math.max(0, Math.min(max, metric.value))
+  const color = levelColor(metric.level)
+  const option: ChartOption = { aria: { enabled: true }, series: [{ type: 'gauge', startAngle: 210, endAngle: -30, min: 0, max, splitNumber: 10, radius: '86%', pointer: { show: false }, progress: { show: true, width: 16, itemStyle: { color } }, axisLine: { lineStyle: { width: 16, color: [[1, '#f0eded']] } }, axisTick: { show: false }, splitLine: { distance: -20, length: 8, lineStyle: { width: 2, color: '#fff' } }, axisLabel: { distance: 7, color: '#8c8283', fontSize: 9, formatter: (raw: number) => max === 100 ? `${raw}%` : String(raw) }, detail: { valueAnimation: false, offsetCenter: [0, '8%'], fontSize: 27, fontWeight: 750, color, formatter: () => formatMetric(metric) }, title: { show: false }, data: value === null ? [] : [{ value }] }] }
+  return <article className={`report-panel health-panel level-${metric.level}`}><PanelHeader title={metric.label} metric={metric} /><EChart option={option} empty={value === null} compact /><div className="health-result"><strong>{metric.title}</strong><span>{healthyRange}</span></div><MetricNarrative metric={metric} /></article>
 }
 
-function EChart({ option, empty }: { option: ChartOption; empty: boolean }) {
+function PanelHeader({ title, metric }: { title: string; metric?: MetricResult }) { return <header className="panel-heading"><h3>{title}</h3>{metric ? <span className="level-badge">{levelLabels[metric.level]}</span> : null}</header> }
+
+function MetricNarrative({ metric }: { metric: MetricResult }) {
+  return <div className="metric-narrative"><p>{metric.explanation}</p><dl><div><dt>公式</dt><dd>{metric.formula}</dd></div><div><dt>参考区间</dt><dd>{metric.reference}</dd></div></dl><div className="action-note"><strong>建议</strong><span>{metric.action}</span></div></div>
+}
+
+function BreakdownTable({ items, total }: { items: BreakdownItem[]; total: number }) {
+  if (!items.length) return <div className="breakdown-empty">暂无可展示的明细</div>
+  return <div className="breakdown-table"><div className="breakdown-head"><span>类别</span><span>金额</span><span>占比</span></div>{items.map((item) => <div className="breakdown-row" key={item.name}><span><i style={{ background: item.color }} />{item.name}</span><strong>{formatMoney(item.value)}</strong><span>{total > 0 ? formatPercent(item.value / total * 100) : '—'}</span></div>)}</div>
+}
+
+function EChart({ option, empty, compact = false }: { option: ChartOption; empty: boolean; compact?: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!ref.current || empty) return
@@ -93,16 +150,34 @@ function EChart({ option, empty }: { option: ChartOption; empty: boolean }) {
     observer.observe(ref.current)
     return () => { observer.disconnect(); chart.dispose() }
   }, [empty, option])
-  if (empty) return <div className="chart-empty">当前数据不足以绘制图表</div>
-  return <div className="chart-canvas" ref={ref} role="img" aria-label="财务分析图表" />
+  if (empty) return <div className={compact ? 'chart-empty compact' : 'chart-empty'}>资料不足</div>
+  return <div className={compact ? 'chart-canvas compact' : 'chart-canvas'} ref={ref} role="img" aria-label="家庭财务分析图表" />
 }
 
-function formatMetric(metric: MetricResult) {
-  if (metric.value === null) return '资料不足'
-  if (metric.unit === 'currency') return formatMoney(metric.value)
-  if (metric.unit === 'percent') return `${metric.value.toFixed(1)}%`
-  if (metric.unit === 'months') return `${metric.value.toFixed(1)} 个月`
-  return `${metric.value.toFixed(2)} 倍`
+function buildAssetBreakdown(customer: CustomerProfile): BreakdownItem[] {
+  return groupEntries(customer.assets.map((item) => ({ name: classifyAsset(item.category), value: item.currentValue })))
 }
-function formatMoney(value: number) { return new Intl.NumberFormat('zh-CN',{style:'currency',currency:'CNY',maximumFractionDigits:0}).format(value) }
-function compactMoney(value: number) { const abs=Math.abs(value); if(abs>=10000)return `${value<0?'-':''}${(abs/10000).toFixed(abs>=100000?0:1)}万`; return String(Math.round(value)) }
+
+function groupEntries(entries: Array<{ name: string; value: number }>): BreakdownItem[] {
+  const grouped = new Map<string, number>()
+  entries.forEach((entry) => { if (entry.value > 0) grouped.set(entry.name, (grouped.get(entry.name) ?? 0) + entry.value) })
+  return [...grouped.entries()].sort((a, b) => b[1] - a[1]).map(([name, value], index) => ({ name, value, color: palette[index % palette.length] }))
+}
+
+function classifyAsset(category: string) { if (category === 'cash') return '现金'; if (category === 'property' || category === 'vehicle') return '固定资产'; if (['bank', 'fund', 'stock', 'bond', 'pension'].includes(category)) return '金融资产'; return '其他资产' }
+function classifyIncome(value: string) { if (/工作|工资|经营|佣金|奖金/.test(value)) return '工作收入'; if (/投资|理财|利息|股息|分红/.test(value)) return '理财收入'; return '其他资产收入' }
+function classifyExpense(value: string) { if (/投资|储蓄|保险|基金|股票|定投|理财/.test(value)) return '投资支出'; return '生活支出' }
+
+function flowVsDebtMetric(liquid: number, liabilities: number): MetricResult {
+  const difference = liquid - liabilities
+  if (liquid <= 0 && liabilities <= 0) return customMetric('flow_debt_gap', '流动资产 VS 负债', null, 'neutral', '等待资产负债数据', '尚未录入流动资产或负债。', '补充流动资产与负债余额。', '流动资产 - 总负债', '差值为正表示流动资产可覆盖全部负债')
+  if (difference < 0) return customMetric('flow_debt_gap', '流动资产 VS 负债', difference, 'critical', '流动资产低于负债', '若短期需要偿债，家庭可能需要依赖收入或处置长期资产。', '优先增加可变现资金并降低高成本负债。', '流动资产 - 总负债', '差值为正表示流动资产可覆盖全部负债')
+  return customMetric('flow_debt_gap', '流动资产 VS 负债', difference, difference >= liabilities ? 'strong' : 'healthy', '流动资产能够覆盖负债', '家庭可变现资产对当前负债形成覆盖。', '继续检查一年内到期债务和现金储备。', '流动资产 - 总负债', '差值为正表示流动资产可覆盖全部负债')
+}
+
+function customMetric(key: string, label: string, value: number | null, level: HealthLevel, title: string, explanation: string, action: string, formula: string, reference: string): MetricResult { return { key, label, value, unit: 'currency', level, title, explanation, action, formula, reference } }
+function levelColor(level: HealthLevel) { return level === 'critical' ? '#a51d27' : level === 'warning' ? '#cf4a52' : level === 'attention' ? '#d98235' : level === 'healthy' ? '#a72a34' : level === 'strong' ? '#7f1119' : '#b9afb0' }
+function formatMetric(metric: MetricResult) { if (metric.value === null) return '资料不足'; if (metric.unit === 'currency') return compactMoney(metric.value); if (metric.unit === 'percent') return `${metric.value.toFixed(1)}%`; if (metric.unit === 'months') return `${metric.value.toFixed(1)}月`; return `${metric.value.toFixed(2)}倍` }
+function formatMoney(value: number) { return new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', maximumFractionDigits: 0 }).format(value) }
+function formatPercent(value: number) { return `${value.toFixed(1)}%` }
+function compactMoney(value: number) { const abs = Math.abs(value); if (abs >= 10000) return `${value < 0 ? '-' : ''}${(abs / 10000).toFixed(abs >= 100000 ? 0 : 1)}万`; return String(Math.round(value)) }

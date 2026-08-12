@@ -53,4 +53,23 @@ describe('financial analysis', () => {
     expect(analyzeCustomer(light).metrics.find((item) => item.key === 'debt_service_ratio')?.title).toBe('月供对收入占用较轻')
     expect(analyzeCustomer(heavy).metrics.find((item) => item.key === 'debt_service_ratio')?.title).toBe('大部分收入用于偿债')
   })
+
+  it('uses the screenshot reference line of three times for liquid debt coverage', () => {
+    const customer = createCustomer('偿债覆盖')
+    customer.assets = [{ ...createAsset(), currentValue: 300_000 }]
+    customer.liabilities = [{ ...createLiability(), balance: 100_000, dueWithinOneYear: 100_000 }]
+    const metric = analyzeCustomer(customer).metrics.find((item) => item.key === 'liquid_coverage')
+    expect(metric?.value).toBe(3)
+    expect(metric?.level).toBe('healthy')
+  })
+
+  it('changes investment health copy with recognized long-term spending', () => {
+    const none = createCustomer('未投入')
+    none.incomes = [{ ...createCashFlow('income'), amount: 10_000 }]
+    const prepared = createCustomer('有投入')
+    prepared.incomes = [{ ...createCashFlow('income'), amount: 10_000 }]
+    prepared.expenses = [{ ...createCashFlow('expense'), name: '家庭定投', category: '投资支出', amount: 3_000 }]
+    expect(analyzeCustomer(none).metrics.find((item) => item.key === 'investment_rate')?.level).toBe('critical')
+    expect(analyzeCustomer(prepared).metrics.find((item) => item.key === 'investment_rate')?.level).toBe('strong')
+  })
 })
