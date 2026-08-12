@@ -117,6 +117,8 @@ export function App() {
   }
 
   const navigation = selfService ? selfServiceNavigation : adminNavigation
+  const modeLabel = selfService ? '家庭财务自测' : '家庭财务分析'
+  const modeDescription = selfService ? '我的资料与报告' : '客户资料工作区'
   const selfServiceCloudEligible = Boolean(selectedCustomer && canSyncSelfServiceCustomer(selectedCustomer))
   const syncLabel = selfService
     ? !selfServiceCloudEligible ? '填写姓名后自动同步' : syncState === 'dirty' ? '等待自动同步' : syncState === 'syncing' ? '正在自动同步' : syncState === 'error' ? '云端同步待重试' : '资料已自动同步'
@@ -126,7 +128,7 @@ export function App() {
     <aside className="sidebar" aria-label="主导航">
       <div className="brand-block">
         <div className="brand-logo-frame"><img src={jojoLogo} alt="Jojo 标志" /></div>
-        <div><strong>JoJo</strong><span>你的家庭资产管理顾问</span></div>
+        <div><strong>{modeLabel}</strong><span>{modeDescription}</span></div>
       </div>
       <nav className="nav-list">
         {navigation.map((item) => {

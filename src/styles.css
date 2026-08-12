@@ -60,6 +60,9 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .access-card { width: min(100%, 440px); padding: 42px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: 0 28px 80px rgba(60,20,24,.12); }
 .access-brand { width: 72px; height: 72px; margin-bottom: 28px; padding: 4px; border: 1px solid #dedede; border-radius: 18px; background: #fff; display: grid; place-items: center; overflow: hidden; box-shadow: 0 8px 20px rgba(34,34,34,.06); }
 .access-brand img { width: 100%; height: 100%; display: block; object-fit: cover; border-radius: 13px; }
+.access-brand-lockup { margin-bottom: 26px; display: flex; align-items: center; gap: 16px; }
+.access-brand-lockup .access-brand { margin-bottom: 0; }
+.access-brand-lockup > strong { max-width: 250px; color: var(--ink); font-size: 16px; line-height: 1.45; }
 .access-card h1 { margin: 9px 0 0; color: var(--ink); font-size: 32px; letter-spacing: -.035em; }
 .access-card > p { margin: 10px 0 26px; color: var(--ink-muted); line-height: 1.65; }
 .access-card form { display: grid; gap: 14px; }
@@ -69,7 +72,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .access-choice-page { align-items: center; }
 .access-choice-card { width: min(100%, 880px); padding: 44px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: 0 28px 80px rgba(60,20,24,.12); }
 .access-choice-heading { max-width: 610px; }
-.access-choice-heading .access-brand { margin-bottom: 22px; }
+.access-choice-heading .access-brand { margin-bottom: 0; }
 .access-choice-heading h1 { margin: 9px 0 0; color: var(--ink); font-size: 38px; letter-spacing: -.04em; }
 .access-choice-heading p { margin: 12px 0 0; color: var(--ink-muted); line-height: 1.65; }
 .access-mode-grid { margin-top: 32px; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
@@ -638,6 +641,8 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .access-page { padding: 16px; }
   .access-card { padding: 30px 22px; }
   .access-choice-card { padding: 28px 20px; }
+  .access-brand-lockup { margin-bottom: 22px; gap: 12px; }
+  .access-brand-lockup > strong { font-size: 14px; }
   .access-choice-heading h1 { font-size: 31px; }
   .access-mode-grid { grid-template-columns: 1fr; }
   body { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
@@ -661,6 +666,13 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .metric-strip { margin-top: 30px; grid-template-columns: 1fr; }
   .metric-strip article, .metric-strip article + article { padding: 18px 0; border-left: 0; border-bottom: 1px solid var(--line); }
   .metric-strip article:last-child { border-bottom: 0; }
+  .financial-summary { margin-top: 22px; padding: 8px; border: 1px solid var(--line); border-radius: 14px; background: #fff; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; box-shadow: 0 8px 24px rgba(60,20,24,.035); }
+  .financial-summary article, .financial-summary article + article { min-width: 0; min-height: 82px; padding: 13px 12px; border: 0; border-radius: 10px; background: #f7f5f5; display: flex; flex-direction: column; justify-content: space-between; }
+  .financial-summary.summary-items-3 article:last-child { grid-column: 1 / -1; min-height: 74px; background: #fff3f4; }
+  .financial-summary span { min-height: 0; color: #777; font-size: 11px; line-height: 1.35; }
+  .financial-summary strong { max-width: 100%; margin-top: 8px; font-size: clamp(17px, 5vw, 21px); line-height: 1.1; letter-spacing: -.025em; overflow-wrap: anywhere; }
+  .financial-summary.summary-items-3 article:last-child strong { color: var(--accent-strong); }
+  .financial-summary.summary-items-3 article:last-child strong.negative-value { color: var(--danger); }
   .work-grid { margin-top: 24px; }
   .section-heading { padding: 20px; }
   .task-row { padding-inline: 18px; }
