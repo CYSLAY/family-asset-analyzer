@@ -428,16 +428,18 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
         </div>
 
         <div className="education-funding">
-          <div className="education-funding-heading"><strong>资金假设（可选）</strong><span>填写后可估算教育资金准备度</span></div>
-          <div className="form-grid four-columns">
-          <Field label="距离开始年数"><input type="number" min="0" value={goal.yearsUntilStart} onChange={(e) => updateGoal(goal.id, { yearsUntilStart: numberValue(e.target.value) })} /></Field>
-          <MoneyField label="自定义年度费用（备用）" value={goal.annualCostToday} onChange={(value) => updateGoal(goal.id, { annualCostToday: value })} />
-          <Field label="学费年增长率"><input type="number" min="0" value={goal.inflationRate} onChange={(e) => updateGoal(goal.id, { inflationRate: numberValue(e.target.value) })} /><span className="input-suffix">%</span></Field>
-          <MoneyField label="已准备资金" value={goal.preparedAmount} onChange={(value) => updateGoal(goal.id, { preparedAmount: value })} />
+          <div className="education-funding-heading"><strong>资金准备（可选）</strong><span>用于计算教育资金准备度与资金缺口</span></div>
+          <div className="education-prepared-field">
+            <MoneyField label="已准备资金" value={goal.preparedAmount} onChange={(value) => updateGoal(goal.id, { preparedAmount: value })} />
           </div>
         </div>
       </article>}) : <InlineEmpty text="还没有教育规划。可为每位子女分别添加一张路线表。" />}
     </EntrySection>
+    <aside className="education-source-note" aria-label="教育费用数据来源">
+      <strong>费用估算口径与数据来源</strong>
+      <p>估算基准截至 2026 年 8 月，均按人民币现价现金口径展示。国内教育费用结合参考图标准与公立、私立教育常见支出估算；香港留学参考香港大学非本地生学费、住宿及生活费；英国参考 British Council 国际学生学费与生活费区间；美国参考 College Board 2025–26 学年学费、住宿及膳食标准。其他国家和地区采用公开教育费用的市场中位规划值。</p>
+      <p>以上结果用于家庭财务规划，不构成学校正式报价；实际费用会因院校、专业、城市、汇率、通胀、奖学金及个人生活方式而变化，请以院校最新公布资料为准。</p>
+    </aside>
   </div>
 }
 

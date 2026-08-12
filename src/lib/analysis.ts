@@ -64,8 +64,9 @@ export function analyzeCustomer(customer: CustomerProfile): FinancialAnalysis {
   const emergencyTarget = getEmergencyTarget(customer)
   const educationFutureCost = customer.educationGoals.reduce((sum, goal) => {
     const routeCashTotal = estimateEducationGoalCash(goal).cashTotal
-    const currentCashNeed = routeCashTotal > 0 ? routeCashTotal : goal.annualCostToday * goal.durationYears
-    return sum + currentCashNeed * Math.pow(1 + goal.inflationRate / 100, goal.yearsUntilStart)
+    if (routeCashTotal > 0) return sum + routeCashTotal
+    const legacyManualCost = goal.annualCostToday * goal.durationYears
+    return sum + legacyManualCost * Math.pow(1 + goal.inflationRate / 100, goal.yearsUntilStart)
   }, 0)
   const educationPrepared = customer.educationGoals.reduce((sum, goal) => sum + goal.preparedAmount, 0)
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { analyzeCustomer } from './analysis'
-import { createAsset, createCashFlow, createCustomer, createLiability } from '../types/domain'
+import { createAsset, createCashFlow, createCustomer, createEducationGoal, createLiability } from '../types/domain'
 
 describe('financial analysis', () => {
   it('does not report a zero savings rate when income is missing', () => {
@@ -89,5 +89,16 @@ describe('financial analysis', () => {
     prepared.expenses = [{ ...createCashFlow('expense'), name: '家庭定投', category: '投资支出', amount: 3_000 }]
     expect(analyzeCustomer(none).metrics.find((item) => item.key === 'investment_rate')?.level).toBe('critical')
     expect(analyzeCustomer(prepared).metrics.find((item) => item.key === 'investment_rate')?.level).toBe('strong')
+  })
+
+  it('uses the selected education route cash total without hidden inflation fields', () => {
+    const customer = createCustomer('教育规划')
+    const goal = createEducationGoal()
+    goal.yearsUntilStart = 10
+    goal.inflationRate = 20
+    goal.annualCostToday = 999_999
+    goal.stagePlans = [{ stage: '本科', durationYears: 4, route: '留学', destination: '美国' }]
+    customer.educationGoals = [goal]
+    expect(analyzeCustomer(customer).totals.educationFutureCost).toBe(1_453_942)
   })
 })
