@@ -115,10 +115,18 @@ export function IntakeWorkspace({ onOpenReport, onOpenCustomers }: Props) {
       <div className="intake-progress-number"><strong>{intakeCompletion(customer)}%</strong><span>模块已有资料</span></div>
     </header>
 
+    <nav className="intake-quick-nav" aria-label="录入模块快速切换">
+      <button className={view === 'overview' ? 'quick-nav-item is-active' : 'quick-nav-item'} type="button" onClick={() => setView('overview')}><FileTextIcon size={17} /><span>录入总览</span></button>
+      {stepMeta.map((item) => {
+        const Icon = item.icon
+        return <button className={view === item.key ? 'quick-nav-item is-active' : 'quick-nav-item'} type="button" key={item.key} onClick={() => setView(item.key)}><Icon size={17} /><span>{item.title}</span>{filled.has(item.key) ? <i aria-label="已填写" /> : null}</button>
+      })}
+      <button className="quick-nav-item report" type="button" onClick={onOpenReport}><FileTextIcon size={17} /><span>分析报告</span></button>
+    </nav>
+
     <div className="intake-layout">
       <main className="intake-content">
         {view === 'overview' ? <IntakeOverview filled={filled} onOpen={setView} onOpenReport={onOpenReport} /> : <>
-          <button className="back-button module-overview-back" type="button" onClick={() => setView('overview')}><ArrowLeftIcon size={17} /> 返回录入总览</button>
           <div className="module-content-heading"><div><span className="section-kicker">资料模块</span><h2>{activeMeta?.title}</h2><p>{activeMeta?.description}</p></div><span className={filled.has(view) ? 'confirmation-badge is-done' : 'confirmation-badge'}>{filled.has(view) ? '已填写' : '待确认'}</span></div>
           {view === 'profile' ? <ProfileForm customer={customer} onUpdate={(patch) => updateCustomer(customer.id, patch)} /> : null}
           {view === 'members' ? <MemberForm customer={customer} /> : null}

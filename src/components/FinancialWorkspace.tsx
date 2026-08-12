@@ -27,6 +27,58 @@ const fixedAssetLabels = { property: '房产', vehicle: '车辆' }
 const liquidAssetLabels = { cash: '现金', bank: '银行存款与理财', fund: '基金', stock: '股票', bond: '债券', pension: '养老金与公积金', receivable: '私人债权', other: '其他资产' }
 const liabilityLabels = { mortgage: '房贷', car_loan: '车贷', consumer_loan: '消费贷款', credit_card: '信用卡', private_loan: '私人借款', other: '其他负债' }
 const frequencyLabels = { monthly: '每月', quarterly: '每季度', yearly: '每年' }
+const liquidityLabels = { immediate: '随时可用', within_month: '一个月内', long_term: '长期持有' }
+
+type AssetPreset = Pick<AssetEntry, 'name' | 'category' | 'liquidity' | 'availableForEmergency'>
+type LiabilityPreset = Pick<LiabilityEntry, 'name' | 'category'>
+type FlowPreset = Pick<CashFlowEntry, 'name' | 'category' | 'frequency' | 'necessary'>
+
+const fixedAssetPresets: AssetPreset[] = [
+  { name: '自住房', category: 'property', liquidity: 'long_term', availableForEmergency: false },
+  { name: '其他房产', category: 'property', liquidity: 'long_term', availableForEmergency: false },
+  { name: '家庭车辆', category: 'vehicle', liquidity: 'long_term', availableForEmergency: false },
+]
+const liquidAssetPresets: AssetPreset[] = [
+  { name: '现金', category: 'cash', liquidity: 'immediate', availableForEmergency: true },
+  { name: '银行存款与理财', category: 'bank', liquidity: 'within_month', availableForEmergency: true },
+  { name: '货币基金', category: 'fund', liquidity: 'within_month', availableForEmergency: true },
+  { name: '基金', category: 'fund', liquidity: 'within_month', availableForEmergency: false },
+  { name: '股票', category: 'stock', liquidity: 'within_month', availableForEmergency: false },
+  { name: '债券', category: 'bond', liquidity: 'within_month', availableForEmergency: false },
+  { name: '养老金与公积金', category: 'pension', liquidity: 'long_term', availableForEmergency: false },
+  { name: '专项投资', category: 'other', liquidity: 'long_term', availableForEmergency: false },
+  { name: '私人债权', category: 'receivable', liquidity: 'long_term', availableForEmergency: false },
+  { name: '保险年金返还', category: 'other', liquidity: 'long_term', availableForEmergency: false },
+]
+const liabilityPresets: LiabilityPreset[] = [
+  { name: '住房贷款', category: 'mortgage' },
+  { name: '车辆贷款', category: 'car_loan' },
+  { name: '消费贷款', category: 'consumer_loan' },
+  { name: '信用卡', category: 'credit_card' },
+  { name: '私人借款', category: 'private_loan' },
+  { name: '其他负债', category: 'other' },
+]
+const incomePresets: FlowPreset[] = [
+  { name: '税后工资', category: '工作收入', frequency: 'yearly', necessary: false },
+  { name: '奖金与佣金', category: '工作收入', frequency: 'yearly', necessary: false },
+  { name: '经营收入', category: '经营收入', frequency: 'yearly', necessary: false },
+  { name: '投资与理财收入', category: '投资收入', frequency: 'yearly', necessary: false },
+  { name: '租金收入', category: '其他收入', frequency: 'monthly', necessary: false },
+  { name: '养老金及其他收入', category: '其他收入', frequency: 'monthly', necessary: false },
+]
+const expensePresets: FlowPreset[] = [
+  { name: '餐饮日用', category: '基本生活', frequency: 'monthly', necessary: true },
+  { name: '居住与物业', category: '住房支出', frequency: 'monthly', necessary: true },
+  { name: '交通通讯', category: '基本生活', frequency: 'monthly', necessary: true },
+  { name: '子女教育', category: '教育支出', frequency: 'yearly', necessary: true },
+  { name: '医疗保健', category: '医疗支出', frequency: 'yearly', necessary: true },
+  { name: '服饰美容', category: '可调整支出', frequency: 'yearly', necessary: false },
+  { name: '娱乐旅游', category: '可调整支出', frequency: 'yearly', necessary: false },
+  { name: '人情往来', category: '可调整支出', frequency: 'yearly', necessary: false },
+  { name: '保险保障', category: '保障支出', frequency: 'yearly', necessary: true },
+  { name: '投资储蓄', category: '投资支出', frequency: 'monthly', necessary: false },
+  { name: '其他支出', category: '其他支出', frequency: 'yearly', necessary: false },
+]
 const educationRoutes = ['公立', '私立', '留学']
 const popularDestinations = ['香港', '英国', '美国']
 const otherDestinations = ['新加坡', '加拿大', '澳大利亚', '新西兰', '日本', '韩国', '德国', '法国', '瑞士', '爱尔兰', '荷兰', '其他国家或地区']
@@ -56,6 +108,62 @@ export function FinancialWorkspace({ section, onChooseCustomer }: Props) {
 }
 
 function BalanceEditor({ customer, onUpdate, mode }: EditorProps & { mode: 'fixed' | 'liquid' }) {
+  const isFixedAsset = (asset: AssetEntry) => asset.category === 'property' || asset.category === 'vehicle'
+  const visibleAssets = customer.assets.filter((asset) => mode === 'fixed' ? isFixedAsset(asset) : !isFixedAsset(asset))
+  const presets = mode === 'fixed' ? fixedAssetPresets : liquidAssetPresets
+  const claimedIds = new Set<string>()
+  const rows = presets.map((preset) => {
+    const exact = visibleAssets.find((item) => !claimedIds.has(item.id) && item.name === preset.name)
+    const uniqueCategory = presets.filter((item) => item.category === preset.category).length === 1
+    const categoryMatch = uniqueCategory ? visibleAssets.find((item) => !claimedIds.has(item.id) && item.category === preset.category) : undefined
+    const entry = exact ?? categoryMatch
+    if (entry) claimedIds.add(entry.id)
+    return { preset, entry }
+  })
+  const extraAssets = visibleAssets.filter((item) => !claimedIds.has(item.id))
+  const claimedLiabilityIds = new Set<string>()
+  const liabilityRows = liabilityPresets.map((preset) => {
+    const exact = customer.liabilities.find((item) => !claimedLiabilityIds.has(item.id) && item.name === preset.name)
+    const categoryMatch = customer.liabilities.find((item) => !claimedLiabilityIds.has(item.id) && item.category === preset.category)
+    const entry = exact ?? categoryMatch
+    if (entry) claimedLiabilityIds.add(entry.id)
+    return { preset, entry }
+  })
+  const extraLiabilities = customer.liabilities.filter((item) => !claimedLiabilityIds.has(item.id))
+  const visibleTotal = visibleAssets.reduce((sum, item) => sum + item.currentValue, 0)
+  const totalAssets = customer.assets.reduce((sum, item) => sum + item.currentValue, 0)
+  const totalLiabilities = customer.liabilities.reduce((sum, item) => sum + item.balance, 0)
+
+  function saveAsset(preset: AssetPreset, entry: AssetEntry | undefined, patch: Partial<AssetEntry>) {
+    if (entry) onUpdate({ assets: customer.assets.map((item) => item.id === entry.id ? { ...item, ...patch } : item) })
+    else onUpdate({ assets: [...customer.assets, { ...createAsset(), ...preset, ...patch }] })
+  }
+  function saveLiability(preset: LiabilityPreset, entry: LiabilityEntry | undefined, patch: Partial<LiabilityEntry>) {
+    if (entry) onUpdate({ liabilities: customer.liabilities.map((item) => item.id === entry.id ? { ...item, ...patch } : item) })
+    else onUpdate({ liabilities: [...customer.liabilities, { ...createLiability(), ...preset, ...patch }] })
+  }
+
+  return <div className="financial-page one-screen-editor">
+    <PageTitle title={mode === 'fixed' ? '固定资产' : '流动资产与负债'} description={mode === 'fixed' ? '房产与车辆集中在同一页直接填写，空白预设行不会写入客户档案。' : '现金、金融资产及家庭负债集中录入，便于一眼核对完整性。'} />
+    <SummaryLine items={mode === 'fixed' ? [['固定资产合计', visibleTotal], ['家庭总资产', totalAssets]] : [['流动资产', visibleTotal], ['总负债', totalLiabilities], ['流动资产减负债', visibleTotal - totalLiabilities]]} />
+    <SheetSection title={mode === 'fixed' ? '房产与车辆' : '现金及金融资产'} description="直接填写金额与对应选项；已经保存的自定义项目会继续显示在表格末尾。">
+      <div className={`entry-sheet asset-sheet ${mode === 'fixed' ? 'fixed-sheet' : ''}`}>
+        <div className="sheet-row sheet-head"><span>资产项目</span><span>当前价值</span><span>年收益率</span><span>所属成员</span><span>变现速度</span>{mode === 'liquid' ? <span>应急资金</span> : null}</div>
+        {rows.map(({ preset, entry }) => <AssetSheetRow key={preset.name} preset={preset} entry={entry} customer={customer} showEmergency={mode === 'liquid'} onChange={(patch) => saveAsset(preset, entry, patch)} />)}
+        {extraAssets.map((entry) => <AssetSheetRow key={entry.id} preset={{ name: entry.name || assetLabels[entry.category], category: entry.category, liquidity: entry.liquidity, availableForEmergency: entry.availableForEmergency }} entry={entry} customer={customer} showEmergency={mode === 'liquid'} onChange={(patch) => saveAsset({ name: entry.name, category: entry.category, liquidity: entry.liquidity, availableForEmergency: entry.availableForEmergency }, entry, patch)} onDelete={() => onUpdate({ assets: customer.assets.filter((item) => item.id !== entry.id) })} />)}
+      </div>
+    </SheetSection>
+    {mode === 'liquid' ? <SheetSection title="家庭负债" description="当前余额、月供与未来一年应还金额会分别用于净资产和短期偿债分析。">
+      <div className="entry-sheet liability-sheet">
+        <div className="sheet-row sheet-head"><span>负债项目</span><span>当前余额</span><span>每月还款</span><span>年利率</span><span>剩余月数</span><span>未来一年应还</span></div>
+        {liabilityRows.map(({ preset, entry }) => <LiabilitySheetRow key={preset.name} preset={preset} entry={entry} onChange={(patch) => saveLiability(preset, entry, patch)} />)}
+        {extraLiabilities.map((entry) => <LiabilitySheetRow key={entry.id} preset={{ name: entry.name || liabilityLabels[entry.category], category: entry.category }} entry={entry} onChange={(patch) => saveLiability({ name: entry.name, category: entry.category }, entry, patch)} onDelete={() => onUpdate({ liabilities: customer.liabilities.filter((item) => item.id !== entry.id) })} />)}
+      </div>
+    </SheetSection> : null}
+  </div>
+}
+
+function LegacyBalanceEditor({ customer, onUpdate, mode }: EditorProps & { mode: 'fixed' | 'liquid' }) {
   function updateAsset(id: string, patch: Partial<AssetEntry>) { onUpdate({ assets: customer.assets.map((item) => item.id === id ? { ...item, ...patch } : item) }) }
   function updateLiability(id: string, patch: Partial<LiabilityEntry>) { onUpdate({ liabilities: customer.liabilities.map((item) => item.id === id ? { ...item, ...patch } : item) }) }
   const totalAssets = customer.assets.reduce((sum, item) => sum + item.currentValue, 0)
@@ -105,6 +213,35 @@ function BalanceEditor({ customer, onUpdate, mode }: EditorProps & { mode: 'fixe
 }
 
 function CashFlowEditor({ customer, onUpdate }: EditorProps) {
+  function saveFlow(key: 'incomes' | 'expenses', preset: FlowPreset, entry: CashFlowEntry | undefined, patch: Partial<CashFlowEntry>) {
+    if (entry) onUpdate({ [key]: customer[key].map((item) => item.id === entry.id ? { ...item, ...patch } : item) })
+    else onUpdate({ [key]: [...customer[key], { ...createCashFlow(key === 'incomes' ? 'income' : 'expense'), ...preset, ...patch }] })
+  }
+  return <div className="financial-page one-screen-editor">
+    <PageTitle title="生活收支" description="常见收入和支出集中在一页内录入，可按月、季度或年度填写。" />
+    <SummaryLine items={[["家庭年收入", annualTotal(customer.incomes)], ["家庭年支出", annualTotal(customer.expenses)], ["年度结余", annualTotal(customer.incomes) - annualTotal(customer.expenses)]]} />
+    {(['incomes', 'expenses'] as const).map((key) => {
+      const isIncome = key === 'incomes'
+      const presets = isIncome ? incomePresets : expensePresets
+      const claimed = new Set<string>()
+      const rows = presets.map((preset) => {
+        const entry = customer[key].find((item) => !claimed.has(item.id) && item.name === preset.name)
+        if (entry) claimed.add(entry.id)
+        return { preset, entry }
+      })
+      const extras = customer[key].filter((item) => !claimed.has(item.id))
+      return <SheetSection key={key} title={isIncome ? '收入来源' : '家庭支出'} description={isIncome ? '金额频率已按常用口径预设，也可以直接调整。' : '必要支出将用于估算家庭现金储备需求。'}>
+        <div className={`entry-sheet cashflow-sheet ${isIncome ? 'income-sheet' : ''}`}>
+          <div className="sheet-row sheet-head"><span>项目</span><span>每期金额</span><span>频率</span><span>归属成员</span>{!isIncome ? <span>必要支出</span> : null}</div>
+          {rows.map(({ preset, entry }) => <CashFlowSheetRow key={preset.name} preset={preset} entry={entry} customer={customer} showNecessary={!isIncome} onChange={(patch) => saveFlow(key, preset, entry, patch)} />)}
+          {extras.map((entry) => <CashFlowSheetRow key={entry.id} preset={{ name: entry.name || entry.category, category: entry.category, frequency: entry.frequency, necessary: entry.necessary }} entry={entry} customer={customer} showNecessary={!isIncome} onChange={(patch) => saveFlow(key, { name: entry.name, category: entry.category, frequency: entry.frequency, necessary: entry.necessary }, entry, patch)} onDelete={() => onUpdate({ [key]: customer[key].filter((item) => item.id !== entry.id) })} />)}
+        </div>
+      </SheetSection>
+    })}
+  </div>
+}
+
+function LegacyCashFlowEditor({ customer, onUpdate }: EditorProps) {
   function updateFlow(key: 'incomes' | 'expenses', id: string, patch: Partial<CashFlowEntry>) { onUpdate({ [key]: customer[key].map((item) => item.id === id ? { ...item, ...patch } : item) }) }
   return <div className="financial-page">
     <PageTitle title="收支储蓄" description="每笔金额可按月、季度或年度录入，系统会统一换算为年度现金流。" />
@@ -210,6 +347,41 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
 
 interface EditorProps { customer: CustomerProfile; onUpdate: (patch: Partial<CustomerProfile>) => void }
 function PageTitle({ title, description }: { title: string; description: string }) { return <section className="directory-heading"><div><h1>{title}</h1><p>{description}</p></div></section> }
+function SheetSection({ title, description, children }: { title: string; description: string; children: React.ReactNode }) { return <section className="form-section sheet-section"><div className="form-section-heading"><h2>{title}</h2><p>{description}</p></div>{children}</section> }
+function SheetMoneyInput({ value, onChange, suffix = '元', label }: { value: number | null; onChange: (value: number) => void; suffix?: string; label: string }) { return <label className="sheet-input-wrap"><span className="sr-only">{label}</span><input aria-label={label} type="number" min="0" inputMode="decimal" value={value || ''} onChange={(event) => onChange(numberValue(event.target.value))} /><i>{suffix}</i></label> }
+
+function AssetSheetRow({ preset, entry, customer, showEmergency, onChange, onDelete }: { preset: AssetPreset; entry?: AssetEntry; customer: CustomerProfile; showEmergency: boolean; onChange: (patch: Partial<AssetEntry>) => void; onDelete?: () => void }) {
+  const value = entry?.currentValue ?? 0
+  return <div className={`sheet-row ${entry ? 'has-data' : ''}`}>
+    <div className="sheet-item-label"><strong>{entry?.name || preset.name}</strong><small>{assetLabels[entry?.category ?? preset.category]}</small>{onDelete ? <button type="button" aria-label={`删除${entry?.name || preset.name}`} onClick={onDelete}><TrashIcon size={14} /></button> : null}</div>
+    <SheetMoneyInput label={`${preset.name}当前价值`} value={value} onChange={(currentValue) => onChange({ currentValue })} />
+    <SheetMoneyInput label={`${preset.name}年收益率`} suffix="%" value={entry?.annualReturnRate ?? 0} onChange={(annualReturnRate) => onChange({ annualReturnRate })} />
+    <label className="sheet-select-wrap"><span className="sr-only">{preset.name}所属成员</span><select aria-label={`${preset.name}所属成员`} value={entry?.ownerMemberId ?? ''} onChange={(event) => onChange({ ownerMemberId: event.target.value || null })}><option value="">家庭共有</option>{memberOptions(customer)}</select></label>
+    <label className="sheet-select-wrap"><span className="sr-only">{preset.name}变现速度</span><select aria-label={`${preset.name}变现速度`} value={entry?.liquidity ?? preset.liquidity} onChange={(event) => onChange({ liquidity: event.target.value as AssetEntry['liquidity'] })}>{options(liquidityLabels)}</select></label>
+    {showEmergency ? <label className="sheet-check"><input type="checkbox" checked={entry?.availableForEmergency ?? preset.availableForEmergency} onChange={(event) => onChange({ availableForEmergency: event.target.checked })} /><span>计入</span></label> : null}
+  </div>
+}
+
+function LiabilitySheetRow({ preset, entry, onChange, onDelete }: { preset: LiabilityPreset; entry?: LiabilityEntry; onChange: (patch: Partial<LiabilityEntry>) => void; onDelete?: () => void }) {
+  return <div className={`sheet-row ${entry ? 'has-data' : ''}`}>
+    <div className="sheet-item-label"><strong>{entry?.name || preset.name}</strong><small>{liabilityLabels[entry?.category ?? preset.category]}</small>{onDelete ? <button type="button" aria-label={`删除${entry?.name || preset.name}`} onClick={onDelete}><TrashIcon size={14} /></button> : null}</div>
+    <SheetMoneyInput label={`${preset.name}当前余额`} value={entry?.balance ?? 0} onChange={(balance) => onChange({ balance })} />
+    <SheetMoneyInput label={`${preset.name}每月还款`} value={entry?.monthlyPayment ?? 0} onChange={(monthlyPayment) => onChange({ monthlyPayment })} />
+    <SheetMoneyInput label={`${preset.name}年利率`} suffix="%" value={entry?.annualInterestRate ?? 0} onChange={(annualInterestRate) => onChange({ annualInterestRate })} />
+    <label className="sheet-input-wrap"><span className="sr-only">{preset.name}剩余月数</span><input aria-label={`${preset.name}剩余月数`} type="number" min="0" value={entry?.remainingMonths ?? ''} onChange={(event) => onChange({ remainingMonths: nullableNumber(event.target.value) })} /><i>月</i></label>
+    <SheetMoneyInput label={`${preset.name}未来一年应还`} value={entry?.dueWithinOneYear ?? 0} onChange={(dueWithinOneYear) => onChange({ dueWithinOneYear })} />
+  </div>
+}
+
+function CashFlowSheetRow({ preset, entry, customer, showNecessary, onChange, onDelete }: { preset: FlowPreset; entry?: CashFlowEntry; customer: CustomerProfile; showNecessary: boolean; onChange: (patch: Partial<CashFlowEntry>) => void; onDelete?: () => void }) {
+  return <div className={`sheet-row ${entry ? 'has-data' : ''}`}>
+    <div className="sheet-item-label"><strong>{entry?.name || preset.name}</strong><small>{entry?.category || preset.category}</small>{onDelete ? <button type="button" aria-label={`删除${entry?.name || preset.name}`} onClick={onDelete}><TrashIcon size={14} /></button> : null}</div>
+    <SheetMoneyInput label={`${preset.name}每期金额`} value={entry?.amount ?? 0} onChange={(amount) => onChange({ amount })} />
+    <label className="sheet-select-wrap"><span className="sr-only">{preset.name}频率</span><select aria-label={`${preset.name}频率`} value={entry?.frequency ?? preset.frequency} onChange={(event) => onChange({ frequency: event.target.value as CashFlowEntry['frequency'] })}>{options(frequencyLabels)}</select></label>
+    <label className="sheet-select-wrap"><span className="sr-only">{preset.name}归属成员</span><select aria-label={`${preset.name}归属成员`} value={entry?.memberId ?? ''} onChange={(event) => onChange({ memberId: event.target.value || null })}><option value="">整个家庭</option>{memberOptions(customer)}</select></label>
+    {showNecessary ? <label className="sheet-check"><input type="checkbox" checked={entry?.necessary ?? preset.necessary} onChange={(event) => onChange({ necessary: event.target.checked })} /><span>必要</span></label> : null}
+  </div>
+}
 function EntrySection({ title, description, action, onAdd, children }: { title: string; description: string; action: string; onAdd: () => void; children: React.ReactNode }) { return <section className="form-section entry-section"><div className="form-section-heading member-heading"><div><h2>{title}</h2><p>{description}</p></div><button className="subtle-button" type="button" onClick={onAdd}><PlusIcon size={18} /> {action}</button></div><div className="member-stack">{children}</div></section> }
 function EntryHeader({ name, onDelete }: { name: string; onDelete: () => void }) { return <div className="member-card-heading"><div><span>原始记录</span><strong>{name}</strong></div><button className="icon-button danger" title="删除记录" type="button" onClick={onDelete}><TrashIcon size={18} /></button></div> }
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="field-block"><span>{label}</span><div className="input-wrap">{children}</div></label> }
