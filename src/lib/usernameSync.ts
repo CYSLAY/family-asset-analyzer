@@ -1,6 +1,7 @@
 import type { CustomerProfile } from '../types/domain'
 import { getCustomers, putCustomer } from './localDb'
 import { supabase } from './supabase'
+import { migrateCustomerProfile } from './customerMigrations'
 
 interface RemoteRecord {
   id: string
@@ -40,13 +41,20 @@ export async function synchronizeWorkspace(username: string, accessCode: string)
   const local = await getCustomers()
   const records = (data ?? []) as RemoteRecord[]
   const merged = new Map(local.map((customer) => [customer.id, customer]))
+  const remoteMigrationIds = new Set<string>()
 
   for (const record of records) {
+    const migration = migrateCustomerProfile(record.document)
+    if (migration.changed) remoteMigrationIds.add(record.id)
     const localCustomer = merged.get(record.id)
     if (!localCustomer || record.client_updated_at > localCustomer.updatedAt) {
-      await putCustomer(record.document)
-      merged.set(record.id, record.document)
+      await putCustomer(migration.customer)
+      merged.set(record.id, migration.customer)
     }
+  }
+  for (const id of remoteMigrationIds) {
+    const customer = merged.get(id)
+    if (customer) await pushWorkspaceCustomer(username, accessCode, customer)
   }
   return getCustomers()
 }

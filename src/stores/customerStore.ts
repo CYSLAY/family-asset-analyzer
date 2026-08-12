@@ -3,6 +3,7 @@ import { createCustomer, type CustomerProfile, type FamilyMember, type SaveState
 import { deleteCustomerPermanently, getCustomers, putCustomer } from '../lib/localDb'
 import { getAccessSession } from '../lib/access'
 import { deleteWorkspaceCustomer, pushWorkspaceCustomer } from '../lib/usernameSync'
+import { migrateCustomerProfile } from '../lib/customerMigrations'
 
 interface CustomerStore {
   customers: CustomerProfile[]
@@ -35,7 +36,10 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
   syncState: 'idle',
 
   initialize: async () => {
-    const customers = await getCustomers()
+    const storedCustomers = await getCustomers()
+    const migrations = storedCustomers.map((customer) => migrateCustomerProfile(customer))
+    await Promise.all(migrations.filter((result) => result.changed).map((result) => putCustomer(result.customer)))
+    const customers = migrations.map((result) => result.customer).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     set({
       customers,
       selectedCustomerId: customers[0]?.id ?? null,
