@@ -117,8 +117,6 @@ export function App() {
   }
 
   const navigation = selfService ? selfServiceNavigation : adminNavigation
-  const modeLabel = selfService ? '家庭财务自测' : '家庭财务分析'
-  const modeDescription = selfService ? '我的资料与报告' : '客户资料工作区'
   const selfServiceCloudEligible = Boolean(selectedCustomer && canSyncSelfServiceCustomer(selectedCustomer))
   const syncLabel = selfService
     ? !selfServiceCloudEligible ? '填写姓名后自动同步' : syncState === 'dirty' ? '等待自动同步' : syncState === 'syncing' ? '正在自动同步' : syncState === 'error' ? '云端同步待重试' : '资料已自动同步'
@@ -128,7 +126,7 @@ export function App() {
     <aside className="sidebar" aria-label="主导航">
       <div className="brand-block">
         <div className="brand-logo-frame"><img src={jojoLogo} alt="Jojo 标志" /></div>
-        <div><strong>{modeLabel}</strong><span>{modeDescription}</span></div>
+        <div><strong>JoJo</strong><span>你的家庭资产管理顾问</span></div>
       </div>
       <nav className="nav-list">
         {navigation.map((item) => {
@@ -149,7 +147,7 @@ export function App() {
         <div className="topbar-actions">
           <div className={saveState === 'error' ? 'save-status has-error' : 'save-status'}><CheckCircleIcon size={18} weight="fill" /> {saveState === 'saving' ? '正在预保存' : saveState === 'error' ? '本地保存失败' : selfService ? syncLabel : '已预存在本机'}</div>
           {!selfService && selectedCustomer ? <button className="save-cloud-button" disabled={saveState === 'saving' || syncState === 'syncing'} type="button" onClick={() => void syncCustomer(selectedCustomer.id)}>{syncState === 'syncing' ? '正在同步' : syncState === 'synced' ? '云端已保存' : syncState === 'error' ? '重试同步' : '保存并同步'}</button> : null}
-          <button className="cloud-status-button" type="button" onClick={exitWorkspace}><SignOutIcon size={18} /><span>{selfService ? '返回入口' : '退出'}</span></button>
+          <button aria-label={selfService ? '返回入口' : '退出管理工作区'} className="cloud-status-button" type="button" onClick={exitWorkspace}><SignOutIcon size={18} /><span>{selfService ? '返回入口' : '退出'}</span></button>
         </div>
       </header>
 

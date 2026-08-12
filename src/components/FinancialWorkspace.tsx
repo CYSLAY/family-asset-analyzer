@@ -446,29 +446,29 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
 interface EditorProps { customer: CustomerProfile; onUpdate: (patch: Partial<CustomerProfile>) => void }
 function PageTitle({ title, description }: { title: string; description: string }) { return <section className="directory-heading"><div><h1>{title}</h1><p>{description}</p></div></section> }
 function SheetSection({ title, description, children }: { title: string; description: string; children: React.ReactNode }) { return <section className="form-section sheet-section"><div className="form-section-heading"><h2>{title}</h2><p>{description}</p></div>{children}</section> }
-function SheetMoneyInput({ value, onChange, suffix = '元', label }: { value: number | null; onChange: (value: number) => void; suffix?: string; label: string }) { return <label className="sheet-input-wrap"><span className="sr-only">{label}</span><input aria-label={label} type="number" min="0" inputMode="decimal" value={value || ''} onChange={(event) => onChange(numberValue(event.target.value))} /><i>{suffix}</i></label> }
+function SheetMoneyInput({ value, onChange, suffix = '元', label, mobileLabel }: { value: number | null; onChange: (value: number) => void; suffix?: string; label: string; mobileLabel?: string }) { return <label className="sheet-input-wrap" data-mobile-label={mobileLabel}><span className="sr-only">{label}</span><input aria-label={label} type="number" min="0" inputMode="decimal" value={value || ''} onChange={(event) => onChange(numberValue(event.target.value))} /><i>{suffix}</i></label> }
 
 function AssetSheetRow({ preset, entry, customer, showEmergency, onChange, onDelete }: { preset: AssetPreset; entry?: AssetEntry; customer: CustomerProfile; showEmergency: boolean; onChange: (patch: Partial<AssetEntry>) => void; onDelete?: () => void }) {
   const value = entry?.currentValue ?? 0
   const displayName = onDelete ? entry?.name || preset.name : preset.name
   return <div className={`sheet-row ${entry ? 'has-data' : ''}`}>
     <div className="sheet-item-label"><strong>{displayName}</strong><small>{assetLabels[entry?.category ?? preset.category]}</small>{onDelete ? <button type="button" aria-label={`删除${displayName}`} onClick={onDelete}><TrashIcon size={14} /></button> : null}</div>
-    <SheetMoneyInput label={`${preset.name}当前价值`} value={value} onChange={(currentValue) => onChange({ currentValue })} />
-    <SheetMoneyInput label={`${preset.name}年收益率`} suffix="%" value={entry?.annualReturnRate ?? 0} onChange={(annualReturnRate) => onChange({ annualReturnRate })} />
-    <label className="sheet-select-wrap"><span className="sr-only">{preset.name}所属成员</span><select aria-label={`${preset.name}所属成员`} value={entry?.ownerMemberId ?? ''} onChange={(event) => onChange({ ownerMemberId: event.target.value || null })}><option value="">家庭共有</option>{memberOptions(customer)}</select></label>
-    <label className="sheet-select-wrap"><span className="sr-only">{preset.name}变现速度</span><select aria-label={`${preset.name}变现速度`} value={entry?.liquidity ?? preset.liquidity} onChange={(event) => onChange({ liquidity: event.target.value as AssetEntry['liquidity'] })}>{options(liquidityLabels)}</select></label>
-    {showEmergency ? <label className="sheet-check"><input type="checkbox" checked={entry?.availableForEmergency ?? preset.availableForEmergency} onChange={(event) => onChange({ availableForEmergency: event.target.checked })} /><span>计入</span></label> : null}
+    <SheetMoneyInput label={`${preset.name}当前价值`} mobileLabel="当前价值" value={value} onChange={(currentValue) => onChange({ currentValue })} />
+    <SheetMoneyInput label={`${preset.name}年收益率`} mobileLabel="年收益率" suffix="%" value={entry?.annualReturnRate ?? 0} onChange={(annualReturnRate) => onChange({ annualReturnRate })} />
+    <label className="sheet-select-wrap" data-mobile-label="所属成员"><span className="sr-only">{preset.name}所属成员</span><select aria-label={`${preset.name}所属成员`} value={entry?.ownerMemberId ?? ''} onChange={(event) => onChange({ ownerMemberId: event.target.value || null })}><option value="">家庭共有</option>{memberOptions(customer)}</select></label>
+    <label className="sheet-select-wrap" data-mobile-label="变现速度"><span className="sr-only">{preset.name}变现速度</span><select aria-label={`${preset.name}变现速度`} value={entry?.liquidity ?? preset.liquidity} onChange={(event) => onChange({ liquidity: event.target.value as AssetEntry['liquidity'] })}>{options(liquidityLabels)}</select></label>
+    {showEmergency ? <label className="sheet-check" data-mobile-label="应急资金"><input type="checkbox" checked={entry?.availableForEmergency ?? preset.availableForEmergency} onChange={(event) => onChange({ availableForEmergency: event.target.checked })} /><span>计入</span></label> : null}
   </div>
 }
 
 function LiabilitySheetRow({ preset, entry, onChange, onDelete }: { preset: LiabilityPreset; entry?: LiabilityEntry; onChange: (patch: Partial<LiabilityEntry>) => void; onDelete?: () => void }) {
   return <div className={`sheet-row ${entry ? 'has-data' : ''}`}>
     <div className="sheet-item-label"><strong>{entry?.name || preset.name}</strong><small>{liabilityLabels[entry?.category ?? preset.category]}</small>{onDelete ? <button type="button" aria-label={`删除${entry?.name || preset.name}`} onClick={onDelete}><TrashIcon size={14} /></button> : null}</div>
-    <SheetMoneyInput label={`${preset.name}当前余额`} value={entry?.balance ?? 0} onChange={(balance) => onChange({ balance })} />
-    <SheetMoneyInput label={`${preset.name}每月还款`} value={entry?.monthlyPayment ?? 0} onChange={(monthlyPayment) => onChange({ monthlyPayment })} />
-    <SheetMoneyInput label={`${preset.name}年利率`} suffix="%" value={entry?.annualInterestRate ?? 0} onChange={(annualInterestRate) => onChange({ annualInterestRate })} />
-    <label className="sheet-input-wrap"><span className="sr-only">{preset.name}剩余月数</span><input aria-label={`${preset.name}剩余月数`} type="number" min="0" value={entry?.remainingMonths ?? ''} onChange={(event) => onChange({ remainingMonths: nullableNumber(event.target.value) })} /><i>月</i></label>
-    <SheetMoneyInput label={`${preset.name}未来一年应还`} value={entry?.dueWithinOneYear ?? 0} onChange={(dueWithinOneYear) => onChange({ dueWithinOneYear })} />
+    <SheetMoneyInput label={`${preset.name}当前余额`} mobileLabel="当前余额" value={entry?.balance ?? 0} onChange={(balance) => onChange({ balance })} />
+    <SheetMoneyInput label={`${preset.name}每月还款`} mobileLabel="每月还款" value={entry?.monthlyPayment ?? 0} onChange={(monthlyPayment) => onChange({ monthlyPayment })} />
+    <SheetMoneyInput label={`${preset.name}年利率`} mobileLabel="年利率" suffix="%" value={entry?.annualInterestRate ?? 0} onChange={(annualInterestRate) => onChange({ annualInterestRate })} />
+    <label className="sheet-input-wrap" data-mobile-label="剩余月数"><span className="sr-only">{preset.name}剩余月数</span><input aria-label={`${preset.name}剩余月数`} type="number" min="0" value={entry?.remainingMonths ?? ''} onChange={(event) => onChange({ remainingMonths: nullableNumber(event.target.value) })} /><i>月</i></label>
+    <SheetMoneyInput label={`${preset.name}未来一年应还`} mobileLabel="一年内应还" value={entry?.dueWithinOneYear ?? 0} onChange={(dueWithinOneYear) => onChange({ dueWithinOneYear })} />
   </div>
 }
 
