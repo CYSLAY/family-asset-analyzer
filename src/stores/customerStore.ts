@@ -17,7 +17,6 @@ interface CustomerStore {
   addMember: (customerId: string, member: FamilyMember) => Promise<void>
   updateMember: (customerId: string, memberId: string, patch: Partial<FamilyMember>) => Promise<void>
   removeMember: (customerId: string, memberId: string) => Promise<void>
-  archiveCustomer: (id: string, archived: boolean) => Promise<void>
   deleteCustomer: (id: string) => Promise<void>
   syncCustomer: (id: string) => Promise<void>
 }
@@ -39,7 +38,7 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
     const customers = await getCustomers()
     set({
       customers,
-      selectedCustomerId: customers.find((item) => !item.archivedAt)?.id ?? null,
+      selectedCustomerId: customers[0]?.id ?? null,
       initialized: true,
       saveState: 'saved',
     })
@@ -92,21 +91,15 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
     await get().updateCustomer(customerId, { members: current.members.filter((member) => member.id !== memberId) })
   },
 
-  archiveCustomer: async (id, archived) => {
-    await get().updateCustomer(id, { archivedAt: archived ? new Date().toISOString() : null })
-    const next = get().customers.find((item) => !item.archivedAt && item.id !== id)
-    if (archived && get().selectedCustomerId === id) set({ selectedCustomerId: next?.id ?? null })
-  },
-
   deleteCustomer: async (id) => {
-    await deleteCustomerPermanently(id)
     const session = getAccessSession()
-    if (session) void deleteWorkspaceCustomer(session.username, session.accessCode, id).catch(() => undefined)
+    if (session) await deleteWorkspaceCustomer(session.username, session.accessCode, id)
+    await deleteCustomerPermanently(id)
     set((state) => {
       const customers = state.customers.filter((item) => item.id !== id)
       return {
         customers,
-        selectedCustomerId: state.selectedCustomerId === id ? customers.find((item) => !item.archivedAt)?.id ?? null : state.selectedCustomerId,
+        selectedCustomerId: state.selectedCustomerId === id ? customers[0]?.id ?? null : state.selectedCustomerId,
         saveState: 'saved',
       }
     })

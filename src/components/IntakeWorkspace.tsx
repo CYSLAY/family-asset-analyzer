@@ -27,7 +27,7 @@ import {
 
 interface Props {
   onOpenReport: () => void
-  onOpenArchive: () => void
+  onOpenCustomers: () => void
 }
 
 type IntakeView = 'overview' | IntakeStepKey
@@ -49,15 +49,15 @@ const stabilityLabels: Record<IncomeStability, string> = {
   none: '暂无收入',
 }
 
-export function IntakeWorkspace({ onOpenReport, onOpenArchive }: Props) {
+export function IntakeWorkspace({ onOpenReport, onOpenCustomers }: Props) {
   const { customers, selectedCustomerId, selectCustomer, addCustomer, updateCustomer } = useCustomerStore()
   const [view, setView] = useState<IntakeView>('overview')
   const [newName, setNewName] = useState('')
   const [creating, setCreating] = useState(false)
-  const customer = customers.find((item) => item.id === selectedCustomerId && !item.archivedAt) ?? null
+  const customer = customers.find((item) => item.id === selectedCustomerId) ?? null
 
   const recentCustomers = useMemo(
-    () => customers.filter((item) => !item.archivedAt).slice(0, 6),
+    () => customers.slice(0, 6),
     [customers],
   )
 
@@ -74,8 +74,8 @@ export function IntakeWorkspace({ onOpenReport, onOpenArchive }: Props) {
       <section className="intake-start-hero">
         <div>
           <span className="section-kicker">信息录入</span>
-          <h1>建立完整的家庭财务底稿</h1>
-          <p>新建客户，或继续补充已有档案。输入内容会先保存在当前设备，点击保存并同步后才上传云端。</p>
+          <h1>开始进行家庭财务分析</h1>
+          <p>为您量身定制的家庭资产管理计划</p>
         </div>
         <button className="primary-action" type="button" onClick={() => setCreating(true)}><UserPlusIcon size={19} /> 新建客户</button>
       </section>
@@ -87,7 +87,7 @@ export function IntakeWorkspace({ onOpenReport, onOpenArchive }: Props) {
       </section> : null}
 
       <section className="recent-intakes">
-        <div className="content-heading"><div><h2>继续录入</h2><p>选择客户后，可自由进入任何资料模块。</p></div><button className="text-button" type="button" onClick={onOpenArchive}>查看全部档案</button></div>
+        <div className="content-heading"><div><h2>继续录入</h2><p>选择客户后，可自由进入任何资料模块。</p></div><button className="text-button" type="button" onClick={onOpenCustomers}>查看全部档案</button></div>
         {recentCustomers.length ? <div className="intake-customer-list">
           {recentCustomers.map((item) => <button className="intake-customer-row" type="button" key={item.id} onClick={() => { selectCustomer(item.id); setView('overview') }}>
             <span className="customer-avatar">{item.primaryContactName.slice(0, 1)}</span>

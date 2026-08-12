@@ -61,7 +61,7 @@ export function App() {
   return <div className="app-shell">
     <aside className="sidebar" aria-label="主导航">
       <div className="brand-block">
-        <div className="brand-mark" aria-hidden="true">家</div>
+        <div className="brand-mark jojo-mark" aria-label={`${accessUser} 标志`}><span>JO</span><i /></div>
         <div><strong>家庭财务分析</strong><span>客户资料工作区</span></div>
       </div>
 
@@ -99,7 +99,7 @@ export function App() {
       </header>
 
       <div className="page-wrap">
-        {view === 'intake' ? <IntakeWorkspace onOpenReport={openReport} onOpenArchive={() => { selectCustomer(''); setView('customers') }} /> : null}
+        {view === 'intake' ? <IntakeWorkspace onOpenReport={openReport} onOpenCustomers={() => { selectCustomer(''); setView('customers') }} /> : null}
         {view === 'customers' ? <CustomerDirectory onStartIntake={() => setView('intake')} onOpenReport={() => setView('analysis')} /> : null}
         {view === 'analysis' ? <Suspense fallback={<div className="report-skeleton" aria-label="正在生成分析报告"><span /><span /><span /></div>}><AnalysisDashboard onChooseCustomer={() => { selectCustomer(''); setView('customers') }} /></Suspense> : null}
       </div>

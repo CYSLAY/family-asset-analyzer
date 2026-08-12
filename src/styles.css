@@ -20,6 +20,7 @@
 }
 
 * { box-sizing: border-box; }
+.sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; border: 0 !important; }
 html { background: #f6f6f6; }
 body { margin: 0; min-width: 320px; min-height: 100dvh; background: #f6f6f6; }
 button, input, select, textarea { font: inherit; }
@@ -30,6 +31,10 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .sidebar { position: sticky; top: 0; height: 100dvh; padding: 24px 18px; border-right: 1px solid var(--line); color: var(--ink); background: var(--sidebar); display: flex; flex-direction: column; }
 .brand-block { display: flex; align-items: center; gap: 12px; padding: 0 8px 28px; }
 .brand-mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 12px; color: white; background: var(--accent); font-size: 17px; font-weight: 750; }
+.jojo-mark { position: relative; overflow: hidden; background: linear-gradient(145deg, #a5111d 0%, #db2936 78%); box-shadow: 0 8px 18px rgba(159,20,32,.18); }
+.jojo-mark::before { content: ''; position: absolute; width: 26px; height: 26px; right: -10px; bottom: -10px; border: 5px solid rgba(255,255,255,.2); border-radius: 50%; }
+.jojo-mark span { position: relative; z-index: 1; margin: 0; color: white; font-size: 13px; font-weight: 860; letter-spacing: -.08em; line-height: 1; }
+.jojo-mark i { position: absolute; top: 8px; right: 8px; width: 5px; height: 5px; border: 1.5px solid white; border-radius: 50%; }
 .brand-block strong, .brand-block span { display: block; }
 .brand-block strong { font-size: 15px; }
 .brand-block span { margin-top: 4px; color: var(--ink-muted); font-size: 12px; }
@@ -134,6 +139,9 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .customer-meta span { color: var(--ink-muted); font-size: 11px; }
 .customer-meta strong { margin-top: 5px; color: var(--ink); font-size: 12px; font-weight: 600; }
 .row-actions { display: flex; align-items: center; gap: 7px; }
+.customer-row-actions { flex-wrap: wrap; justify-content: flex-end; }
+.customer-delete-button { min-height: 34px; padding: 0 10px; border: 1px solid rgba(189,29,40,.35); border-radius: var(--radius-control); color: var(--danger); background: #fff7f7; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 11px; font-weight: 720; cursor: pointer; }
+.customer-delete-button:hover { border-color: var(--danger); background: #fcebec; }
 .icon-button { width: 40px; height: 40px; padding: 0; display: grid; place-items: center; }
 .icon-button.danger, .danger-text-button { color: var(--danger); }
 .danger-text-button { min-height: 38px; padding: 0 11px; border-color: rgba(184,64,64,.3); }
@@ -184,15 +192,17 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .education-card > .member-card-heading { margin: 0; padding: 20px 22px; border-bottom: 1px solid var(--line); background: var(--surface-muted); }
 .education-basics { padding: 22px; }
 .education-pathway { margin: 0 22px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-.education-stage-row { min-height: 78px; padding: 14px 16px; display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: center; gap: 18px; }
+.education-stage-row { min-height: 78px; padding: 14px 16px; display: grid; grid-template-columns: 168px minmax(0, 1fr); align-items: center; gap: 18px; }
 .education-stage-row + .education-stage-row { border-top: 1px solid var(--line); }
-.education-stage-label { min-width: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.education-stage-label { min-width: 0; display: grid; grid-template-columns: minmax(52px, 1fr) 76px; align-items: center; gap: 10px; }
 .education-stage-label strong { color: var(--ink); font-size: 14px; }
-.education-stage-label span { color: var(--ink-muted); font-size: 11px; white-space: nowrap; }
+.education-duration-control select, .education-destination-control select { width: 100%; min-height: 36px; padding: 0 28px 0 10px; border: 1px solid #d7d7d7; border-radius: 8px; outline: 0; color: var(--ink); background: white; font-size: 12px; cursor: pointer; }
+.education-duration-control select:focus, .education-destination-control select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(207,31,44,.12); }
 .education-route-options { display: flex; flex-wrap: wrap; gap: 8px; }
 .route-chip { min-height: 36px; padding: 0 13px; border: 1px solid #d7d7d7; border-radius: 8px; color: var(--ink-muted); background: white; font-size: 12px; cursor: pointer; transition: border-color .16s ease, color .16s ease, background .16s ease; }
 .route-chip:hover { border-color: #d6878d; color: var(--accent); }
 .route-chip.is-selected { border-color: #e4aeb2; color: var(--accent-strong); background: var(--accent-soft); font-weight: 720; }
+.education-destination-control { flex: 1 1 190px; max-width: 250px; }
 .education-funding { margin-top: 22px; padding: 22px; border-top: 1px solid var(--line); background: #fffafa; }
 .education-funding-heading { margin-bottom: 18px; display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
 .education-funding-heading strong { color: var(--ink); font-size: 14px; }
@@ -317,6 +327,16 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .metric-narrative dt { color: var(--ink-muted); font-size: 10px; }
 .metric-narrative dd { margin: 4px 0 0; color: var(--ink); font-size: 11px; line-height: 1.5; }
 .modal-backdrop { position: fixed; z-index: 60; inset: 0; padding: 22px; background: rgba(9,25,23,.54); display: grid; place-items: center; }
+.delete-modal-backdrop { background: rgba(30,16,18,.56); backdrop-filter: blur(3px); }
+.delete-confirm-dialog { width: min(100%, 470px); padding: 30px; border: 1px solid #edc8cb; border-radius: 18px; background: white; box-shadow: 0 28px 80px rgba(46,9,13,.24); }
+.delete-dialog-icon { width: 48px; height: 48px; margin-bottom: 20px; border-radius: 13px; color: var(--danger); background: #fce9eb; display: grid; place-items: center; }
+.delete-confirm-dialog h2 { margin: 8px 0 0; color: var(--ink); font-size: 24px; letter-spacing: -.025em; }
+.delete-confirm-dialog p { margin: 14px 0 0; color: var(--ink-muted); font-size: 14px; line-height: 1.7; }
+.delete-confirm-dialog .delete-dialog-error { padding: 10px 12px; border-left: 2px solid var(--danger); color: var(--danger); background: #fff3f4; font-size: 12px; }
+.delete-dialog-actions { margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 10px; }
+.danger-confirm-button { min-height: 42px; padding: 0 15px; border: 1px solid var(--danger); border-radius: var(--radius-control); color: white; background: var(--danger); display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-weight: 720; cursor: pointer; }
+.danger-confirm-button:hover { background: #98151e; }
+.danger-confirm-button:disabled, .delete-dialog-actions button:disabled { opacity: .58; cursor: wait; }
 .cloud-panel { position: relative; width: min(100%, 520px); max-height: calc(100dvh - 44px); padding: 30px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); overflow: auto; box-shadow: 0 28px 90px rgba(9,37,33,.26); }
 .modal-close { position: absolute; top: 18px; right: 18px; width: 40px; height: 40px; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-control); color: var(--ink); background: var(--surface); display: grid; place-items: center; cursor: pointer; }
 .cloud-panel h2 { margin: 9px 44px 0 0; color: var(--ink); font-size: 28px; letter-spacing: -.025em; }
@@ -464,8 +484,9 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .directory-heading .primary-action, .directory-tools .subtle-button { width: 100%; margin-top: 18px; }
   .create-customer-panel { grid-template-columns: 1fr; }
   .create-customer-panel .form-actions { grid-column: auto; }
-  .customer-row { grid-template-columns: 1fr auto; }
+  .customer-row { grid-template-columns: 1fr; padding-block: 16px; }
   .customer-meta { display: none; }
+  .customer-row-actions { justify-content: flex-start; padding-left: 60px; }
   .editor-toolbar { align-items: start; }
   .editor-toolbar-actions { display: grid; }
   .record-id { margin-top: 20px; }
@@ -480,9 +501,10 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .education-card > .member-card-heading, .education-basics, .education-funding { padding: 18px 14px; }
   .education-pathway { margin-inline: 14px; }
   .education-stage-row { grid-template-columns: 1fr; gap: 10px; }
-  .education-stage-label { justify-content: flex-start; }
+  .education-stage-label { grid-template-columns: minmax(52px, 1fr) 84px; }
   .education-route-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .route-chip { padding-inline: 8px; }
+  .education-destination-control { grid-column: 1 / -1; max-width: none; }
   .education-funding-heading { display: grid; gap: 5px; }
   .span-two { grid-column: auto; }
   .analysis-hero { padding: 24px 20px; grid-template-columns: 1fr; }
@@ -519,7 +541,9 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .module-grid { grid-template-columns: 1fr; }
   .report-gate { display: block; }
   .report-gate .primary-action { width: 100%; margin-top: 16px; justify-content: center; }
-  .archive-actions { display: none; }
+  .delete-confirm-dialog { padding: 24px 20px; }
+  .delete-dialog-actions { display: grid; grid-template-columns: 1fr; }
+  .delete-dialog-actions .subtle-button { order: 2; }
 }
 
 @media (prefers-reduced-motion: reduce) {

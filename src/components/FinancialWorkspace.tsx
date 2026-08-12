@@ -27,8 +27,20 @@ const fixedAssetLabels = { property: '房产', vehicle: '车辆' }
 const liquidAssetLabels = { cash: '现金', bank: '银行存款与理财', fund: '基金', stock: '股票', bond: '债券', pension: '养老金与公积金', receivable: '私人债权', other: '其他资产' }
 const liabilityLabels = { mortgage: '房贷', car_loan: '车贷', consumer_loan: '消费贷款', credit_card: '信用卡', private_loan: '私人借款', other: '其他负债' }
 const frequencyLabels = { monthly: '每月', quarterly: '每季度', yearly: '每年' }
-const schoolRoutes = ['公立（本地）', '公立（外地）', '私立（中国）', '其他']
-const higherEducationRoutes = ['中国', '私立（美国）', '私立（加拿大）', '其他']
+const educationRoutes = ['公立', '私立', '留学']
+const popularDestinations = ['香港', '英国', '美国']
+const otherDestinations = ['新加坡', '加拿大', '澳大利亚', '新西兰', '日本', '韩国', '德国', '法国', '瑞士', '爱尔兰', '荷兰', '其他国家或地区']
+const educationYearOptions = Array.from({ length: 12 }, (_, index) => index + 1)
+
+function normalizedEducationChoice(value: string) {
+  if (!value) return { route: '', destination: '' }
+  if (educationRoutes.includes(value)) return { route: value, destination: '' }
+  const destination = [...popularDestinations, ...otherDestinations].find((item) => value.includes(item.replace('其他国家或地区', '其他')))
+  if (destination && destination !== '其他国家或地区' && !value.includes('中国')) return { route: '留学', destination }
+  if (value.includes('公立') || value === '中国') return { route: '公立', destination: '' }
+  if (value.includes('私立')) return { route: '私立', destination: '' }
+  return { route: '', destination: '' }
+}
 
 export function FinancialWorkspace({ section, onChooseCustomer }: Props) {
   const { customers, selectedCustomerId, updateCustomer } = useCustomerStore()
@@ -122,17 +134,30 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
     return educationStageDefaults.map((defaultPlan) => {
       const saved = goal.stagePlans?.find((plan) => plan.stage === defaultPlan.stage)
       const legacyRoute = !saved && goal.currentStage === defaultPlan.stage ? goal.targetRoute : ''
-      return { ...defaultPlan, ...saved, route: saved?.route ?? legacyRoute }
+      const normalized = normalizedEducationChoice(saved?.route ?? legacyRoute)
+      return { ...defaultPlan, ...saved, route: normalized.route, destination: saved?.destination ?? normalized.destination }
+    })
+  }
+  function saveStagePlans(goal: EducationGoal, stagePlans: EducationStagePlan[], activeStage: string) {
+    const activePlan = stagePlans.find((plan) => plan.stage === activeStage)
+    const firstPlan = activePlan?.route ? activePlan : stagePlans.find((plan) => plan.route)
+    updateGoal(goal.id, {
+      stagePlans,
+      targetRoute: firstPlan?.route === '留学' && firstPlan.destination ? `留学（${firstPlan.destination}）` : firstPlan?.route || '',
+      durationYears: activePlan?.durationYears ?? goal.durationYears,
     })
   }
   function updateRoute(goal: EducationGoal, stage: string, route: string) {
-    const stagePlans = plansFor(goal).map((plan) => plan.stage === stage ? { ...plan, route: plan.route === route ? '' : route } : plan)
-    const selectedPlan = stagePlans.find((plan) => plan.stage === stage)
-    updateGoal(goal.id, {
-      stagePlans,
-      targetRoute: selectedPlan?.route || stagePlans.find((plan) => plan.route)?.route || '',
-      durationYears: selectedPlan?.durationYears ?? goal.durationYears,
-    })
+    const stagePlans = plansFor(goal).map((plan) => plan.stage === stage
+      ? { ...plan, route: plan.route === route ? '' : route, destination: route === '留学' && plan.route !== route ? plan.destination : '' }
+      : plan)
+    saveStagePlans(goal, stagePlans, stage)
+  }
+  function updateStageDuration(goal: EducationGoal, stage: string, durationYears: number) {
+    saveStagePlans(goal, plansFor(goal).map((plan) => plan.stage === stage ? { ...plan, durationYears } : plan), stage)
+  }
+  function updateDestination(goal: EducationGoal, stage: string, destination: string) {
+    saveStagePlans(goal, plansFor(goal).map((plan) => plan.stage === stage ? { ...plan, route: '留学', destination } : plan), stage)
   }
   return <div className="financial-page">
     <PageTitle title="教育期望" description="选择子女与当前阶段，再逐行点选未来教育路线；没有规划的阶段可以留空。" />
@@ -149,10 +174,19 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
 
         <div className="education-pathway" aria-label="教育路线设置">
           {plansFor(goal).map((plan) => {
-            const routes = plan.stage === '本科' || plan.stage === '研究生' ? higherEducationRoutes : plan.stage === '早教' ? ['私立（中国）', '不安排'] : schoolRoutes
             return <div className="education-stage-row" key={plan.stage}>
-              <div className="education-stage-label"><strong>{plan.stage}</strong><span>{plan.durationYears} 年</span></div>
-              <div className="education-route-options">{routes.map((route) => <button className={`route-chip ${plan.route === route ? 'is-selected' : ''}`} type="button" key={route} aria-pressed={plan.route === route} onClick={() => updateRoute(goal, plan.stage, route)}>{route}</button>)}</div>
+              <div className="education-stage-label">
+                <strong>{plan.stage}</strong>
+                <label className="education-duration-control"><span className="sr-only">{plan.stage}年限</span><select value={plan.durationYears} aria-label={`${plan.stage}年限`} onChange={(event) => updateStageDuration(goal, plan.stage, Number(event.target.value))}>{educationYearOptions.map((year) => <option value={year} key={year}>{year} 年</option>)}</select></label>
+              </div>
+              <div className="education-route-options">
+                {educationRoutes.map((route) => <button className={`route-chip ${plan.route === route ? 'is-selected' : ''}`} type="button" key={route} aria-pressed={plan.route === route} onClick={() => updateRoute(goal, plan.stage, route)}>{route}</button>)}
+                {plan.route === '留学' ? <label className="education-destination-control"><span className="sr-only">{plan.stage}留学国家或地区</span><select value={plan.destination ?? ''} aria-label={`${plan.stage}留学国家或地区`} onChange={(event) => updateDestination(goal, plan.stage, event.target.value)}>
+                  <option value="">选择国家或地区</option>
+                  <optgroup label="热门选项">{popularDestinations.map((destination) => <option value={destination} key={destination}>{destination}</option>)}</optgroup>
+                  <optgroup label="其他国家和地区">{otherDestinations.map((destination) => <option value={destination} key={destination}>{destination}</option>)}</optgroup>
+                </select></label> : null}
+              </div>
             </div>
           })}
         </div>

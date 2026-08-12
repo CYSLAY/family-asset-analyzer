@@ -123,6 +123,7 @@ export interface EducationStagePlan {
   stage: string
   durationYears: number
   route: string
+  destination?: string
 }
 
 export const educationStageDefaults: EducationStagePlan[] = [
