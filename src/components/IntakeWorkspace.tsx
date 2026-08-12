@@ -55,13 +55,13 @@ const otherCities = ['杭州', '成都', '重庆', '天津', '苏州', '南京',
 
 export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = false }: Props) {
   const { customers, selectedCustomerId, selectCustomer, addCustomer, updateCustomer } = useCustomerStore()
-  const [view, setView] = useState<IntakeView>('overview')
+  const [view, setView] = useState<IntakeView>(selfService ? 'profile' : 'overview')
   const [newName, setNewName] = useState('')
   const [creating, setCreating] = useState(false)
   const customer = customers.find((item) => item.id === selectedCustomerId) ?? null
 
   const recentCustomers = useMemo(
-    () => customers.slice(0, 6),
+    () => customers.filter((item) => item.source !== 'self_service').slice(0, 6),
     [customers],
   )
 
@@ -105,31 +105,39 @@ export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = f
 
   const filled = new Set(stepMeta.filter((item) => hasIntakeStepData(customer, item.key)).map((item) => item.key))
   const activeMeta = stepMeta.find((item) => item.key === view)
+  const nameEntered = Boolean(customer.primaryContactName.trim())
+  const selfServiceLocked = selfService && !nameEntered
+
+  function switchView(next: IntakeView) {
+    if (selfServiceLocked && next !== 'profile') return
+    setView(next)
+  }
 
   return <div className="intake-workspace">
     <header className="intake-header">
       <div>
-        <button className="back-button" type="button" onClick={() => { if (selfService) setView('overview'); else selectCustomer('') }}><ArrowLeftIcon size={17} /> {selfService ? '返回填写总览' : '切换客户'}</button>
+        {!selfService ? <button className="back-button" type="button" onClick={() => selectCustomer('')}><ArrowLeftIcon size={17} /> 切换客户</button> : null}
         <h1>{selfService ? customer.primaryContactName ? `${customer.primaryContactName}的家庭资料` : '我的家庭资料' : customer.householdName}</h1>
-        <p>{selfService ? '可按任意顺序填写，资料会自动保存在本机并同步至云端。' : '可自由选择任意模块录入，系统会根据已有内容自动更新填写状态。'}</p>
+        <p>{selfService ? selfServiceLocked ? '请先填写主要联系人姓名，之后即可进入其他资料模块。' : '可按任意顺序填写，完成度超过 10% 后会自动同步至云端。' : '可自由选择任意模块录入，系统会根据已有内容自动更新填写状态。'}</p>
       </div>
       <div className="intake-progress-number"><strong>{intakeCompletion(customer)}%</strong><span>模块已有资料</span></div>
     </header>
 
     <nav className="intake-quick-nav" aria-label="录入模块快速切换">
-      <button className={view === 'overview' ? 'quick-nav-item is-active' : 'quick-nav-item'} type="button" onClick={() => setView('overview')}><FileTextIcon size={17} /><span>录入总览</span></button>
+      <button className={view === 'overview' ? 'quick-nav-item is-active' : 'quick-nav-item'} disabled={selfServiceLocked} type="button" onClick={() => switchView('overview')}><FileTextIcon size={17} /><span>录入总览</span></button>
       {stepMeta.map((item) => {
         const Icon = item.icon
-        return <button className={view === item.key ? 'quick-nav-item is-active' : 'quick-nav-item'} type="button" key={item.key} onClick={() => setView(item.key)}><Icon size={17} /><span>{item.title}</span>{filled.has(item.key) ? <i aria-label="已填写" /> : null}</button>
+        const locked = selfServiceLocked && item.key !== 'profile'
+        return <button aria-label={locked ? `${item.title}，请先填写姓名` : item.title} className={view === item.key ? 'quick-nav-item is-active' : 'quick-nav-item'} disabled={locked} type="button" key={item.key} onClick={() => switchView(item.key)}><Icon size={17} /><span>{item.title}</span>{filled.has(item.key) ? <i aria-label="已填写" /> : null}</button>
       })}
-      <button className="quick-nav-item report" type="button" onClick={onOpenReport}><FileTextIcon size={17} /><span>分析报告</span></button>
+      <button aria-label={selfServiceLocked ? '分析报告，请先填写姓名' : '分析报告'} className="quick-nav-item report" disabled={selfServiceLocked} type="button" onClick={onOpenReport}><FileTextIcon size={17} /><span>分析报告</span></button>
     </nav>
 
     <div className="intake-layout">
       <main className="intake-content">
-        {view === 'overview' ? <IntakeOverview filled={filled} onOpen={setView} onOpenReport={onOpenReport} /> : <>
+        {view === 'overview' ? <IntakeOverview filled={filled} onOpen={switchView} onOpenReport={onOpenReport} /> : <>
           <div className="module-content-heading"><div><span className="section-kicker">资料模块</span><h2>{activeMeta?.title}</h2><p>{activeMeta?.description}</p></div><span className={filled.has(view) ? 'confirmation-badge is-done' : 'confirmation-badge'}>{filled.has(view) ? '已填写' : '待确认'}</span></div>
-          {view === 'profile' ? <ProfileForm customer={customer} onUpdate={(patch) => updateCustomer(customer.id, patch)} /> : null}
+          {view === 'profile' ? <ProfileForm customer={customer} requireName={selfService} onUpdate={(patch) => updateCustomer(customer.id, patch)} /> : null}
           {view === 'members' ? <MemberForm customer={customer} /> : null}
           {view === 'fixed_assets' ? <FinancialWorkspace section="fixed" onChooseCustomer={() => selectCustomer('')} /> : null}
           {view === 'liquid_assets' ? <FinancialWorkspace section="liquid" onChooseCustomer={() => selectCustomer('')} /> : null}
@@ -166,12 +174,13 @@ function IntakeOverview({ filled, onOpen, onOpenReport }: { filled: Set<IntakeSt
   </>
 }
 
-function ProfileForm({ customer, onUpdate }: { customer: CustomerProfile; onUpdate: (patch: Partial<CustomerProfile>) => void }) {
+function ProfileForm({ customer, requireName, onUpdate }: { customer: CustomerProfile; requireName: boolean; onUpdate: (patch: Partial<CustomerProfile>) => void }) {
   const knownCities = [...popularCities, ...otherCities]
   const hasLegacyCity = Boolean(customer.city && !knownCities.includes(customer.city))
   return <section className="form-section module-form">
+    {requireName && !customer.primaryContactName.trim() ? <p className="profile-required-note" role="status">请先填写主要联系人姓名。填写前资料仅保存在当前设备，不会上传云端。</p> : null}
     <div className="form-grid two-columns">
-      <Field label="主要联系人姓名"><input value={customer.primaryContactName} onChange={(event) => {
+      <Field label={requireName ? '主要联系人姓名（必填）' : '主要联系人姓名'}><input required={requireName} aria-required={requireName} value={customer.primaryContactName} placeholder="请输入姓名" onChange={(event) => {
         const name = event.target.value
         onUpdate({
           primaryContactName: name,

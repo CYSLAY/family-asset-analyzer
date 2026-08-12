@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
+  CaretLeftIcon,
+  CaretRightIcon,
   MagnifyingGlassIcon,
   PlusIcon,
   TrashIcon,
@@ -7,6 +9,7 @@ import {
   UsersThreeIcon,
 } from '@phosphor-icons/react'
 import { intakeCompletion, type CustomerProfile } from '../types/domain'
+import { buildCustomerDirectoryView } from '../lib/customerDirectory'
 import { useCustomerStore } from '../stores/customerStore'
 
 interface CustomerDirectoryProps {
@@ -24,21 +27,16 @@ export function CustomerDirectory({ onStartIntake, onOpenReport }: CustomerDirec
   const [search, setSearch] = useState('')
   const [newName, setNewName] = useState('')
   const [creating, setCreating] = useState(false)
+  const [advisorPage, setAdvisorPage] = useState(1)
   const [pendingDelete, setPendingDelete] = useState<CustomerProfile | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
 
-  const visibleCustomers = useMemo(() => {
-    const keyword = search.trim().toLocaleLowerCase('zh-CN')
-    return customers.filter((customer) => {
-      if (!keyword) return true
-      return [customer.primaryContactName, customer.householdName, customer.city]
-        .some((value) => value.toLocaleLowerCase('zh-CN').includes(keyword))
-    })
-  }, [customers, search])
+  const directoryView = useMemo(() => buildCustomerDirectoryView(customers, search, advisorPage), [advisorPage, customers, search])
+  const { visibleCustomers, searchActive, advisorCustomers, selfServiceCustomers, advisorPageCount, advisorPage: currentAdvisorPage, displayedAdvisorCustomers, displayedSelfServiceCustomers } = directoryView
   const customerGroups = [
-    { key: 'advisor', title: '顾问录入', description: '由您在管理工作区建立和维护的客户档案', customers: visibleCustomers.filter((customer) => customer.source !== 'self_service') },
-    { key: 'self_service', title: '客户自填', description: '客户通过“家庭财务自测”独立填写并自动提交的档案', customers: visibleCustomers.filter((customer) => customer.source === 'self_service') },
+    { key: 'advisor', title: '顾问录入', description: '由您在管理工作区建立和维护的客户档案', customers: displayedAdvisorCustomers, total: advisorCustomers.length },
+    { key: 'self_service', title: '客户自填', description: '客户通过“家庭财务自测”独立填写并自动提交的档案', customers: displayedSelfServiceCustomers, total: selfServiceCustomers.length },
   ]
 
   async function handleCreate() {
@@ -75,7 +73,7 @@ export function CustomerDirectory({ onStartIntake, onOpenReport }: CustomerDirec
       <section className="directory-tools">
         <label className="search-field">
           <MagnifyingGlassIcon size={18} />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索姓名、家庭名称或城市" aria-label="搜索客户" />
+          <input value={search} onChange={(event) => { setSearch(event.target.value); setAdvisorPage(1) }} placeholder="搜索姓名、家庭名称或城市" aria-label="搜索客户" />
         </label>
       </section>
 
@@ -93,7 +91,7 @@ export function CustomerDirectory({ onStartIntake, onOpenReport }: CustomerDirec
       {visibleCustomers.length ? (
         <div className="customer-source-groups">
           {customerGroups.map((group) => group.customers.length ? <section className="customer-source-section" key={group.key} aria-label={group.title}>
-            <header className="customer-source-heading"><div><span className={`customer-source-mark ${group.key}`} /> <strong>{group.title}</strong><p>{group.description}</p></div><span>{group.customers.length} 份档案</span></header>
+            <header className="customer-source-heading"><div><span className={`customer-source-mark ${group.key}`} /> <strong>{group.title}</strong><p>{group.description}</p></div><span>{group.total} 份档案</span></header>
             <div className="customer-list">
               {group.customers.map((customer) => <article className="customer-row" key={customer.id}>
                 <button className="customer-main" type="button" onClick={() => { selectCustomer(customer.id); onStartIntake() }}>
@@ -108,6 +106,14 @@ export function CustomerDirectory({ onStartIntake, onOpenReport }: CustomerDirec
                 </div>
               </article>)}
             </div>
+            {!searchActive && group.key === 'advisor' && advisorPageCount > 1 ? <nav className="customer-pagination" aria-label="顾问录入档案分页">
+              <span>第 {currentAdvisorPage} 页，共 {advisorPageCount} 页</span>
+              <div>
+                <button aria-label="上一页" disabled={currentAdvisorPage === 1} type="button" onClick={() => setAdvisorPage((page) => Math.max(1, page - 1))}><CaretLeftIcon size={16} /> 上一页</button>
+                <button aria-label="下一页" disabled={currentAdvisorPage === advisorPageCount} type="button" onClick={() => setAdvisorPage((page) => Math.min(advisorPageCount, page + 1))}>下一页 <CaretRightIcon size={16} /></button>
+              </div>
+            </nav> : null}
+            {!searchActive && group.key === 'self_service' && group.total > 2 ? <p className="customer-hidden-note">当前显示最近 2 份客户自填档案，其余档案可通过上方搜索查找。</p> : null}
           </section> : null)}
         </div>
       ) : (

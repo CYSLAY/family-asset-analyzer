@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { createCustomer, type CustomerProfile, type FamilyMember, type SaveState } from '../types/domain'
+import { canSyncSelfServiceCustomer, createCustomer, type CustomerProfile, type FamilyMember, type SaveState } from '../types/domain'
 import { deleteCustomerPermanently, getCustomers, putCustomer } from '../lib/localDb'
 import { getAccessSession } from '../lib/access'
 import { deleteWorkspaceCustomer, pushWorkspaceCustomer } from '../lib/usernameSync'
@@ -36,7 +36,7 @@ function scheduleSelfServiceSync(customerId: string) {
   selfServiceSyncTimer = setTimeout(() => {
     const session = getPublicIntakeSession()
     const customer = useCustomerStore.getState().customers.find((item) => item.id === customerId)
-    if (!session || session.id !== customerId || !customer || customer.source !== 'self_service') return
+    if (!session || session.id !== customerId || !customer || customer.source !== 'self_service' || !canSyncSelfServiceCustomer(customer)) return
     useCustomerStore.setState({ syncState: 'syncing' })
     void pushPublicIntake(session, customer)
       .then(() => useCustomerStore.setState({ syncState: 'synced' }))

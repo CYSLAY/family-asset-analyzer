@@ -1,4 +1,4 @@
-import type { CustomerProfile } from '../types/domain'
+import { canSyncSelfServiceCustomer, type CustomerProfile } from '../types/domain'
 import { supabase } from './supabase'
 import { migrateCustomerProfile } from './customerMigrations'
 
@@ -61,7 +61,9 @@ export async function listPublicIntakesForAdvisor(username: string, accessCode: 
   if (!supabase) return []
   const { data, error } = await supabase.rpc('workspace_list_public_intakes', { p_username: username, p_access_code: accessCode })
   if (error) throw error
-  return ((data ?? []) as RemoteRecord[]).map((record) => ({ ...migrateCustomerProfile(record.document).customer, source: 'self_service' as const }))
+  return ((data ?? []) as RemoteRecord[])
+    .map((record) => ({ ...migrateCustomerProfile(record.document).customer, source: 'self_service' as const }))
+    .filter(canSyncSelfServiceCustomer)
 }
 
 export async function pushPublicIntakeAsAdvisor(username: string, accessCode: string, customer: CustomerProfile) {

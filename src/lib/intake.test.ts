@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createAsset, createCustomer, hasIntakeStepData, intakeCompletion, isIntakeComplete } from '../types/domain'
+import { canSyncSelfServiceCustomer, createAsset, createCustomer, hasIntakeStepData, intakeCompletion, isIntakeComplete } from '../types/domain'
 
 describe('automatic intake status', () => {
   it('keeps legacy customers readable and derives status from their data', () => {
@@ -29,5 +29,11 @@ describe('automatic intake status', () => {
     customer.householdName = '我的家庭'
     expect(hasIntakeStepData(customer, 'profile')).toBe(false)
     expect(intakeCompletion(customer)).toBe(0)
+    expect(canSyncSelfServiceCustomer(customer)).toBe(false)
+    customer.city = '香港'
+    expect(intakeCompletion(customer)).toBeGreaterThan(10)
+    expect(canSyncSelfServiceCustomer(customer)).toBe(false)
+    customer.primaryContactName = '测试客户'
+    expect(canSyncSelfServiceCustomer(customer)).toBe(true)
   })
 })

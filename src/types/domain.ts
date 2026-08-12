@@ -67,6 +67,10 @@ export function intakeCompletion(customer: CustomerProfile) {
   return Math.round((intakeStepKeys.filter((step) => hasIntakeStepData(customer, step)).length / intakeStepKeys.length) * 100)
 }
 
+export function canSyncSelfServiceCustomer(customer: CustomerProfile) {
+  return Boolean(customer.primaryContactName.trim()) && intakeCompletion(customer) > 10
+}
+
 export type AssetCategory = 'cash' | 'bank' | 'fund' | 'stock' | 'bond' | 'property' | 'vehicle' | 'pension' | 'receivable' | 'other'
 export type LiquidityLevel = 'immediate' | 'within_month' | 'long_term'
 

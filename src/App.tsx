@@ -16,7 +16,7 @@ import { putCustomer } from './lib/localDb'
 import { createPublicIntakeSession, fetchPublicIntake, getPublicIntakeSession, pushPublicIntake } from './lib/publicIntake'
 import { synchronizeWorkspace } from './lib/usernameSync'
 import { useCustomerStore } from './stores/customerStore'
-import { createCustomer, type CustomerProfile } from './types/domain'
+import { canSyncSelfServiceCustomer, createCustomer, type CustomerProfile } from './types/domain'
 
 const AnalysisDashboard = lazy(() => import('./components/AnalysisDashboard').then((module) => ({ default: module.AnalysisDashboard })))
 
@@ -81,7 +81,7 @@ export function App() {
         customer = { ...createCustomer('', 'self_service'), id: session.id, householdName: '我的家庭' }
       }
       await putCustomer(customer)
-      if (cloudFetched && (!remoteCustomer || customer.updatedAt > remoteCustomer.updatedAt)) {
+      if (cloudFetched && canSyncSelfServiceCustomer(customer) && (!remoteCustomer || customer.updatedAt > remoteCustomer.updatedAt)) {
         try { await pushPublicIntake(session, customer) } catch { cloudFailed = true }
       }
       if (cancelled) return
@@ -96,11 +96,12 @@ export function App() {
 
   function openMainView(next: AppView) {
     if (next === 'customers' && !selfService) selectCustomer('')
+    if (next === 'analysis' && selfService && (!selectedCustomer || !selectedCustomer.primaryContactName.trim())) return
     setView(next)
   }
 
   function openReport() {
-    if (selectedCustomer) setView('analysis')
+    if (selectedCustomer && (!selfService || selectedCustomer.primaryContactName.trim())) setView('analysis')
   }
 
   function exitWorkspace() {
@@ -118,8 +119,9 @@ export function App() {
   const navigation = selfService ? selfServiceNavigation : adminNavigation
   const modeLabel = selfService ? '家庭财务自测' : '家庭财务分析'
   const modeDescription = selfService ? '我的资料与报告' : '客户资料工作区'
+  const selfServiceCloudEligible = Boolean(selectedCustomer && canSyncSelfServiceCustomer(selectedCustomer))
   const syncLabel = selfService
-    ? syncState === 'syncing' ? '正在自动同步' : syncState === 'error' ? '云端同步待重试' : '资料已自动同步'
+    ? !selfServiceCloudEligible ? '填写姓名后自动同步' : syncState === 'dirty' ? '等待自动同步' : syncState === 'syncing' ? '正在自动同步' : syncState === 'error' ? '云端同步待重试' : '资料已自动同步'
     : workspaceSync === 'synced' ? '云端工作区已连接' : workspaceSync === 'syncing' ? '正在连接云端' : workspaceSync === 'error' ? '云端连接失败' : '退出当前工作区'
 
   return <div className={selfService ? 'app-shell self-service-shell' : 'app-shell'}>
@@ -132,7 +134,8 @@ export function App() {
         {navigation.map((item) => {
           const Icon = item.icon
           const active = view === item.view || !selfService && view === 'analysis' && item.view === 'customers'
-          return <button aria-label={item.label} className={active ? 'nav-item is-active' : 'nav-item'} key={item.view} type="button" onClick={() => openMainView(item.view)}><Icon size={21} weight={active ? 'fill' : 'regular'} /><span>{item.label}</span></button>
+        const locked = selfService && item.view === 'analysis' && !selectedCustomer?.primaryContactName.trim()
+        return <button aria-label={locked ? `${item.label}，请先填写姓名` : item.label} className={active ? 'nav-item is-active' : 'nav-item'} disabled={locked} key={item.view} type="button" onClick={() => openMainView(item.view)}><Icon size={21} weight={active ? 'fill' : 'regular'} /><span>{item.label}</span></button>
         })}
       </nav>
       <button aria-label="退出当前工作区" className="sync-card" type="button" onClick={exitWorkspace}>
@@ -151,7 +154,7 @@ export function App() {
       </header>
 
       <div className="page-wrap">
-        {syncState === 'error' && selfService ? <div className="public-sync-warning" role="status">当前资料已保存在本机，云端连接恢复后会继续自动同步。</div> : null}
+        {syncState === 'error' && selfService && selfServiceCloudEligible ? <div className="public-sync-warning" role="status">当前资料已保存在本机，云端连接恢复后会继续自动同步。</div> : null}
         {view === 'intake' ? <IntakeWorkspace selfService={selfService} onOpenReport={openReport} onOpenCustomers={() => { if (!selfService) { selectCustomer(''); setView('customers') } }} /> : null}
         {view === 'customers' && !selfService ? <CustomerDirectory onStartIntake={() => setView('intake')} onOpenReport={() => setView('analysis')} /> : null}
         {view === 'analysis' ? <Suspense fallback={<div className="report-skeleton" aria-label="正在生成分析报告"><span /><span /><span /></div>}><AnalysisDashboard onChooseCustomer={() => { if (selfService) setView('intake'); else { selectCustomer(''); setView('customers') } }} /></Suspense> : null}
@@ -162,7 +165,8 @@ export function App() {
       {navigation.map((item) => {
         const Icon = item.icon
         const active = view === item.view || !selfService && view === 'analysis' && item.view === 'customers'
-        return <button aria-label={item.label} className={active ? 'is-active' : ''} key={item.view} type="button" onClick={() => openMainView(item.view)}><Icon size={21} /><span>{item.label}</span></button>
+        const locked = selfService && item.view === 'analysis' && !selectedCustomer?.primaryContactName.trim()
+        return <button aria-label={locked ? `${item.label}，请先填写姓名` : item.label} className={active ? 'is-active' : ''} disabled={locked} key={item.view} type="button" onClick={() => openMainView(item.view)}><Icon size={21} /><span>{item.label}</span></button>
       })}
     </nav>
   </div>
