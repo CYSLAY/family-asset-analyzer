@@ -5,6 +5,7 @@ import {
   createCashFlow,
   createEducationGoal,
   createLiability,
+  createMember,
   educationStageDefaults,
   type AssetEntry,
   type CashFlowEntry,
@@ -59,14 +60,14 @@ const liabilityPresets: LiabilityPreset[] = [
   { name: '其他负债', category: 'other' },
 ]
 const incomePresets: FlowPreset[] = [
-  { name: '税后收入', category: '工作收入', frequency: 'yearly', necessary: false, aliases: ['税后工资'] },
+  { name: '税后收入', category: '工作收入', frequency: 'yearly', necessary: false, aliases: ['税后工资', '工作收入'] },
   { name: '奖金、佣金', category: '工作收入', frequency: 'yearly', necessary: false, aliases: ['奖金与佣金'] },
   { name: '住房公积金', category: '住房公积金', frequency: 'monthly', necessary: false },
   { name: '日常提取', category: '经营收入', frequency: 'monthly', necessary: false, aliases: ['经营收入'] },
   { name: '其他收入', category: '其他收入', frequency: 'yearly', necessary: false, aliases: ['投资与理财收入', '租金收入', '养老金及其他收入'] },
 ]
 const expensePresets: FlowPreset[] = [
-  { name: '餐饮零食', category: '基本生活', frequency: 'monthly', necessary: true, aliases: ['餐饮日用'] },
+  { name: '餐饮零食', category: '基本生活', frequency: 'monthly', necessary: true, aliases: ['餐饮日用', '基本生活'] },
   { name: '交通通讯', category: '基本生活', frequency: 'monthly', necessary: true },
   { name: '衣服、美容', category: '可调整支出', frequency: 'yearly', necessary: false, aliases: ['服饰美容'] },
   { name: '娱乐、旅游', category: '可调整支出', frequency: 'yearly', necessary: false, aliases: ['娱乐旅游'] },
@@ -209,31 +210,81 @@ function LegacyBalanceEditor({ customer, onUpdate, mode }: EditorProps & { mode:
 }
 
 function CashFlowEditor({ customer, onUpdate }: EditorProps) {
-  function saveFlow(key: 'incomes' | 'expenses', preset: FlowPreset, entry: CashFlowEntry | undefined, patch: Partial<CashFlowEntry>) {
+  const primaryMember = customer.members.find((member) => member.isPrimaryIncomeProvider) ?? customer.members.find((member) => member.relation === '本人') ?? customer.members[0]
+  const existingIncomeMemberIds = customer.incomes.map((item) => item.memberId).filter((id): id is string => Boolean(id))
+  const hasHouseholdIncome = customer.incomes.some((item) => !item.memberId)
+  const [visibleIncomeMembers, setVisibleIncomeMembers] = useState<string[]>(() => Array.from(new Set([
+    ...(primaryMember ? [primaryMember.id] : ['household']),
+    ...existingIncomeMemberIds,
+    ...(hasHouseholdIncome && primaryMember ? ['household'] : []),
+  ])))
+
+  function saveFlow(key: 'incomes' | 'expenses', preset: FlowPreset, entry: CashFlowEntry | undefined, patch: Partial<CashFlowEntry>, memberId: string | null = null) {
     if (entry) onUpdate({ [key]: customer[key].map((item) => item.id === entry.id ? { ...item, ...patch } : item) })
-    else onUpdate({ [key]: [...customer[key], { ...createCashFlow(key === 'incomes' ? 'income' : 'expense'), ...preset, ...patch }] })
+    else onUpdate({ [key]: [...customer[key], { ...createCashFlow(key === 'incomes' ? 'income' : 'expense'), ...preset, memberId, ...patch }] })
   }
+
+  function incomeRows(memberKey: string) {
+    const memberId = memberKey === 'household' ? null : memberKey
+    const memberEntries = customer.incomes.filter((item) => item.memberId === memberId)
+    const claimed = new Set<string>()
+    const rows = incomePresets.map((preset) => {
+      const entry = memberEntries.find((item) => !claimed.has(item.id) && (item.name === preset.name || preset.aliases?.includes(item.name)))
+      if (entry) claimed.add(entry.id)
+      return { preset, entry }
+    })
+    return { rows, extras: memberEntries.filter((item) => !claimed.has(item.id)), memberId }
+  }
+
+  const expenseClaimed = new Set<string>()
+  const expenseRows = expensePresets.map((preset) => {
+    const entry = customer.expenses.find((item) => !expenseClaimed.has(item.id) && (item.name === preset.name || preset.aliases?.includes(item.name)))
+    if (entry) expenseClaimed.add(entry.id)
+    return { preset, entry }
+  })
+  const extraExpenses = customer.expenses.filter((item) => !expenseClaimed.has(item.id))
+  const availableIncomeMembers = customer.members.filter((member) => !visibleIncomeMembers.includes(member.id))
+
+  function addIncomeMember(value: string) {
+    if (!value) return
+    if (value !== 'new') {
+      setVisibleIncomeMembers((ids) => [...ids, value])
+      return
+    }
+    const member = createMember({ relation: '其他' })
+    onUpdate({ members: [...customer.members, member] })
+    setVisibleIncomeMembers((ids) => [...ids, member.id])
+  }
+
+  function updateIncomeMemberName(memberId: string, name: string) {
+    onUpdate({ members: customer.members.map((member) => member.id === memberId ? { ...member, name } : member) })
+  }
+
   return <div className="financial-page one-screen-editor">
-    <PageTitle title="生活收支" description="常见收入和支出集中在一页内录入，可按月、季度或年度填写。" />
+    <PageTitle title="生活收支" description="收入按家庭成员分别记录，支出按家庭整体记录；金额单位已经预设。" />
     <SummaryLine items={[["家庭年收入", annualTotal(customer.incomes)], ["家庭年支出", annualTotal(customer.expenses)], ["年度结余", annualTotal(customer.incomes) - annualTotal(customer.expenses)]]} />
-    {(['incomes', 'expenses'] as const).map((key) => {
-      const isIncome = key === 'incomes'
-      const presets = isIncome ? incomePresets : expensePresets
-      const claimed = new Set<string>()
-      const rows = presets.map((preset) => {
-        const entry = customer[key].find((item) => !claimed.has(item.id) && (item.name === preset.name || preset.aliases?.includes(item.name)))
-        if (entry) claimed.add(entry.id)
-        return { preset, entry }
-      })
-      const extras = customer[key].filter((item) => !claimed.has(item.id))
-      return <SheetSection key={key} title={isIncome ? '收入来源' : '家庭支出'} description={isIncome ? '金额频率已按常用口径预设，也可以直接调整。' : '必要支出将用于估算家庭现金储备需求。'}>
-        <div className={`entry-sheet cashflow-sheet ${isIncome ? 'income-sheet' : ''}`}>
-          <div className="sheet-row sheet-head"><span>项目</span><span>每期金额</span><span>频率</span><span>归属成员</span>{!isIncome ? <span>必要支出</span> : null}</div>
-          {rows.map(({ preset, entry }) => <CashFlowSheetRow key={preset.name} preset={preset} entry={entry} customer={customer} showNecessary={!isIncome} onChange={(patch) => saveFlow(key, preset, entry, patch)} />)}
-          {extras.map((entry) => <CashFlowSheetRow key={entry.id} preset={{ name: entry.name || entry.category, category: entry.category, frequency: entry.frequency, necessary: entry.necessary }} entry={entry} customer={customer} showNecessary={!isIncome} onChange={(patch) => saveFlow(key, { name: entry.name, category: entry.category, frequency: entry.frequency, necessary: entry.necessary }, entry, patch)} onDelete={() => onUpdate({ [key]: customer[key].filter((item) => item.id !== entry.id) })} />)}
-        </div>
-      </SheetSection>
-    })}
+    <SheetSection title="收入来源" description="每位成员独立填写，单位固定显示为元/月或元/年。">
+      <div className="income-member-list">
+        {visibleIncomeMembers.map((memberKey) => {
+          const member = customer.members.find((item) => item.id === memberKey)
+          const { rows, extras, memberId } = incomeRows(memberKey)
+          return <section className="income-member-block" key={memberKey}>
+            <div className="income-member-heading"><div>{member ? <label><span className="sr-only">收入成员姓名</span><input aria-label="收入成员姓名" value={member.name} onChange={(event) => updateIncomeMemberName(member.id, event.target.value)} placeholder="填写成员姓名" /></label> : <strong>{memberKey === 'household' ? '家庭共有收入' : '未命名成员'}</strong>}<span>{member?.relation || '家庭'}</span></div>{memberKey !== primaryMember?.id && !extras.length && !rows.some((item) => item.entry) ? <button type="button" onClick={() => setVisibleIncomeMembers((ids) => ids.filter((id) => id !== memberKey))}>移除</button> : null}</div>
+            <div className="compact-flow-grid income-flow-grid">
+              {rows.map(({ preset, entry }) => <CompactFlowField key={preset.name} label={preset.name} entry={entry} frequency={entry?.frequency ?? preset.frequency} onChange={(amount) => saveFlow('incomes', preset, entry, { amount }, memberId)} />)}
+              {extras.map((entry) => <CompactFlowField key={entry.id} label={entry.name || entry.category} entry={entry} frequency={entry.frequency} onChange={(amount) => saveFlow('incomes', { name: entry.name, category: entry.category, frequency: entry.frequency, necessary: entry.necessary }, entry, { amount }, memberId)} onDelete={() => onUpdate({ incomes: customer.incomes.filter((item) => item.id !== entry.id) })} />)}
+            </div>
+          </section>
+        })}
+        <label className="add-income-member"><PlusIcon size={17} /><span className="sr-only">添加其他收入成员</span><select value="" onChange={(event) => addIncomeMember(event.target.value)}><option value="">添加其他成员</option>{availableIncomeMembers.map((member) => <option value={member.id} key={member.id}>{member.name || member.relation}</option>)}<option value="new">新建家庭成员</option></select></label>
+      </div>
+    </SheetSection>
+    <SheetSection title="家庭支出" description="按家庭整体填写，常见项目采用参考图中的月度或年度口径。">
+      <div className="compact-flow-grid expense-flow-grid">
+        {expenseRows.map(({ preset, entry }) => <CompactFlowField key={preset.name} label={preset.name} entry={entry} frequency={entry?.frequency ?? preset.frequency} necessary={entry?.necessary ?? preset.necessary} onChange={(amount) => saveFlow('expenses', preset, entry, { amount })} />)}
+        {extraExpenses.map((entry) => <CompactFlowField key={entry.id} label={entry.name || entry.category} entry={entry} frequency={entry.frequency} necessary={entry.necessary} onChange={(amount) => saveFlow('expenses', { name: entry.name, category: entry.category, frequency: entry.frequency, necessary: entry.necessary }, entry, { amount })} onDelete={() => onUpdate({ expenses: customer.expenses.filter((item) => item.id !== entry.id) })} />)}
+      </div>
+    </SheetSection>
   </div>
 }
 
@@ -366,6 +417,15 @@ function LiabilitySheetRow({ preset, entry, onChange, onDelete }: { preset: Liab
     <SheetMoneyInput label={`${preset.name}年利率`} suffix="%" value={entry?.annualInterestRate ?? 0} onChange={(annualInterestRate) => onChange({ annualInterestRate })} />
     <label className="sheet-input-wrap"><span className="sr-only">{preset.name}剩余月数</span><input aria-label={`${preset.name}剩余月数`} type="number" min="0" value={entry?.remainingMonths ?? ''} onChange={(event) => onChange({ remainingMonths: nullableNumber(event.target.value) })} /><i>月</i></label>
     <SheetMoneyInput label={`${preset.name}未来一年应还`} value={entry?.dueWithinOneYear ?? 0} onChange={(dueWithinOneYear) => onChange({ dueWithinOneYear })} />
+  </div>
+}
+
+function CompactFlowField({ label, entry, frequency, necessary, onChange, onDelete }: { label: string; entry?: CashFlowEntry; frequency: CashFlowEntry['frequency']; necessary?: boolean; onChange: (amount: number) => void; onDelete?: () => void }) {
+  const unit = frequency === 'monthly' ? '元/月' : frequency === 'quarterly' ? '元/季度' : '元/年'
+  return <div className={`compact-flow-field ${entry ? 'has-data' : ''}`}>
+    <div className="compact-flow-label"><strong>{label}</strong>{necessary ? <small>必要支出</small> : null}</div>
+    <label className="compact-flow-input"><span className="sr-only">{label}（{unit}）</span><input aria-label={`${label}（${unit}）`} type="number" min="0" inputMode="decimal" value={entry?.amount || ''} onChange={(event) => onChange(numberValue(event.target.value))} /><i>{unit}</i></label>
+    {onDelete ? <button className="compact-flow-delete" type="button" aria-label={`删除${label}`} onClick={onDelete}><TrashIcon size={14} /></button> : null}
   </div>
 }
 

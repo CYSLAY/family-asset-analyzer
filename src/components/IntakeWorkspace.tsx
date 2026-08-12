@@ -37,7 +37,7 @@ const stepMeta: Array<{ key: IntakeStepKey; title: string; description: string; 
   { key: 'members', title: '家庭成员', description: '成员关系、年龄、工作及健康情况', icon: UsersThreeIcon },
   { key: 'fixed_assets', title: '固定资产', description: '房产、车辆及其他长期资产', icon: BuildingsIcon },
   { key: 'liquid_assets', title: '流动资产与负债', description: '现金、金融资产、贷款与月供', icon: WalletIcon },
-  { key: 'cashflow', title: '生活收支', description: '家庭收入、支出及发生频率', icon: TrendUpIcon },
+  { key: 'cashflow', title: '生活收支', description: '按成员收入与家庭整体支出', icon: TrendUpIcon },
   { key: 'education', title: '教育期望', description: '教育路线、时间与资金准备', icon: CurrencyCircleDollarIcon },
 ]
 
