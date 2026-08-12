@@ -33,7 +33,7 @@ interface Props {
 type IntakeView = 'overview' | IntakeStepKey
 
 const stepMeta: Array<{ key: IntakeStepKey; title: string; description: string; icon: typeof UsersThreeIcon }> = [
-  { key: 'profile', title: '客户资料', description: '联系人、家庭名称、城市与备注', icon: ClipboardTextIcon },
+  { key: 'profile', title: '客户资料', description: '联系人、所在城市与备注', icon: ClipboardTextIcon },
   { key: 'members', title: '家庭成员', description: '成员关系、年龄、工作及健康情况', icon: UsersThreeIcon },
   { key: 'fixed_assets', title: '固定资产', description: '房产、车辆及其他长期资产', icon: BuildingsIcon },
   { key: 'liquid_assets', title: '流动资产与负债', description: '现金、金融资产、贷款与月供', icon: WalletIcon },
@@ -48,6 +48,9 @@ const stabilityLabels: Record<IncomeStability, string> = {
   retired: '退休收入',
   none: '暂无收入',
 }
+
+const popularCities = ['北京', '上海', '广州', '深圳', '香港']
+const otherCities = ['杭州', '成都', '重庆', '天津', '苏州', '南京', '武汉', '西安', '厦门', '青岛', '宁波', '东莞', '佛山', '珠海', '澳门', '台北', '其他城市或地区']
 
 export function IntakeWorkspace({ onOpenReport, onOpenCustomers }: Props) {
   const { customers, selectedCustomerId, selectCustomer, addCustomer, updateCustomer } = useCustomerStore()
@@ -155,11 +158,17 @@ function IntakeOverview({ filled, onOpen, onOpenReport }: { filled: Set<IntakeSt
 }
 
 function ProfileForm({ customer, onUpdate }: { customer: CustomerProfile; onUpdate: (patch: Partial<CustomerProfile>) => void }) {
+  const knownCities = [...popularCities, ...otherCities]
+  const hasLegacyCity = Boolean(customer.city && !knownCities.includes(customer.city))
   return <section className="form-section module-form">
-    <div className="form-grid three-columns">
+    <div className="form-grid two-columns">
       <Field label="主要联系人姓名"><input value={customer.primaryContactName} onChange={(event) => onUpdate({ primaryContactName: event.target.value })} /></Field>
-      <Field label="家庭名称"><input value={customer.householdName} onChange={(event) => onUpdate({ householdName: event.target.value })} /></Field>
-      <Field label="所在城市"><input value={customer.city} onChange={(event) => onUpdate({ city: event.target.value })} placeholder="例如：香港" /></Field>
+      <Field label="所在城市"><select value={customer.city} onChange={(event) => onUpdate({ city: event.target.value })}>
+        <option value="">请选择城市或地区</option>
+        {hasLegacyCity ? <option value={customer.city}>{customer.city}（原有资料）</option> : null}
+        <optgroup label="热门城市">{popularCities.map((city) => <option value={city} key={city}>{city}</option>)}</optgroup>
+        <optgroup label="其他城市和地区">{otherCities.map((city) => <option value={city} key={city}>{city}</option>)}</optgroup>
+      </select></Field>
       <Field label="家庭情况备注" wide><textarea value={customer.notes} onChange={(event) => onUpdate({ notes: event.target.value })} placeholder="记录重要家庭责任、沟通偏好或需要持续关注的事项" /></Field>
     </div>
   </section>

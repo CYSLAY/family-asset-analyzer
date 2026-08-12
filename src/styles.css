@@ -164,6 +164,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .form-section-heading p { margin: 7px 0 0; color: var(--ink-muted); font-size: 13px; }
 .form-section-heading.member-heading { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
 .form-grid { display: grid; gap: 20px; }
+.form-grid.two-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .form-grid.three-columns { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .form-grid.four-columns { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .field-block { min-width: 0; display: grid; align-content: start; gap: 8px; }
@@ -497,6 +498,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .record-id { margin-top: 20px; }
   .form-section { padding: 21px 18px; }
   .form-grid.three-columns { grid-template-columns: 1fr; }
+  .form-grid.two-columns { grid-template-columns: 1fr; }
   .form-grid.four-columns { grid-template-columns: 1fr; }
   .form-section-heading.member-heading { display: block; }
   .form-section-heading.member-heading .subtle-button { width: 100%; margin-top: 16px; }
