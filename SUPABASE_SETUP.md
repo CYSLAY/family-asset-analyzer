@@ -22,14 +22,12 @@ https://zwsjltgkpdiazhrpepla.supabase.co
 
 1. 在 Supabase 左侧进入 `SQL Editor`。
 2. 点击 `New query`。
-3. 依次运行 `supabase/migrations/202608120001_initial_schema.sql` 和 `supabase/migrations/202608120002_username_workspace.sql`。
+3. 依次运行 `supabase/migrations/202608120001_initial_schema.sql`、`202608120002_username_workspace.sql` 和 `202608120003_access_password.sql`。
 4. 每份脚本粘贴后点击 `Run`。
-5. 两次都看到 `Success. No rows returned` 即表示完成。
+5. 每次都看到 `Success. No rows returned` 即表示完成。
 
 这份脚本会建立客户资料与分析快照表，并开启 RLS。每个登录账号只能访问自己的资料。
 
 ## 3. 验证同步
 
-重启本地应用后，输入白名单用户名 `jojo`。新建客户后会自动上传；另一台设备输入同一用户名后会合并最新资料。
-
-当前入口只有用户名，没有密码或验证码，适合个人或受控环境使用，不属于强身份认证。
+重启应用后，输入白名单用户名和访问密码。输入先保存在本机；点击“保存并同步”后才上传当前客户。另一台设备使用相同凭据即可读取已同步资料。
