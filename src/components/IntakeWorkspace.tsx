@@ -113,24 +113,9 @@ export function IntakeWorkspace({ onOpenReport, onOpenArchive }: Props) {
     </header>
 
     <div className="intake-layout">
-      <aside className="intake-module-nav" aria-label="资料模块">
-        <button className={view === 'overview' ? 'module-nav-item is-active' : 'module-nav-item'} type="button" onClick={() => setView('overview')}>
-          <FileTextIcon size={19} /><span><strong>录入总览</strong><small>查看完成情况</small></span>
-        </button>
-        {stepMeta.map((item) => {
-          const Icon = item.icon
-          const isDone = filled.has(item.key)
-          return <button className={view === item.key ? 'module-nav-item is-active' : 'module-nav-item'} type="button" key={item.key} onClick={() => setView(item.key)}>
-            <Icon size={19} /><span><strong>{item.title}</strong><small>{isDone ? '已填写' : '待确认'}</small></span>
-          </button>
-        })}
-        <button className="module-nav-item report-link" type="button" onClick={onOpenReport}>
-          <FileTextIcon size={19} /><span><strong>财务分析报告</strong><small>按现有资料生成</small></span>
-        </button>
-      </aside>
-
       <main className="intake-content">
         {view === 'overview' ? <IntakeOverview filled={filled} onOpen={setView} onOpenReport={onOpenReport} /> : <>
+          <button className="back-button module-overview-back" type="button" onClick={() => setView('overview')}><ArrowLeftIcon size={17} /> 返回录入总览</button>
           <div className="module-content-heading"><div><span className="section-kicker">资料模块</span><h2>{activeMeta?.title}</h2><p>{activeMeta?.description}</p></div><span className={filled.has(view) ? 'confirmation-badge is-done' : 'confirmation-badge'}>{filled.has(view) ? '已填写' : '待确认'}</span></div>
           {view === 'profile' ? <ProfileForm customer={customer} onUpdate={(patch) => updateCustomer(customer.id, patch)} /> : null}
           {view === 'members' ? <MemberForm customer={customer} /> : null}

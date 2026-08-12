@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as echarts from 'echarts/core'
 import { GaugeChart, PieChart } from 'echarts/charts'
 import { AriaComponent, TooltipComponent } from 'echarts/components'
@@ -6,7 +6,7 @@ import { SVGRenderer } from 'echarts/renderers'
 import type { ComposeOption } from 'echarts/core'
 import type { GaugeSeriesOption, PieSeriesOption } from 'echarts/charts'
 import type { TooltipComponentOption } from 'echarts/components'
-import { ArrowRightIcon, CheckCircleIcon, InfoIcon, PrinterIcon } from '@phosphor-icons/react'
+import { ArrowRightIcon, CaretDownIcon, InfoIcon } from '@phosphor-icons/react'
 import { analyzeCustomer, annualize, type HealthLevel, type MetricResult } from '../lib/analysis'
 import { useCustomerStore } from '../stores/customerStore'
 import type { CustomerProfile } from '../types/domain'
@@ -39,7 +39,6 @@ export function AnalysisDashboard({ onChooseCustomer }: Props) {
   if (annualDebtPayments - fixedDebtPayments > 0) expenseRows.push({ name: '流动负债偿还', value: annualDebtPayments - fixedDebtPayments })
   const expenseBreakdown = groupEntries(expenseRows)
   const flowDebt = flowVsDebtMetric(analysis.totals.liquidAssets, analysis.totals.liabilities)
-  const priorityMetrics = [flowDebt.level === 'critical' || flowDebt.level === 'warning' ? flowDebt : null, ...analysis.priorityKeys.map((key) => metric(key))].filter(Boolean).slice(0, 3) as MetricResult[]
 
   return <div className="analysis-page detailed-report">
     <section className="analysis-hero">
@@ -47,14 +46,10 @@ export function AnalysisDashboard({ onChooseCustomer }: Props) {
         <span className="quiet-label">{customer.householdName}的财务分析报告</span>
         <h1>资产结构与现金流诊断</h1>
         <p>所有图表根据当前已录入资料实时计算；缺少数据的板块会明确标示，不使用固定结论代替判断。</p>
-        <button className="report-print-button" type="button" onClick={() => window.print()}><PrinterIcon size={17} /> 打印或保存 PDF</button>
       </div>
-      <div className={`score-block level-${analysis.overallLevel}`}><span>综合健康度</span><strong>{analysis.score ?? '资料不足'}</strong><small>{analysis.score === null ? '已展示可计算项目' : '满分 100 · 严重风险不被平均'}</small></div>
     </section>
 
-    {analysis.score === null ? <section className="positive-banner data-gap-banner"><InfoIcon size={22} weight="fill" /><div><strong>报告已按现有资料生成</strong><p>继续补充资产、负债或收支后，健康度和结论文案会自动更新。</p></div></section> : priorityMetrics.length ? <section className="priority-section"><div className="section-heading plain"><div><h2>优先处理</h2><p>以下问题对家庭财务安全影响最大。</p></div></div><div className="priority-list">{priorityMetrics.map((item, index) => <article key={item.key}><span>{index + 1}</span><div><strong>{item.title}</strong><p>{item.action}</p></div></article>)}</div></section> : <section className="positive-banner"><CheckCircleIcon size={22} weight="fill" /><div><strong>暂未发现紧急问题</strong><p>仍建议定期更新资料，并逐项查看指标依据。</p></div></section>}
-
-    <nav className="report-section-nav" aria-label="报告章节"><a href="#balance-report">资产负债</a><a href="#cashflow-report">收支储蓄</a>{customer.educationGoals.length ? <a href="#education-report">教育目标</a> : null}</nav>
+    <nav className="report-section-nav" aria-label="报告章节"><a href="#balance-report">资产负债</a><a href="#cashflow-report">收支储蓄</a><a href="#education-report">教育目标</a></nav>
 
     <ReportSection id="balance-report" index="01" title="资产负债分析" description="先看家庭净资产，再检查资产配置、债务结构和短期偿债能力。">
       <div className="report-grid two-columns">
@@ -90,12 +85,16 @@ export function AnalysisDashboard({ onChooseCustomer }: Props) {
       </div>
     </ReportSection>
 
-    {customer.educationGoals.length ? <ReportSection id="education-report" index="03" title="教育目标准备" description="教育路线已经纳入档案；资金准备度只在费用假设完整时计算。"><div className="health-grid one-up"><HealthPanel metric={metric('education_readiness')} max={100} healthyRange="目标越临近，已准备资金覆盖比例应越高" /></div></ReportSection> : null}
+    <ReportSection id="education-report" index="03" title="教育目标准备" description="教育路线已经纳入档案；资金准备度只在费用假设完整时计算。"><div className="health-grid one-up"><HealthPanel metric={metric('education_readiness')} max={100} healthyRange="目标越临近，已准备资金覆盖比例应越高" /></div></ReportSection>
   </div>
 }
 
 function ReportSection({ id, index, title, description, children }: { id: string; index: string; title: string; description: string; children: React.ReactNode }) {
-  return <section className="report-section" id={id}><header className="report-section-heading"><span>{index}</span><div><h2>{title}</h2><p>{description}</p></div></header>{children}</section>
+  const [open, setOpen] = useState(true)
+  return <section className={open ? 'report-section is-open' : 'report-section is-collapsed'} id={id}>
+    <header className="report-section-heading"><span>{index}</span><div><h2>{title}</h2><p>{description}</p></div><button className="report-section-toggle" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>{open ? '收起' : '展开'}<CaretDownIcon className={open ? 'is-open' : ''} size={18} /></button></header>
+    {open ? <div className="report-section-content">{children}</div> : null}
+  </section>
 }
 
 function ComparisonPanel({ title, leftLabel, leftValue, rightLabel, rightValue, resultLabel, resultValue, resultPercent, metric }: { title: string; leftLabel: string; leftValue: number; rightLabel: string; rightValue: number; resultLabel: string; resultValue: number; resultPercent: number | null; metric: MetricResult }) {
@@ -132,7 +131,8 @@ function HealthPanel({ metric, max, healthyRange }: { metric: MetricResult; max:
 function PanelHeader({ title, metric }: { title: string; metric?: MetricResult }) { return <header className="panel-heading"><h3>{title}</h3>{metric ? <span className="level-badge">{levelLabels[metric.level]}</span> : null}</header> }
 
 function MetricNarrative({ metric }: { metric: MetricResult }) {
-  return <div className="metric-narrative"><p>{metric.explanation}</p><dl><div><dt>公式</dt><dd>{metric.formula}</dd></div><div><dt>参考区间</dt><dd>{metric.reference}</dd></div></dl><div className="action-note"><strong>建议</strong><span>{metric.action}</span></div></div>
+  const showReference = hasMeaningfulReference(metric.reference)
+  return <div className="metric-narrative"><p>{metric.explanation}</p><dl className={showReference ? '' : 'single-column'}><div><dt>公式</dt><dd>{metric.formula}</dd></div>{showReference ? <div><dt>参考区间</dt><dd>{metric.reference}</dd></div> : null}</dl></div>
 }
 
 function BreakdownTable({ items, total }: { items: BreakdownItem[]; total: number }) {
@@ -176,6 +176,7 @@ function flowVsDebtMetric(liquid: number, liabilities: number): MetricResult {
 }
 
 function customMetric(key: string, label: string, value: number | null, level: HealthLevel, title: string, explanation: string, action: string, formula: string, reference: string): MetricResult { return { key, label, value, unit: 'currency', level, title, explanation, action, formula, reference } }
+function hasMeaningfulReference(reference: string) { return Boolean(reference) && !/不设置统一|不以越低越好|这是集中度指标/.test(reference) }
 function levelColor(level: HealthLevel) { return level === 'critical' ? '#a51d27' : level === 'warning' ? '#cf4a52' : level === 'attention' ? '#d98235' : level === 'healthy' ? '#a72a34' : level === 'strong' ? '#7f1119' : '#b9afb0' }
 function formatMetric(metric: MetricResult) { if (metric.value === null) return '资料不足'; if (metric.unit === 'currency') return compactMoney(metric.value); if (metric.unit === 'percent') return `${metric.value.toFixed(1)}%`; if (metric.unit === 'months') return `${metric.value.toFixed(1)}月`; return `${metric.value.toFixed(2)}倍` }
 function formatMoney(value: number) { return new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', maximumFractionDigits: 0 }).format(value) }
