@@ -180,12 +180,15 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
                 <label className="education-duration-control"><span className="sr-only">{plan.stage}年限</span><select value={plan.durationYears} aria-label={`${plan.stage}年限`} onChange={(event) => updateStageDuration(goal, plan.stage, Number(event.target.value))}>{educationYearOptions.map((year) => <option value={year} key={year}>{year} 年</option>)}</select></label>
               </div>
               <div className="education-route-options">
-                {educationRoutes.map((route) => <button className={`route-chip ${plan.route === route ? 'is-selected' : ''}`} type="button" key={route} aria-pressed={plan.route === route} onClick={() => updateRoute(goal, plan.stage, route)}>{route}</button>)}
-                {plan.route === '留学' ? <label className="education-destination-control"><span className="sr-only">{plan.stage}留学国家或地区</span><select value={plan.destination ?? ''} aria-label={`${plan.stage}留学国家或地区`} onChange={(event) => updateDestination(goal, plan.stage, event.target.value)}>
-                  <option value="">选择国家或地区</option>
-                  <optgroup label="热门选项">{popularDestinations.map((destination) => <option value={destination} key={destination}>{destination}</option>)}</optgroup>
-                  <optgroup label="其他国家和地区">{otherDestinations.map((destination) => <option value={destination} key={destination}>{destination}</option>)}</optgroup>
-                </select></label> : null}
+                {educationRoutes.filter((route) => route !== '留学').map((route) => <button className={`route-chip ${plan.route === route ? 'is-selected' : ''}`} type="button" key={route} aria-pressed={plan.route === route} onClick={() => updateRoute(goal, plan.stage, route)}>{route}</button>)}
+                <div className={plan.route === '留学' ? 'study-abroad-combo is-active' : 'study-abroad-combo'}>
+                  <button className={`route-chip ${plan.route === '留学' ? 'is-selected' : ''}`} type="button" aria-pressed={plan.route === '留学'} onClick={() => updateRoute(goal, plan.stage, '留学')}>留学</button>
+                  {plan.route === '留学' ? <label className="education-destination-control"><span className="sr-only">{plan.stage}留学国家或地区</span><select value={plan.destination ?? ''} aria-label={`${plan.stage}留学国家或地区`} onChange={(event) => updateDestination(goal, plan.stage, event.target.value)}>
+                    <option value="">选择地区</option>
+                    <optgroup label="热门选项">{popularDestinations.map((destination) => <option value={destination} key={destination}>{destination}</option>)}</optgroup>
+                    <optgroup label="其他国家和地区">{otherDestinations.map((destination) => <option value={destination} key={destination}>{destination}</option>)}</optgroup>
+                  </select></label> : null}
+                </div>
               </div>
             </div>
           })}

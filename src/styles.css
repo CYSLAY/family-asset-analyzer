@@ -197,13 +197,17 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .education-stage-row + .education-stage-row { border-top: 1px solid var(--line); }
 .education-stage-label { min-width: 0; display: grid; grid-template-columns: minmax(52px, 1fr) 76px; align-items: center; gap: 10px; }
 .education-stage-label strong { color: var(--ink); font-size: 14px; }
-.education-duration-control select, .education-destination-control select { width: 100%; min-height: 36px; padding: 0 28px 0 10px; border: 1px solid #d7d7d7; border-radius: 8px; outline: 0; color: var(--ink); background: white; font-size: 12px; cursor: pointer; }
+.education-duration-control select, .education-destination-control select { width: 100%; height: 36px; min-height: 36px; padding: 0 27px 0 10px; border: 1px solid #d7d7d7; border-radius: 8px; outline: 0; color: var(--ink); background: white; font-size: 12px; cursor: pointer; }
 .education-duration-control select:focus, .education-destination-control select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(207,31,44,.12); }
-.education-route-options { display: flex; flex-wrap: wrap; gap: 8px; }
-.route-chip { min-height: 36px; padding: 0 13px; border: 1px solid #d7d7d7; border-radius: 8px; color: var(--ink-muted); background: white; font-size: 12px; cursor: pointer; transition: border-color .16s ease, color .16s ease, background .16s ease; }
+.education-route-options { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; }
+.route-chip { height: 36px; min-height: 36px; padding: 0 13px; border: 1px solid #d7d7d7; border-radius: 8px; color: var(--ink-muted); background: white; font-size: 12px; cursor: pointer; transition: border-color .16s ease, color .16s ease, background .16s ease; }
 .route-chip:hover { border-color: #d6878d; color: var(--accent); }
 .route-chip.is-selected { border-color: #e4aeb2; color: var(--accent-strong); background: var(--accent-soft); font-weight: 720; }
-.education-destination-control { flex: 1 1 190px; max-width: 250px; }
+.study-abroad-combo { height: 36px; display: inline-flex; align-items: stretch; flex: 0 0 auto; }
+.study-abroad-combo.is-active .route-chip { position: relative; z-index: 1; border-right: 0; border-radius: 8px 0 0 8px; }
+.education-destination-control { width: 108px; height: 36px; flex: 0 0 108px; }
+.study-abroad-combo .education-destination-control select { border-color: #e4aeb2; border-radius: 0 8px 8px 0; color: var(--accent-strong); background: #fffafa; }
+.study-abroad-combo .education-destination-control select:focus { position: relative; z-index: 2; }
 .education-funding { margin-top: 22px; padding: 22px; border-top: 1px solid var(--line); background: #fffafa; }
 .education-funding-heading { margin-bottom: 18px; display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
 .education-funding-heading strong { color: var(--ink); font-size: 14px; }
@@ -503,9 +507,9 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .education-pathway { margin-inline: 14px; }
   .education-stage-row { grid-template-columns: 1fr; gap: 10px; }
   .education-stage-label { grid-template-columns: minmax(52px, 1fr) 84px; }
-  .education-route-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .education-route-options { display: flex; flex-wrap: nowrap; gap: 7px; }
   .route-chip { padding-inline: 8px; }
-  .education-destination-control { grid-column: 1 / -1; max-width: none; }
+  .education-destination-control { width: 104px; flex-basis: 104px; }
   .education-funding-heading { display: grid; gap: 5px; }
   .span-two { grid-column: auto; }
   .analysis-hero { padding: 24px 20px; grid-template-columns: 1fr; }
