@@ -1,0 +1,13 @@
+{
+  "name": "家庭资产分析",
+  "short_name": "资产分析",
+  "description": "家庭资产负债、收支储蓄与目标健康度分析工具",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f7f6",
+  "theme_color": "#0b6b62",
+  "icons": [
+    { "src": "./app-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
