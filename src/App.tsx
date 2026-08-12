@@ -9,6 +9,7 @@ import {
 import { AccessGate } from './components/AccessGate'
 import { CustomerDirectory } from './components/CustomerDirectory'
 import { IntakeWorkspace } from './components/IntakeWorkspace'
+import jojoLogo from '../assets/branding/jojo-personal-logo.png'
 import { clearAccessUser, getAccessSession, getAccessUser } from './lib/access'
 import { synchronizeWorkspace } from './lib/usernameSync'
 import { useCustomerStore } from './stores/customerStore'
@@ -61,7 +62,9 @@ export function App() {
   return <div className="app-shell">
     <aside className="sidebar" aria-label="主导航">
       <div className="brand-block">
-        <div className="brand-mark jojo-mark" aria-label={`${accessUser} 标志`}><span>JO</span><i /></div>
+        <div className="brand-logo-frame">
+          <img src={jojoLogo} alt={`${accessUser} 标志`} />
+        </div>
         <div><strong>家庭财务分析</strong><span>客户资料工作区</span></div>
       </div>
 
