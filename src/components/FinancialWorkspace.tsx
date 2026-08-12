@@ -153,7 +153,6 @@ function BalanceEditor({ customer, onUpdate, mode, showSummary }: EditorProps & 
   }
 
   return <div className="financial-page one-screen-editor">
-    <PageTitle title={mode === 'fixed' ? '固定资产' : '流动资产与负债'} description={mode === 'fixed' ? '房产与车辆集中在同一页直接填写，空白预设行不会写入客户档案。' : '现金、金融资产及家庭负债集中录入，便于一眼核对完整性。'} />
     {showSummary ? <SummaryLine items={mode === 'fixed' ? [['固定资产合计', visibleTotal], ['家庭总资产', totalAssets]] : [['流动资产', visibleTotal], ['总负债', totalLiabilities], ['流动资产减负债', visibleTotal - totalLiabilities]]} /> : null}
     <SheetSection title={mode === 'fixed' ? '房产与车辆' : '现金及金融资产'} description={mode === 'fixed' ? '直接填写家庭车辆；如有房产或其他车辆，可在表格下方新增。' : '直接填写金额与对应选项；已经保存的自定义项目会继续显示在表格末尾。'}>
       <div className={`entry-sheet asset-sheet ${mode === 'fixed' ? 'fixed-sheet' : ''}`}>
@@ -202,7 +201,6 @@ function LegacyBalanceEditor({ customer, onUpdate, mode }: EditorProps & { mode:
   }
 
   return <div className="financial-page">
-    <PageTitle title={mode === 'fixed' ? '固定资产' : '流动资产与负债'} description={mode === 'fixed' ? '记录房产、车辆等长期持有资产的当前市值与权属。' : '记录可变现资金和每笔债务，供流动性与偿债压力分析使用。'} />
     <SummaryLine items={mode === 'fixed' ? [['固定资产合计', visibleAssetTotal], ['家庭总资产', totalAssets]] : [['流动资产', visibleAssetTotal], ['总负债', totalLiabilities], ['流动资产减负债', visibleAssetTotal - totalLiabilities]]} />
     <EntrySection title={mode === 'fixed' ? '房产与车辆' : '现金及金融资产'} description={mode === 'fixed' ? '每项资产独立记录，后续可准确计算固定资产占比。' : '包括现金、存款、基金、股票、债券、公积金及其他可变现资产。'} action={mode === 'fixed' ? '添加固定资产' : '添加流动资产'} onAdd={addAsset}>
       {visibleAssets.length ? visibleAssets.map((asset) => <article className="entry-card" key={asset.id}>
@@ -288,7 +286,6 @@ function CashFlowEditor({ customer, onUpdate, showSummary }: EditorProps & { sho
   }
 
   return <div className="financial-page one-screen-editor">
-    <PageTitle title="生活收支" description="收入按家庭成员分别记录，支出按家庭整体记录；金额单位已经预设。" />
     {showSummary ? <SummaryLine items={[["家庭年收入", annualTotal(customer.incomes)], ["家庭年支出", annualTotal(customer.expenses)], ["年度结余", annualTotal(customer.incomes) - annualTotal(customer.expenses)]]} /> : null}
     <SheetSection title="收入来源" description="每位成员独立填写，单位固定显示为元/月或元/年。">
       <div className="income-member-list">
@@ -318,7 +315,6 @@ function CashFlowEditor({ customer, onUpdate, showSummary }: EditorProps & { sho
 function LegacyCashFlowEditor({ customer, onUpdate }: EditorProps) {
   function updateFlow(key: 'incomes' | 'expenses', id: string, patch: Partial<CashFlowEntry>) { onUpdate({ [key]: customer[key].map((item) => item.id === id ? { ...item, ...patch } : item) }) }
   return <div className="financial-page">
-    <PageTitle title="收支储蓄" description="每笔金额可按月、季度或年度录入，系统会统一换算为年度现金流。" />
     <SummaryLine items={[['家庭年收入', annualTotal(customer.incomes)], ['家庭年支出', annualTotal(customer.expenses)], ['年度结余', annualTotal(customer.incomes) - annualTotal(customer.expenses)]]} />
     {(['incomes', 'expenses'] as const).map((key) => {
       const isIncome = key === 'incomes'
@@ -371,7 +367,6 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
     saveStagePlans(goal, plansFor(goal).map((plan) => plan.stage === stage ? { ...plan, route: '留学', destination } : plan), stage)
   }
   return <div className="financial-page">
-    <PageTitle title="教育期望" description="选择子女与当前阶段，再逐行点选未来教育路线；没有规划的阶段可以留空。" />
     <EntrySection title="子女教育路线" description="每位子女一张路线表，常见阶段年限已经预设，可随时修改资金假设。" action="添加子女规划" onAdd={() => onUpdate({ educationGoals: [...customer.educationGoals, createEducationGoal()] })}>
       {customer.educationGoals.length ? customer.educationGoals.map((goal) => {
         const childName = customer.members.find((member) => member.id === goal.childMemberId)?.name
@@ -445,7 +440,6 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
 }
 
 interface EditorProps { customer: CustomerProfile; onUpdate: (patch: Partial<CustomerProfile>) => void }
-function PageTitle({ title, description }: { title: string; description: string }) { return <section className="directory-heading"><div><h1>{title}</h1><p>{description}</p></div></section> }
 function SheetSection({ title, description, children }: { title: string; description: string; children: React.ReactNode }) { return <section className="form-section sheet-section"><div className="form-section-heading"><h2>{title}</h2><p>{description}</p></div>{children}</section> }
 function SheetMoneyInput({ value, onChange, suffix = '元', label, mobileLabel }: { value: number | null; onChange: (value: number) => void; suffix?: string; label: string; mobileLabel?: string }) { return <label className="sheet-input-wrap" data-mobile-label={mobileLabel}><span className="sr-only">{label}</span><input aria-label={label} type="number" min="0" inputMode="decimal" value={value || ''} onChange={(event) => onChange(numberValue(event.target.value))} /><i>{suffix}</i></label> }
 
