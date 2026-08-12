@@ -12,7 +12,9 @@ import { useCustomerStore } from '../stores/customerStore'
 import type { CustomerProfile } from '../types/domain'
 
 interface Props { onChooseCustomer: () => void }
-interface BreakdownItem { name: string; value: number; color: string }
+interface BreakdownSource { label: string; amount: number; frequency?: 'monthly' | 'quarterly' | 'yearly' }
+interface BreakdownEntry { name: string; value: number; source: BreakdownSource }
+interface BreakdownItem { name: string; value: number; color: string; sources: BreakdownSource[] }
 
 const levelLabels: Record<HealthLevel, string> = { critical: '紧急', warning: '偏弱', attention: '需关注', healthy: '良好', strong: '较强', neutral: '资料不足' }
 const liabilityLabels: Record<string, string> = { mortgage: '房贷', car_loan: '车贷', consumer_loan: '消费贷款', credit_card: '信用卡', private_loan: '私人借款', other: '其他负债' }
@@ -30,13 +32,13 @@ export function AnalysisDashboard({ onChooseCustomer }: Props) {
 
   const metric = (key: string) => analysis.metrics.find((item) => item.key === key) as MetricResult
   const assetBreakdown = buildAssetBreakdown(customer)
-  const liabilityBreakdown = groupEntries(customer.liabilities.map((item) => ({ name: liabilityLabels[item.category], value: item.balance })))
-  const incomeBreakdown = groupEntries(customer.incomes.map((item) => ({ name: classifyIncome(`${item.category}${item.name}`), value: annualize(item) })))
-  const expenseRows = customer.expenses.map((item) => ({ name: classifyExpense(`${item.category}${item.name}`), value: annualize(item) }))
-  const annualDebtPayments = customer.liabilities.reduce((sum, item) => sum + item.monthlyPayment * 12, 0)
-  const fixedDebtPayments = customer.liabilities.filter((item) => item.category === 'mortgage' || item.category === 'car_loan').reduce((sum, item) => sum + item.monthlyPayment * 12, 0)
-  if (fixedDebtPayments > 0) expenseRows.push({ name: '固定资产按揭', value: fixedDebtPayments })
-  if (annualDebtPayments - fixedDebtPayments > 0) expenseRows.push({ name: '流动负债偿还', value: annualDebtPayments - fixedDebtPayments })
+  const liabilityBreakdown = groupEntries(customer.liabilities.map((item) => ({ name: liabilityLabels[item.category], value: item.balance, source: { label: item.name || liabilityLabels[item.category], amount: item.balance } })))
+  const incomeBreakdown = groupEntries(customer.incomes.map((item) => ({ name: classifyIncome(`${item.category}${item.name}`), value: annualize(item), source: { label: flowSourceLabel(customer, item.memberId, item.name || item.category), amount: item.amount, frequency: item.frequency } })))
+  const expenseRows: BreakdownEntry[] = customer.expenses.map((item) => ({ name: classifyExpense(`${item.category}${item.name}`), value: annualize(item), source: { label: flowSourceLabel(customer, item.memberId, item.name || item.category), amount: item.amount, frequency: item.frequency } }))
+  customer.liabilities.filter((item) => item.monthlyPayment > 0).forEach((item) => {
+    const fixed = item.category === 'mortgage' || item.category === 'car_loan'
+    expenseRows.push({ name: fixed ? '固定资产按揭' : '流动负债偿还', value: item.monthlyPayment * 12, source: { label: `${item.name || liabilityLabels[item.category]}月供`, amount: item.monthlyPayment, frequency: 'monthly' } })
+  })
   const expenseBreakdown = groupEntries(expenseRows)
   const flowDebt = flowVsDebtMetric(analysis.totals.liquidAssets, analysis.totals.liabilities)
 
@@ -117,7 +119,7 @@ function ComparisonPanel({ title, leftLabel, leftValue, rightLabel, rightValue, 
 
 function DistributionPanel({ title, totalLabel, items }: { title: string; totalLabel: string; items: BreakdownItem[] }) {
   const total = items.reduce((sum, item) => sum + item.value, 0)
-  const option: ChartOption = { aria: { enabled: true }, tooltip: { trigger: 'item', valueFormatter: (value: unknown) => formatMoney(Number(value)) }, color: items.map((item) => item.color), series: [{ type: 'pie', radius: ['58%', '79%'], center: ['50%', '48%'], itemStyle: { borderColor: '#fff', borderWidth: 3 }, label: { show: false }, data: items }] }
+  const option: ChartOption = { aria: { enabled: true }, tooltip: { trigger: 'item', formatter: (params: unknown) => sourceTooltip(items, params) }, color: items.map((item) => item.color), series: [{ type: 'pie', radius: ['58%', '79%'], center: ['50%', '48%'], itemStyle: { borderColor: '#fff', borderWidth: 3 }, label: { show: false }, data: items }] }
   return <article className="report-panel distribution-panel"><PanelHeader title={title} /><div className="donut-wrap"><EChart option={option} empty={!items.length} /><div className="donut-total"><span>{totalLabel}</span><strong>{items.length ? formatMoney(total) : '资料不足'}</strong></div></div><BreakdownTable items={items} total={total} /></article>
 }
 
@@ -156,13 +158,46 @@ function EChart({ option, empty, compact = false }: { option: ChartOption; empty
 }
 
 function buildAssetBreakdown(customer: CustomerProfile): BreakdownItem[] {
-  return groupEntries(customer.assets.map((item) => ({ name: classifyAsset(item.category), value: item.currentValue })))
+  return groupEntries(customer.assets.map((item) => ({ name: classifyAsset(item.category), value: item.currentValue, source: { label: ownerSourceLabel(customer, item.ownerMemberId, item.name || classifyAsset(item.category)), amount: item.currentValue } })))
 }
 
-function groupEntries(entries: Array<{ name: string; value: number }>): BreakdownItem[] {
-  const grouped = new Map<string, number>()
-  entries.forEach((entry) => { if (entry.value > 0) grouped.set(entry.name, (grouped.get(entry.name) ?? 0) + entry.value) })
-  return [...grouped.entries()].sort((a, b) => b[1] - a[1]).map(([name, value], index) => ({ name, value, color: palette[index % palette.length] }))
+function groupEntries(entries: BreakdownEntry[]): BreakdownItem[] {
+  const grouped = new Map<string, { value: number; sources: BreakdownSource[] }>()
+  entries.forEach((entry) => {
+    if (entry.value <= 0) return
+    const group = grouped.get(entry.name) ?? { value: 0, sources: [] }
+    group.value += entry.value
+    group.sources.push(entry.source)
+    grouped.set(entry.name, group)
+  })
+  return [...grouped.entries()].sort((a, b) => b[1].value - a[1].value).map(([name, group], index) => ({ name, value: group.value, sources: group.sources, color: palette[index % palette.length] }))
+}
+
+function flowSourceLabel(customer: CustomerProfile, memberId: string | null, label: string) {
+  const member = memberId ? customer.members.find((item) => item.id === memberId) : null
+  return member?.name ? `${member.name} · ${label}` : label
+}
+
+function ownerSourceLabel(customer: CustomerProfile, memberId: string | null, label: string) {
+  const member = memberId ? customer.members.find((item) => item.id === memberId) : null
+  return member?.name ? `${member.name} · ${label}` : label
+}
+
+function sourceTooltip(items: BreakdownItem[], params: unknown) {
+  const dataIndex = typeof params === 'object' && params && 'dataIndex' in params ? Number((params as { dataIndex: unknown }).dataIndex) : -1
+  const item = items[dataIndex]
+  if (!item) return ''
+  const sources = item.sources.map((source) => `<div class="chart-source-row"><span>${escapeHtml(source.label)}</span><strong>${escapeHtml(formatSourceAmount(source))}</strong></div>`).join('')
+  return `<div class="chart-source-tooltip"><div class="chart-source-total"><span><i style="background:${item.color}"></i>${escapeHtml(item.name)}</span><strong>${escapeHtml(formatMoney(item.value))}</strong></div><div class="chart-source-divider"></div><div class="chart-source-caption">原始数据来源</div>${sources}</div>`
+}
+
+function formatSourceAmount(source: BreakdownSource) {
+  const suffix = source.frequency === 'monthly' ? '/月' : source.frequency === 'quarterly' ? '/季度' : source.frequency === 'yearly' ? '/年' : ''
+  return `${formatMoney(source.amount)}${suffix}`
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[character] ?? character)
 }
 
 function classifyAsset(category: string) { if (category === 'cash') return '现金'; if (category === 'property' || category === 'vehicle') return '固定资产'; if (['bank', 'fund', 'stock', 'bond', 'pension'].includes(category)) return '金融资产'; return '其他资产' }
