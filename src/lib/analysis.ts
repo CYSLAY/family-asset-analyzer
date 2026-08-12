@@ -13,6 +13,7 @@ export interface MetricResult {
   action: string
   formula: string
   reference: string
+  displayValue?: string
 }
 
 export interface FinancialAnalysis {
@@ -54,7 +55,8 @@ export function analyzeCustomer(customer: CustomerProfile): FinancialAnalysis {
   const necessaryAnnualExpenses = customer.expenses.filter((item) => item.necessary).reduce((sum, item) => sum + annualize(item), 0)
   const annualDebtPayments = customer.liabilities.reduce((sum, item) => sum + item.monthlyPayment * 12, 0)
   const necessaryMonthlyOutflow = necessaryAnnualExpenses / 12 + annualDebtPayments / 12
-  const dueWithinOneYear = customer.liabilities.reduce((sum, item) => sum + item.dueWithinOneYear, 0)
+  const hasLiabilityData = customer.liabilities.some((item) => item.balance > 0 || item.monthlyPayment > 0 || item.dueWithinOneYear > 0)
+  const dueWithinOneYear = customer.liabilities.reduce((sum, item) => sum + estimateOneYearDebt(item), 0)
   const workIncome = customer.incomes.filter((item) => /工作|工资|经营|佣金|奖金/.test(`${item.category}${item.name}`)).reduce((sum, item) => sum + annualize(item), 0)
   const investmentExpenses = customer.expenses.filter((item) => /投资|储蓄|保险|基金|股票|定投|理财/.test(`${item.category}${item.name}`)).reduce((sum, item) => sum + annualize(item), 0)
   const annualSurplus = annualIncome - annualExpenses - annualDebtPayments
@@ -66,7 +68,7 @@ export function analyzeCustomer(customer: CustomerProfile): FinancialAnalysis {
     netWorthMetric(assets - liabilities, customer.assets.length > 0 || customer.liabilities.length > 0),
     debtRatioMetric(assets, liabilities),
     fixedAssetMetric(assets, fixedAssets),
-    liquidCoverageMetric(liquidAssets, dueWithinOneYear),
+    liquidCoverageMetric(liquidAssets, dueWithinOneYear, hasLiabilityData),
     debtServiceMetric(annualIncome, annualDebtPayments, liabilities),
     emergencyMetric(emergencyFunds, necessaryMonthlyOutflow, emergencyTarget),
     savingsMetric(annualIncome, annualSurplus),
@@ -75,7 +77,7 @@ export function analyzeCustomer(customer: CustomerProfile): FinancialAnalysis {
     educationMetric(educationFutureCost, educationPrepared, customer.educationGoals.length),
   ]
 
-  const scored = metrics.filter((metric) => metric.value !== null && metric.key !== 'income_concentration')
+  const scored = metrics.filter((metric) => metric.value !== null && !metric.displayValue && metric.key !== 'income_concentration')
   const rawScore = scored.length ? Math.round(scored.reduce((sum, metric) => sum + levelScore(metric.level), 0) / scored.length) : null
   const hasCritical = metrics.some((metric) => metric.level === 'critical')
   const score = rawScore === null ? null : hasCritical ? Math.min(rawScore, 49) : rawScore
@@ -127,8 +129,20 @@ function fixedAssetMetric(assets: number, fixed: number): MetricResult {
   return metric('fixed_asset_ratio', '固定资产占比', ratio, 'percent', 'warning', '固定资产高度集中', '大部分资产难以快速变现，家庭可能出现资产多但现金不足的情况。', '优先提高流动资产占比，并避免进一步集中。', '固定资产 / 总资产', '50%以下通常较灵活，70%以上需要关注流动性')
 }
 
-function liquidCoverageMetric(liquid: number, due: number): MetricResult {
-  if (due <= 0) return metric('liquid_coverage', '资产负债健康度', null, 'ratio', 'neutral', '一年内债务资料不足', '没有一年内应还债务金额，暂时不能判断短期偿债覆盖。', '补充各笔债务未来一年应还金额；确认无债务时可保持为空。', '流动资产 / 未来一年应还债务', '低于1倍风险较高，1-3倍需关注，3倍及以上较健康')
+function estimateOneYearDebt(liability: CustomerProfile['liabilities'][number]) {
+  if (liability.dueWithinOneYear > 0) return liability.dueWithinOneYear
+  if (liability.monthlyPayment > 0) {
+    const months = liability.remainingMonths === null ? 12 : Math.min(12, Math.max(0, liability.remainingMonths))
+    const estimated = liability.monthlyPayment * months
+    return liability.balance > 0 ? Math.min(liability.balance, estimated) : estimated
+  }
+  if (liability.balance > 0 && liability.remainingMonths !== null && liability.remainingMonths > 0 && liability.remainingMonths <= 12) return liability.balance
+  return 0
+}
+
+function liquidCoverageMetric(liquid: number, due: number, hasLiabilityData: boolean): MetricResult {
+  if (!hasLiabilityData) return { ...metric('liquid_coverage', '资产负债健康度', 10, 'ratio', 'strong', '当前没有短期偿债压力', '当前没有录入需要偿还的负债，流动资产无需承担未来一年还款。', '', '当前无负债', ''), displayValue: '无负债' }
+  if (due <= 0) return metric('liquid_coverage', '资产负债健康度', null, 'ratio', 'neutral', '还款计划待补充', '已录入负债余额，但月供、剩余期数和未来一年应还金额不足以推算短期还款。', '补充月供或未来一年应还金额。', '流动资产 / 未来一年应还债务', '低于1倍风险较高，1-3倍需关注，3倍及以上较健康')
   const ratio = liquid / due
   if (ratio < 1) return metric('liquid_coverage', '一年期偿债覆盖', ratio, 'ratio', 'critical', '流动资产不足以覆盖短期债务', '未来一年应还金额高于当前流动资产。', '优先提高现金储备或调整到期债务安排。', '流动资产 / 未来一年应还债务', '1倍是基础，2倍以上更有缓冲')
   if (ratio < 3) return metric('liquid_coverage', '资产负债健康度', ratio, 'ratio', 'attention', '短期偿债覆盖有限', '流动资产可以覆盖一年内债务，但距离3倍健康参考线仍有差距。', '保留还款专用资金，并逐步增加高流动性资产。', '流动资产 / 未来一年应还债务', '低于1倍风险较高，1-3倍需关注，3倍及以上较健康')

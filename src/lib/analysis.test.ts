@@ -63,6 +63,24 @@ describe('financial analysis', () => {
     expect(metric?.level).toBe('healthy')
   })
 
+  it('infers one-year debt from monthly payments when the separate annual field is empty', () => {
+    const customer = createCustomer('自动推算')
+    customer.assets = [{ ...createAsset(), currentValue: 360_000 }]
+    customer.liabilities = [{ ...createLiability(), balance: 200_000, monthlyPayment: 10_000, remainingMonths: 24, dueWithinOneYear: 0 }]
+    const result = analyzeCustomer(customer)
+    expect(result.totals.dueWithinOneYear).toBe(120_000)
+    expect(result.metrics.find((item) => item.key === 'liquid_coverage')?.value).toBe(3)
+  })
+
+  it('shows no debt instead of insufficient data when the household has no liabilities', () => {
+    const customer = createCustomer('无负债')
+    customer.assets = [{ ...createAsset(), currentValue: 200_000 }]
+    const metric = analyzeCustomer(customer).metrics.find((item) => item.key === 'liquid_coverage')
+    expect(metric?.title).toBe('当前没有短期偿债压力')
+    expect(metric?.displayValue).toBe('无负债')
+    expect(metric?.level).toBe('strong')
+  })
+
   it('changes investment health copy with recognized long-term spending', () => {
     const none = createCustomer('未投入')
     none.incomes = [{ ...createCashFlow('income'), amount: 10_000 }]

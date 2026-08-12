@@ -90,7 +90,7 @@ export function AnalysisDashboard({ onChooseCustomer }: Props) {
 }
 
 function ReportSection({ id, index, title, description, children }: { id: string; index: string; title: string; description: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false)
   return <section className={open ? 'report-section is-open' : 'report-section is-collapsed'} id={id}>
     <header className="report-section-heading"><span>{index}</span><div><h2>{title}</h2><p>{description}</p></div><button className="report-section-toggle" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>{open ? '收起' : '展开'}<CaretDownIcon className={open ? 'is-open' : ''} size={18} /></button></header>
     {open ? <div className="report-section-content">{children}</div> : null}
@@ -124,8 +124,9 @@ function DistributionPanel({ title, totalLabel, items }: { title: string; totalL
 function HealthPanel({ metric, max, healthyRange }: { metric: MetricResult; max: number; healthyRange: string }) {
   const value = metric.value === null ? null : Math.max(0, Math.min(max, metric.value))
   const color = levelColor(metric.level)
+  const rangeCopy = metric.displayValue === '无负债' ? '当前没有需要覆盖的短期债务' : healthyRange
   const option: ChartOption = { aria: { enabled: true }, series: [{ type: 'gauge', startAngle: 210, endAngle: -30, min: 0, max, splitNumber: 10, radius: '86%', pointer: { show: false }, progress: { show: true, width: 16, itemStyle: { color } }, axisLine: { lineStyle: { width: 16, color: [[1, '#f0eded']] } }, axisTick: { show: false }, splitLine: { distance: -20, length: 8, lineStyle: { width: 2, color: '#fff' } }, axisLabel: { distance: 7, color: '#8c8283', fontSize: 9, formatter: (raw: number) => max === 100 ? `${raw}%` : String(raw) }, detail: { valueAnimation: false, offsetCenter: [0, '8%'], fontSize: 27, fontWeight: 750, color, formatter: () => formatMetric(metric) }, title: { show: false }, data: value === null ? [] : [{ value }] }] }
-  return <article className={`report-panel health-panel level-${metric.level}`}><PanelHeader title={metric.label} metric={metric} /><EChart option={option} empty={value === null} compact /><div className="health-result"><strong>{metric.title}</strong><span>{healthyRange}</span></div><MetricNarrative metric={metric} /></article>
+  return <article className={`report-panel health-panel level-${metric.level}`}><PanelHeader title={metric.label} metric={metric} /><EChart option={option} empty={value === null} compact /><div className="health-result"><strong>{metric.title}</strong><span>{rangeCopy}</span></div><MetricNarrative metric={metric} /></article>
 }
 
 function PanelHeader({ title, metric }: { title: string; metric?: MetricResult }) { return <header className="panel-heading"><h3>{title}</h3>{metric ? <span className="level-badge">{levelLabels[metric.level]}</span> : null}</header> }
@@ -178,7 +179,7 @@ function flowVsDebtMetric(liquid: number, liabilities: number): MetricResult {
 function customMetric(key: string, label: string, value: number | null, level: HealthLevel, title: string, explanation: string, action: string, formula: string, reference: string): MetricResult { return { key, label, value, unit: 'currency', level, title, explanation, action, formula, reference } }
 function hasMeaningfulReference(reference: string) { return Boolean(reference) && !/不设置统一|不以越低越好|这是集中度指标/.test(reference) }
 function levelColor(level: HealthLevel) { return level === 'critical' ? '#a51d27' : level === 'warning' ? '#cf4a52' : level === 'attention' ? '#d98235' : level === 'healthy' ? '#a72a34' : level === 'strong' ? '#7f1119' : '#b9afb0' }
-function formatMetric(metric: MetricResult) { if (metric.value === null) return '资料不足'; if (metric.unit === 'currency') return compactMoney(metric.value); if (metric.unit === 'percent') return `${metric.value.toFixed(1)}%`; if (metric.unit === 'months') return `${metric.value.toFixed(1)}月`; return `${metric.value.toFixed(2)}倍` }
+function formatMetric(metric: MetricResult) { if (metric.displayValue) return metric.displayValue; if (metric.value === null) return '资料不足'; if (metric.unit === 'currency') return compactMoney(metric.value); if (metric.unit === 'percent') return `${metric.value.toFixed(1)}%`; if (metric.unit === 'months') return `${metric.value.toFixed(1)}月`; return `${metric.value.toFixed(2)}倍` }
 function formatMoney(value: number) { return new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', maximumFractionDigits: 0 }).format(value) }
 function formatPercent(value: number) { return `${value.toFixed(1)}%` }
 function compactMoney(value: number) { const abs = Math.abs(value); if (abs >= 10000) return `${value < 0 ? '-' : ''}${(abs / 10000).toFixed(abs >= 100000 ? 0 : 1)}万`; return String(Math.round(value)) }

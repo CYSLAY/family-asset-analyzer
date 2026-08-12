@@ -38,6 +38,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .brand-block strong, .brand-block span { display: block; }
 .brand-block strong { font-size: 15px; }
 .brand-block span { margin-top: 4px; color: var(--ink-muted); font-size: 12px; }
+.brand-block .jojo-mark span { margin: 0; color: #fff; }
 .nav-list { display: grid; gap: 5px; }
 .nav-item { min-height: 46px; padding: 0 12px; border: 0; border-radius: 10px; color: #555; background: transparent; display: flex; align-items: center; gap: 12px; cursor: pointer; text-align: left; }
 .nav-item:hover { color: var(--accent); background: var(--accent-soft); }
