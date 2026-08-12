@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -52,13 +52,40 @@ const stabilityLabels: Record<IncomeStability, string> = {
 
 const popularCities = ['北京', '上海', '广州', '深圳', '香港']
 const otherCities = ['杭州', '成都', '重庆', '天津', '苏州', '南京', '武汉', '西安', '厦门', '青岛', '宁波', '东莞', '佛山', '珠海', '澳门', '台北', '其他城市或地区']
+const summarySteps: IntakeStepKey[] = ['fixed_assets', 'liquid_assets', 'cashflow']
+
+function summaryStorageKey(customerId: string) { return `family-asset-summary-tabs:${customerId}` }
+function readRevealedSummaries(customerId: string | null) {
+  if (!customerId) return new Set<IntakeStepKey>()
+  try {
+    const saved = JSON.parse(localStorage.getItem(summaryStorageKey(customerId)) ?? '[]') as IntakeStepKey[]
+    return new Set(saved.filter((step) => summarySteps.includes(step)))
+  } catch { return new Set<IntakeStepKey>() }
+}
+function persistRevealedSummary(customerId: string, step: IntakeStepKey) {
+  const revealed = readRevealedSummaries(customerId)
+  revealed.add(step)
+  localStorage.setItem(summaryStorageKey(customerId), JSON.stringify([...revealed]))
+}
+function isSummaryStep(view: IntakeView): view is IntakeStepKey { return view !== 'overview' && summarySteps.includes(view) }
 
 export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = false }: Props) {
   const { customers, selectedCustomerId, selectCustomer, addCustomer, updateCustomer } = useCustomerStore()
   const [view, setView] = useState<IntakeView>(selfService ? 'profile' : 'overview')
   const [newName, setNewName] = useState('')
   const [creating, setCreating] = useState(false)
+  const [revealedSummaries, setRevealedSummaries] = useState(() => readRevealedSummaries(selectedCustomerId))
   const customer = customers.find((item) => item.id === selectedCustomerId) ?? null
+  const currentViewRef = useRef<IntakeView>(view)
+  const currentCustomerRef = useRef<CustomerProfile | null>(customer)
+  currentViewRef.current = view
+  currentCustomerRef.current = customer
+
+  useEffect(() => () => {
+    const currentCustomer = currentCustomerRef.current
+    const currentView = currentViewRef.current
+    if (selfService && currentCustomer && isSummaryStep(currentView) && hasIntakeStepData(currentCustomer, currentView)) persistRevealedSummary(currentCustomer.id, currentView)
+  }, [selfService])
 
   const recentCustomers = useMemo(
     () => customers.filter((item) => item.source !== 'self_service').slice(0, 6),
@@ -110,7 +137,18 @@ export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = f
 
   function switchView(next: IntakeView) {
     if (selfServiceLocked && next !== 'profile') return
+    const currentCustomer = customer
+    if (selfService && currentCustomer && view !== next && isSummaryStep(view) && hasIntakeStepData(currentCustomer, view)) {
+      persistRevealedSummary(currentCustomer.id, view)
+      setRevealedSummaries((current) => new Set(current).add(view))
+    }
     setView(next)
+  }
+
+  function openReportAfterLeavingTab() {
+    const currentCustomer = customer
+    if (selfService && currentCustomer && isSummaryStep(view) && hasIntakeStepData(currentCustomer, view)) persistRevealedSummary(currentCustomer.id, view)
+    onOpenReport()
   }
 
   return <div className="intake-workspace">
@@ -130,18 +168,18 @@ export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = f
         const locked = selfServiceLocked && item.key !== 'profile'
         return <button aria-label={locked ? `${item.title}，请先填写姓名` : item.title} className={view === item.key ? 'quick-nav-item is-active' : 'quick-nav-item'} disabled={locked} type="button" key={item.key} onClick={() => switchView(item.key)}><Icon size={17} /><span>{item.title}</span>{filled.has(item.key) ? <i aria-label="已填写" /> : null}</button>
       })}
-      <button aria-label={selfServiceLocked ? '分析报告，请先填写姓名' : '分析报告'} className="quick-nav-item report" disabled={selfServiceLocked} type="button" onClick={onOpenReport}><FileTextIcon size={17} /><span>分析报告</span></button>
+      <button aria-label={selfServiceLocked ? '分析报告，请先填写姓名' : '分析报告'} className="quick-nav-item report" disabled={selfServiceLocked} type="button" onClick={openReportAfterLeavingTab}><FileTextIcon size={17} /><span>分析报告</span></button>
     </nav>
 
     <div className="intake-layout">
       <main className="intake-content">
-        {view === 'overview' ? <IntakeOverview filled={filled} onOpen={switchView} onOpenReport={onOpenReport} /> : <>
+        {view === 'overview' ? <IntakeOverview filled={filled} onOpen={switchView} onOpenReport={openReportAfterLeavingTab} /> : <>
           <div className="module-content-heading"><div><span className="section-kicker">资料模块</span><h2>{activeMeta?.title}</h2><p>{activeMeta?.description}</p></div><span className={filled.has(view) ? 'confirmation-badge is-done' : 'confirmation-badge'}>{filled.has(view) ? '已填写' : '待确认'}</span></div>
           {view === 'profile' ? <ProfileForm customer={customer} requireName={selfService} onUpdate={(patch) => updateCustomer(customer.id, patch)} /> : null}
           {view === 'members' ? <MemberForm customer={customer} /> : null}
-          {view === 'fixed_assets' ? <FinancialWorkspace section="fixed" onChooseCustomer={() => selectCustomer('')} /> : null}
-          {view === 'liquid_assets' ? <FinancialWorkspace section="liquid" onChooseCustomer={() => selectCustomer('')} /> : null}
-          {view === 'cashflow' ? <FinancialWorkspace section="cashflow" onChooseCustomer={() => selectCustomer('')} /> : null}
+          {view === 'fixed_assets' ? <FinancialWorkspace section="fixed" showSummary={!selfService || revealedSummaries.has('fixed_assets')} onChooseCustomer={() => selectCustomer('')} /> : null}
+          {view === 'liquid_assets' ? <FinancialWorkspace section="liquid" showSummary={!selfService || revealedSummaries.has('liquid_assets')} onChooseCustomer={() => selectCustomer('')} /> : null}
+          {view === 'cashflow' ? <FinancialWorkspace section="cashflow" showSummary={!selfService || revealedSummaries.has('cashflow')} onChooseCustomer={() => selectCustomer('')} /> : null}
           {view === 'education' ? <FinancialWorkspace section="goals" onChooseCustomer={() => selectCustomer('')} /> : null}
         </>}
       </main>

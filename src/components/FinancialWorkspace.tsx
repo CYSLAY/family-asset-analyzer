@@ -22,6 +22,7 @@ export type FinancialSection = 'fixed' | 'liquid' | 'cashflow' | 'goals'
 interface Props {
   section: FinancialSection
   onChooseCustomer: () => void
+  showSummary?: boolean
 }
 
 const assetLabels = { cash: '现金', bank: '银行定期存款', fund: '基金', stock: '股票', bond: '债券', property: '房产', vehicle: '车辆', pension: '养老金与公积金', receivable: '私人债权', other: '其他资产' }
@@ -90,7 +91,7 @@ function normalizedEducationChoice(value: string) {
   return { route: '', destination: '' }
 }
 
-export function FinancialWorkspace({ section, onChooseCustomer }: Props) {
+export function FinancialWorkspace({ section, onChooseCustomer, showSummary = true }: Props) {
   const { customers, selectedCustomerId, updateCustomer } = useCustomerStore()
   const customer = customers.find((item) => item.id === selectedCustomerId) ?? null
 
@@ -98,12 +99,12 @@ export function FinancialWorkspace({ section, onChooseCustomer }: Props) {
     return <section className="empty-state financial-empty"><UsersThreeIcon size={34} /><h2>请先选择客户</h2><p>所有资产、负债和收支都必须归属于一份客户档案。</p><button className="primary-action compact" type="button" onClick={onChooseCustomer}>选择客户 <ArrowRightIcon size={18} /></button></section>
   }
 
-  if (section === 'fixed' || section === 'liquid') return <BalanceEditor mode={section} customer={customer} onUpdate={(patch) => updateCustomer(customer.id, patch)} />
-  if (section === 'cashflow') return <CashFlowEditor customer={customer} onUpdate={(patch) => updateCustomer(customer.id, patch)} />
+  if (section === 'fixed' || section === 'liquid') return <BalanceEditor mode={section} customer={customer} showSummary={showSummary} onUpdate={(patch) => updateCustomer(customer.id, patch)} />
+  if (section === 'cashflow') return <CashFlowEditor customer={customer} showSummary={showSummary} onUpdate={(patch) => updateCustomer(customer.id, patch)} />
   return <GoalEditor customer={customer} onUpdate={(patch) => updateCustomer(customer.id, patch)} />
 }
 
-function BalanceEditor({ customer, onUpdate, mode }: EditorProps & { mode: 'fixed' | 'liquid' }) {
+function BalanceEditor({ customer, onUpdate, mode, showSummary }: EditorProps & { mode: 'fixed' | 'liquid'; showSummary: boolean }) {
   const isFixedAsset = (asset: AssetEntry) => asset.category === 'property' || asset.category === 'vehicle'
   const visibleAssets = customer.assets.filter((asset) => mode === 'fixed' ? isFixedAsset(asset) : !isFixedAsset(asset))
   const presets = mode === 'fixed' ? fixedAssetPresets : liquidAssetPresets
@@ -153,7 +154,7 @@ function BalanceEditor({ customer, onUpdate, mode }: EditorProps & { mode: 'fixe
 
   return <div className="financial-page one-screen-editor">
     <PageTitle title={mode === 'fixed' ? '固定资产' : '流动资产与负债'} description={mode === 'fixed' ? '房产与车辆集中在同一页直接填写，空白预设行不会写入客户档案。' : '现金、金融资产及家庭负债集中录入，便于一眼核对完整性。'} />
-    <SummaryLine items={mode === 'fixed' ? [['固定资产合计', visibleTotal], ['家庭总资产', totalAssets]] : [['流动资产', visibleTotal], ['总负债', totalLiabilities], ['流动资产减负债', visibleTotal - totalLiabilities]]} />
+    {showSummary ? <SummaryLine items={mode === 'fixed' ? [['固定资产合计', visibleTotal], ['家庭总资产', totalAssets]] : [['流动资产', visibleTotal], ['总负债', totalLiabilities], ['流动资产减负债', visibleTotal - totalLiabilities]]} /> : null}
     <SheetSection title={mode === 'fixed' ? '房产与车辆' : '现金及金融资产'} description={mode === 'fixed' ? '直接填写家庭车辆；如有房产或其他车辆，可在表格下方新增。' : '直接填写金额与对应选项；已经保存的自定义项目会继续显示在表格末尾。'}>
       <div className={`entry-sheet asset-sheet ${mode === 'fixed' ? 'fixed-sheet' : ''}`}>
         <div className="sheet-row sheet-head"><span>资产项目</span><span>当前价值</span><span>年收益率</span><span>所属成员</span><span>变现速度</span>{mode === 'liquid' ? <span>应急资金</span> : null}</div>
@@ -235,7 +236,7 @@ function LegacyBalanceEditor({ customer, onUpdate, mode }: EditorProps & { mode:
   </div>
 }
 
-function CashFlowEditor({ customer, onUpdate }: EditorProps) {
+function CashFlowEditor({ customer, onUpdate, showSummary }: EditorProps & { showSummary: boolean }) {
   const primaryMember = customer.members.find((member) => member.isPrimaryIncomeProvider) ?? customer.members.find((member) => member.relation === '本人') ?? customer.members[0]
   const existingIncomeMemberIds = customer.incomes.map((item) => item.memberId).filter((id): id is string => Boolean(id))
   const hasHouseholdIncome = customer.incomes.some((item) => !item.memberId)
@@ -288,7 +289,7 @@ function CashFlowEditor({ customer, onUpdate }: EditorProps) {
 
   return <div className="financial-page one-screen-editor">
     <PageTitle title="生活收支" description="收入按家庭成员分别记录，支出按家庭整体记录；金额单位已经预设。" />
-    <SummaryLine items={[["家庭年收入", annualTotal(customer.incomes)], ["家庭年支出", annualTotal(customer.expenses)], ["年度结余", annualTotal(customer.incomes) - annualTotal(customer.expenses)]]} />
+    {showSummary ? <SummaryLine items={[["家庭年收入", annualTotal(customer.incomes)], ["家庭年支出", annualTotal(customer.expenses)], ["年度结余", annualTotal(customer.incomes) - annualTotal(customer.expenses)]]} /> : null}
     <SheetSection title="收入来源" description="每位成员独立填写，单位固定显示为元/月或元/年。">
       <div className="income-member-list">
         {visibleIncomeMembers.map((memberKey) => {
