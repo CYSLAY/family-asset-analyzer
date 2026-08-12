@@ -132,6 +132,7 @@ export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = f
 
   const filled = new Set(stepMeta.filter((item) => hasIntakeStepData(customer, item.key)).map((item) => item.key))
   const activeMeta = stepMeta.find((item) => item.key === view)
+  const financialView = view === 'fixed_assets' || view === 'liquid_assets' || view === 'cashflow' || view === 'education'
   const nameEntered = Boolean(customer.primaryContactName.trim())
   const selfServiceLocked = selfService && !nameEntered
 
@@ -174,7 +175,7 @@ export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = f
     <div className="intake-layout">
       <main className="intake-content">
         {view === 'overview' ? <IntakeOverview filled={filled} onOpen={switchView} onOpenReport={openReportAfterLeavingTab} /> : <>
-          <div className="module-content-heading"><div><span className="section-kicker">资料模块</span><h2>{activeMeta?.title}</h2><p>{activeMeta?.description}</p></div><span className={filled.has(view) ? 'confirmation-badge is-done' : 'confirmation-badge'}>{filled.has(view) ? '已填写' : '待确认'}</span></div>
+          {!financialView ? <div className="module-content-heading"><div><span className="section-kicker">资料模块</span><h2>{activeMeta?.title}</h2><p>{activeMeta?.description}</p></div><span className={filled.has(view) ? 'confirmation-badge is-done' : 'confirmation-badge'}>{filled.has(view) ? '已填写' : '待确认'}</span></div> : null}
           {view === 'profile' ? <ProfileForm customer={customer} requireName={selfService} onUpdate={(patch) => updateCustomer(customer.id, patch)} /> : null}
           {view === 'members' ? <MemberForm customer={customer} /> : null}
           {view === 'fixed_assets' ? <FinancialWorkspace section="fixed" showSummary={!selfService || revealedSummaries.has('fixed_assets')} onChooseCustomer={() => selectCustomer('')} /> : null}
