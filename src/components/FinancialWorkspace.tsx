@@ -23,25 +23,23 @@ interface Props {
   onChooseCustomer: () => void
 }
 
-const assetLabels = { cash: '现金', bank: '银行存款与理财', fund: '基金', stock: '股票', bond: '债券', property: '房产', vehicle: '车辆', pension: '养老金与公积金', receivable: '私人债权', other: '其他资产' }
+const assetLabels = { cash: '现金', bank: '银行定期存款', fund: '基金', stock: '股票', bond: '债券', property: '房产', vehicle: '车辆', pension: '养老金与公积金', receivable: '私人债权', other: '其他资产' }
 const fixedAssetLabels = { property: '房产', vehicle: '车辆' }
-const liquidAssetLabels = { cash: '现金', bank: '银行存款与理财', fund: '基金', stock: '股票', bond: '债券', pension: '养老金与公积金', receivable: '私人债权', other: '其他资产' }
+const liquidAssetLabels = { cash: '现金', bank: '银行定期存款', fund: '基金', stock: '股票', bond: '债券', pension: '养老金与公积金', receivable: '私人债权', other: '其他资产' }
 const liabilityLabels = { mortgage: '房贷', car_loan: '车贷', consumer_loan: '消费贷款', credit_card: '信用卡', private_loan: '私人借款', other: '其他负债' }
 const frequencyLabels = { monthly: '每月', quarterly: '每季度', yearly: '每年' }
 const liquidityLabels = { immediate: '随时可用', within_month: '一个月内', long_term: '长期持有' }
 
-type AssetPreset = Pick<AssetEntry, 'name' | 'category' | 'liquidity' | 'availableForEmergency'>
+type AssetPreset = Pick<AssetEntry, 'name' | 'category' | 'liquidity' | 'availableForEmergency'> & { aliases?: string[] }
 type LiabilityPreset = Pick<LiabilityEntry, 'name' | 'category'>
 type FlowPreset = Pick<CashFlowEntry, 'name' | 'category' | 'frequency' | 'necessary'> & { aliases?: string[] }
 
 const fixedAssetPresets: AssetPreset[] = [
-  { name: '自住房', category: 'property', liquidity: 'long_term', availableForEmergency: false },
-  { name: '其他房产', category: 'property', liquidity: 'long_term', availableForEmergency: false },
   { name: '家庭车辆', category: 'vehicle', liquidity: 'long_term', availableForEmergency: false },
 ]
 const liquidAssetPresets: AssetPreset[] = [
   { name: '现金', category: 'cash', liquidity: 'immediate', availableForEmergency: true },
-  { name: '银行存款与理财', category: 'bank', liquidity: 'within_month', availableForEmergency: true },
+  { name: '银行定期存款', category: 'bank', liquidity: 'within_month', availableForEmergency: true, aliases: ['银行存款与理财'] },
   { name: '货币基金', category: 'fund', liquidity: 'within_month', availableForEmergency: true },
   { name: '基金', category: 'fund', liquidity: 'within_month', availableForEmergency: false },
   { name: '股票', category: 'stock', liquidity: 'within_month', availableForEmergency: false },
@@ -110,7 +108,7 @@ function BalanceEditor({ customer, onUpdate, mode }: EditorProps & { mode: 'fixe
   const presets = mode === 'fixed' ? fixedAssetPresets : liquidAssetPresets
   const claimedIds = new Set<string>()
   const rows = presets.map((preset) => {
-    const exact = visibleAssets.find((item) => !claimedIds.has(item.id) && item.name === preset.name)
+    const exact = visibleAssets.find((item) => !claimedIds.has(item.id) && (item.name === preset.name || preset.aliases?.includes(item.name)))
     const uniqueCategory = presets.filter((item) => item.category === preset.category).length === 1
     const categoryMatch = uniqueCategory ? visibleAssets.find((item) => !claimedIds.has(item.id) && item.category === preset.category) : undefined
     const entry = exact ?? categoryMatch
@@ -139,15 +137,42 @@ function BalanceEditor({ customer, onUpdate, mode }: EditorProps & { mode: 'fixe
     if (entry) onUpdate({ liabilities: customer.liabilities.map((item) => item.id === entry.id ? { ...item, ...patch } : item) })
     else onUpdate({ liabilities: [...customer.liabilities, { ...createLiability(), ...preset, ...patch }] })
   }
+  function addFixedAsset(category: 'property' | 'vehicle') {
+    const asset = createAsset()
+    onUpdate({
+      assets: [...customer.assets, {
+        ...asset,
+        name: category === 'property' ? '房产' : '车辆',
+        category,
+        liquidity: 'long_term',
+        availableForEmergency: false,
+      }],
+    })
+  }
 
   return <div className="financial-page one-screen-editor">
     <PageTitle title={mode === 'fixed' ? '固定资产' : '流动资产与负债'} description={mode === 'fixed' ? '房产与车辆集中在同一页直接填写，空白预设行不会写入客户档案。' : '现金、金融资产及家庭负债集中录入，便于一眼核对完整性。'} />
     <SummaryLine items={mode === 'fixed' ? [['固定资产合计', visibleTotal], ['家庭总资产', totalAssets]] : [['流动资产', visibleTotal], ['总负债', totalLiabilities], ['流动资产减负债', visibleTotal - totalLiabilities]]} />
-    <SheetSection title={mode === 'fixed' ? '房产与车辆' : '现金及金融资产'} description="直接填写金额与对应选项；已经保存的自定义项目会继续显示在表格末尾。">
+    <SheetSection title={mode === 'fixed' ? '房产与车辆' : '现金及金融资产'} description={mode === 'fixed' ? '直接填写家庭车辆；如有房产或其他车辆，可在表格下方新增。' : '直接填写金额与对应选项；已经保存的自定义项目会继续显示在表格末尾。'}>
       <div className={`entry-sheet asset-sheet ${mode === 'fixed' ? 'fixed-sheet' : ''}`}>
         <div className="sheet-row sheet-head"><span>资产项目</span><span>当前价值</span><span>年收益率</span><span>所属成员</span><span>变现速度</span>{mode === 'liquid' ? <span>应急资金</span> : null}</div>
         {rows.map(({ preset, entry }) => <AssetSheetRow key={preset.name} preset={preset} entry={entry} customer={customer} showEmergency={mode === 'liquid'} onChange={(patch) => saveAsset(preset, entry, patch)} />)}
         {extraAssets.map((entry) => <AssetSheetRow key={entry.id} preset={{ name: entry.name || assetLabels[entry.category], category: entry.category, liquidity: entry.liquidity, availableForEmergency: entry.availableForEmergency }} entry={entry} customer={customer} showEmergency={mode === 'liquid'} onChange={(patch) => saveAsset({ name: entry.name, category: entry.category, liquidity: entry.liquidity, availableForEmergency: entry.availableForEmergency }, entry, patch)} onDelete={() => onUpdate({ assets: customer.assets.filter((item) => item.id !== entry.id) })} />)}
+        {mode === 'fixed' ? <div className="sheet-add-row">
+          <label className="sheet-add-control">
+            <PlusIcon size={17} />
+            <span className="sr-only">新增资产项目</span>
+            <select aria-label="新增资产项目" defaultValue="" onChange={(event) => {
+              const category = event.target.value as 'property' | 'vehicle' | ''
+              if (category) addFixedAsset(category)
+              event.target.value = ''
+            }}>
+              <option value="" disabled>添加资产项目</option>
+              <option value="property">新增房产</option>
+              <option value="vehicle">新增车辆</option>
+            </select>
+          </label>
+        </div> : null}
       </div>
     </SheetSection>
     {mode === 'liquid' ? <SheetSection title="家庭负债" description="当前余额、月供与未来一年应还金额会分别用于净资产和短期偿债分析。">
@@ -364,15 +389,15 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
                 <label className="education-duration-control"><span className="sr-only">{plan.stage}年限</span><select value={plan.durationYears} aria-label={`${plan.stage}年限`} onChange={(event) => updateStageDuration(goal, plan.stage, Number(event.target.value))}>{educationYearOptions.map((year) => <option value={year} key={year}>{year} 年</option>)}</select></label>
               </div>
               <div className="education-route-options">
-                {educationRoutes.filter((route) => route !== '留学').map((route) => <button className={`route-chip ${plan.route === route ? 'is-selected' : ''}`} type="button" key={route} aria-pressed={plan.route === route} onClick={() => updateRoute(goal, plan.stage, route)}>{route}</button>)}
-                <div className={plan.route === '留学' ? 'study-abroad-combo is-active' : 'study-abroad-combo'}>
+                {(plan.stage === '早教' ? ['私立'] : educationRoutes.filter((route) => route !== '留学')).map((route) => <button className={`route-chip ${plan.route === route ? 'is-selected' : ''}`} type="button" key={route} aria-pressed={plan.route === route} onClick={() => updateRoute(goal, plan.stage, route)}>{route}</button>)}
+                {plan.stage !== '早教' ? <div className={plan.route === '留学' ? 'study-abroad-combo is-active' : 'study-abroad-combo'}>
                   <button className={`route-chip ${plan.route === '留学' ? 'is-selected' : ''}`} type="button" aria-pressed={plan.route === '留学'} onClick={() => updateRoute(goal, plan.stage, '留学')}>留学</button>
                   {plan.route === '留学' ? <label className="education-destination-control"><span className="sr-only">{plan.stage}留学国家或地区</span><select value={plan.destination ?? ''} aria-label={`${plan.stage}留学国家或地区`} onChange={(event) => updateDestination(goal, plan.stage, event.target.value)}>
                     <option value="">地区</option>
                     <optgroup label="热门选项">{popularDestinations.map((destination) => <option value={destination} key={destination}>{destination}</option>)}</optgroup>
                     <optgroup label="其他国家和地区">{otherDestinations.map((destination) => <option value={destination} key={destination}>{destination}</option>)}</optgroup>
                   </select></label> : null}
-                </div>
+                </div> : null}
               </div>
             </div>
           })}
@@ -399,8 +424,9 @@ function SheetMoneyInput({ value, onChange, suffix = '元', label }: { value: nu
 
 function AssetSheetRow({ preset, entry, customer, showEmergency, onChange, onDelete }: { preset: AssetPreset; entry?: AssetEntry; customer: CustomerProfile; showEmergency: boolean; onChange: (patch: Partial<AssetEntry>) => void; onDelete?: () => void }) {
   const value = entry?.currentValue ?? 0
+  const displayName = onDelete ? entry?.name || preset.name : preset.name
   return <div className={`sheet-row ${entry ? 'has-data' : ''}`}>
-    <div className="sheet-item-label"><strong>{entry?.name || preset.name}</strong><small>{assetLabels[entry?.category ?? preset.category]}</small>{onDelete ? <button type="button" aria-label={`删除${entry?.name || preset.name}`} onClick={onDelete}><TrashIcon size={14} /></button> : null}</div>
+    <div className="sheet-item-label"><strong>{displayName}</strong><small>{assetLabels[entry?.category ?? preset.category]}</small>{onDelete ? <button type="button" aria-label={`删除${displayName}`} onClick={onDelete}><TrashIcon size={14} /></button> : null}</div>
     <SheetMoneyInput label={`${preset.name}当前价值`} value={value} onChange={(currentValue) => onChange({ currentValue })} />
     <SheetMoneyInput label={`${preset.name}年收益率`} suffix="%" value={entry?.annualReturnRate ?? 0} onChange={(annualReturnRate) => onChange({ annualReturnRate })} />
     <label className="sheet-select-wrap"><span className="sr-only">{preset.name}所属成员</span><select aria-label={`${preset.name}所属成员`} value={entry?.ownerMemberId ?? ''} onChange={(event) => onChange({ ownerMemberId: event.target.value || null })}><option value="">家庭共有</option>{memberOptions(customer)}</select></label>

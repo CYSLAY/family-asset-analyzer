@@ -212,6 +212,10 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .sheet-input-wrap input:focus, .sheet-select-wrap select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(207,31,44,.10); }
 .sheet-check { min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; color: var(--ink-muted); font-size: 10px; cursor: pointer; }
 .sheet-check input { width: 16px; height: 16px; accent-color: var(--accent); }
+.sheet-add-row { padding: 14px 18px; background: #fffafa; display: flex; justify-content: flex-start; }
+.sheet-add-control { min-width: 188px; height: 38px; padding-left: 11px; border: 1px solid #d9d2d2; border-radius: 8px; color: var(--accent-dark); background: #fff; display: inline-flex; align-items: center; gap: 6px; }
+.sheet-add-control:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(207,31,44,.10); }
+.sheet-add-control select { min-width: 0; height: 100%; padding: 0 30px 0 2px; border: 0; outline: 0; color: inherit; background: transparent; font-size: 12px; font-weight: 680; cursor: pointer; }
 .income-member-list { display: grid; }
 .income-member-block { padding: 22px 24px 24px; }
 .income-member-block + .income-member-block { border-top: 1px solid var(--line); }
@@ -246,11 +250,11 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .education-card > .member-card-heading { margin: 0; padding: 20px 22px; border-bottom: 1px solid var(--line); background: var(--surface-muted); }
 .education-basics { padding: 22px; }
 .education-pathway { margin: 0 22px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-.education-stage-row { min-height: 70px; padding: 11px 16px; display: grid; grid-template-columns: 176px minmax(0, 1fr); align-items: center; gap: 16px; }
+.education-stage-row { min-height: 70px; padding: 11px 16px; display: grid; grid-template-columns: 188px minmax(0, 1fr); align-items: center; gap: 16px; }
 .education-stage-row + .education-stage-row { border-top: 1px solid var(--line); }
-.education-stage-label { min-width: 0; display: grid; grid-template-columns: minmax(52px, 1fr) 76px; align-items: center; gap: 10px; }
+.education-stage-label { min-width: 0; display: grid; grid-template-columns: minmax(52px, 1fr) 88px; align-items: center; gap: 10px; }
 .education-stage-label strong { color: var(--ink); font-size: 14px; }
-.education-duration-control select, .education-destination-control select { width: 100%; height: 36px; min-height: 36px; padding: 0 27px 0 10px; border: 1px solid #d7d7d7; border-radius: 8px; outline: 0; color: var(--ink); background: white; font-size: 12px; cursor: pointer; }
+.education-duration-control select, .education-destination-control select { width: 100%; height: 36px; min-height: 36px; padding: 0 24px 0 12px; border: 1px solid #d7d7d7; border-radius: 8px; outline: 0; color: var(--ink); background: white; font-size: 12px; cursor: pointer; }
 .education-duration-control select:focus, .education-destination-control select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(207,31,44,.12); }
 .education-route-options { width: max-content; max-width: 100%; justify-self: start; display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; }
 .route-chip { min-width: 64px; height: 36px; min-height: 36px; padding: 0 13px; border: 1px solid #d7d7d7; border-radius: 8px; color: var(--ink-muted); background: white; font-size: 12px; cursor: pointer; transition: border-color .16s ease, color .16s ease, background .16s ease; }
@@ -526,8 +530,8 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .cashflow-sheet.income-sheet .sheet-row { min-width: 680px; }
   .compact-flow-grid { column-gap: 18px; }
   .compact-flow-field { grid-template-columns: 96px minmax(0, 1fr); gap: 10px; }
-  .education-stage-row { grid-template-columns: 156px minmax(0, 1fr); }
-  .education-stage-label { grid-template-columns: minmax(58px, 1fr) 76px; gap: 8px; }
+  .education-stage-row { grid-template-columns: 168px minmax(0, 1fr); }
+  .education-stage-label { grid-template-columns: minmax(58px, 1fr) 88px; gap: 8px; }
   .create-customer-panel { grid-template-columns: 1fr 1.4fr; }
   .create-customer-panel .form-actions { grid-column: 1 / -1; }
   .priority-list { grid-template-columns: 1fr; }
@@ -588,7 +592,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .education-card > .member-card-heading, .education-basics, .education-funding { padding: 18px 14px; }
   .education-pathway { margin-inline: 14px; }
   .education-stage-row { grid-template-columns: 1fr; gap: 10px; }
-  .education-stage-label { grid-template-columns: minmax(52px, 1fr) 84px; }
+  .education-stage-label { grid-template-columns: minmax(52px, 1fr) 88px; }
   .education-route-options { display: flex; flex-wrap: nowrap; gap: 7px; }
   .route-chip { padding-inline: 8px; }
   .education-destination-control { width: 88px; flex-basis: 88px; }
