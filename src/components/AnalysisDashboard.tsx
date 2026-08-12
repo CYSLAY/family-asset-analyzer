@@ -130,7 +130,7 @@ function ComparisonPanel({ title, leftLabel, leftValue, rightLabel, rightValue, 
   }
   return <article className={`report-panel comparison-panel level-${metric.level}`}>
     <PanelHeader title={title} metric={metric} />
-    <div className="comparison-visual"><EChart option={option} empty={!hasData} /><div className="comparison-result"><span>{resultLabel}</span><strong className={resultValue < 0 ? 'negative-value' : ''}>{hasData ? formatMoney(resultValue) : '资料不足'}</strong>{resultPercent !== null ? <small>{formatPercent(resultPercent)}</small> : null}</div></div>
+    <div className="comparison-visual"><EChart option={option} empty={!hasData} /><div className="comparison-result"><span>{resultLabel}</span><strong className={resultValue < 0 ? 'negative-value' : ''}>{hasData ? formatMoney(resultValue) : '—'}</strong>{resultPercent !== null ? <small>{formatPercent(resultPercent)}</small> : null}</div></div>
     <div className="comparison-legend"><span><i className="legend-primary" />{leftLabel}<strong>{formatMoney(leftValue)}</strong></span><span><i className="legend-secondary" />{rightLabel}<strong>{formatMoney(rightValue)}</strong></span></div>
     <MetricNarrative metric={metric} />
   </article>
@@ -139,7 +139,7 @@ function ComparisonPanel({ title, leftLabel, leftValue, rightLabel, rightValue, 
 function DistributionPanel({ title, totalLabel, items }: { title: string; totalLabel: string; items: BreakdownItem[] }) {
   const total = items.reduce((sum, item) => sum + item.value, 0)
   const option: ChartOption = { aria: { enabled: true }, tooltip: { trigger: 'item', formatter: (params: unknown) => sourceTooltip(items, params) }, color: items.map((item) => item.color), series: [{ type: 'pie', radius: ['58%', '79%'], center: ['50%', '48%'], itemStyle: { borderColor: '#fff', borderWidth: 3 }, label: { show: false }, data: items }] }
-  return <article className="report-panel distribution-panel"><PanelHeader title={title} /><div className="donut-wrap"><EChart option={option} empty={!items.length} /><div className="donut-total"><span>{totalLabel}</span><strong>{items.length ? formatMoney(total) : '资料不足'}</strong></div></div><BreakdownTable items={items} total={total} /></article>
+  return <article className="report-panel distribution-panel"><PanelHeader title={title} /><div className="donut-wrap"><EChart option={option} empty={!items.length} /><div className="donut-total"><span>{totalLabel}</span><strong>{items.length ? formatMoney(total) : '—'}</strong></div></div><BreakdownTable items={items} total={total} /></article>
 }
 
 function HealthPanel({ metric, max, healthyRange }: { metric: MetricResult; max: number; healthyRange: string }) {
@@ -172,7 +172,7 @@ function EChart({ option, empty, compact = false }: { option: ChartOption; empty
     observer.observe(ref.current)
     return () => { observer.disconnect(); chart.dispose() }
   }, [empty, option])
-  if (empty) return <div className={compact ? 'chart-empty compact' : 'chart-empty'}>资料不足</div>
+  if (empty) return <div className={compact ? 'chart-empty compact' : 'chart-empty'}><span aria-hidden="true">—</span><small>录入数据后显示图表</small></div>
   return <div className={compact ? 'chart-canvas compact' : 'chart-canvas'} ref={ref} role="img" aria-label="家庭财务分析图表" />
 }
 

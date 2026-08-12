@@ -55,7 +55,10 @@ export function AccessGate({ onAdminAllowed, onStartSelfService }: Props) {
   return <main className="access-page access-choice-page">
     <section className="access-choice-card">
       <div className="access-choice-heading">
-        <div className="access-brand-lockup"><div className="access-brand"><img src={jojoLogo} alt="Jojo" /></div><strong>JoJo · 你的家庭资产管理顾问</strong></div>
+        <div aria-label="JoJo · 你的家庭资产管理顾问" className="access-brand-lockup">
+          <div className="access-brand"><img src={jojoLogo} alt="" /></div>
+          <div className="access-brand-copy"><strong>JoJo <i aria-hidden="true">·</i></strong><span>你的家庭资产管理顾问</span></div>
+        </div>
         <span className="quiet-label">家庭财务分析</span>
         <h1>选择使用方式</h1>
         <p>您可以自行梳理家庭资料并查看初步报告，也可以进入顾问管理工作区。</p>

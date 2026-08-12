@@ -60,9 +60,14 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .access-card { width: min(100%, 440px); padding: 42px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: 0 28px 80px rgba(60,20,24,.12); }
 .access-brand { width: 72px; height: 72px; margin-bottom: 28px; padding: 4px; border: 1px solid #dedede; border-radius: 18px; background: #fff; display: grid; place-items: center; overflow: hidden; box-shadow: 0 8px 20px rgba(34,34,34,.06); }
 .access-brand img { width: 100%; height: 100%; display: block; object-fit: cover; border-radius: 13px; }
-.access-brand-lockup { margin-bottom: 26px; display: flex; align-items: center; gap: 16px; }
+.access-brand-lockup { width: fit-content; margin-bottom: 30px; display: flex; align-items: center; gap: 22px; }
 .access-brand-lockup .access-brand { margin-bottom: 0; }
-.access-brand-lockup > strong { max-width: 250px; color: var(--ink); font-size: 16px; line-height: 1.45; }
+.access-brand-lockup .access-brand { width: 100px; height: 100px; border-radius: 22px; box-shadow: 0 12px 28px rgba(60,20,24,.09); }
+.access-brand-lockup .access-brand img { transform: scale(1.06); }
+.access-brand-copy strong, .access-brand-copy span { display: block; }
+.access-brand-copy strong { color: var(--ink); font-size: 28px; line-height: 1.08; letter-spacing: -.025em; }
+.access-brand-copy strong i { color: var(--accent); font-style: normal; }
+.access-brand-copy span { margin-top: 9px; color: #4f4f4f; font-size: 18px; font-weight: 680; line-height: 1.35; }
 .access-card h1 { margin: 9px 0 0; color: var(--ink); font-size: 32px; letter-spacing: -.035em; }
 .access-card > p { margin: 10px 0 26px; color: var(--ink-muted); line-height: 1.65; }
 .access-card form { display: grid; gap: 14px; }
@@ -364,7 +369,9 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .chart-panel { min-width: 0; padding: 24px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--shadow); }
 .chart-panel h2 { margin: 0; color: var(--ink); font-size: 17px; }
 .chart-canvas, .chart-empty { width: 100%; height: 310px; margin-top: 12px; }
-.chart-empty { color: var(--ink-muted); display: grid; place-items: center; text-align: center; }
+.chart-empty { color: var(--ink-muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; text-align: center; }
+.chart-empty > span { color: #cfc7c8; font-size: 30px; line-height: 1; }
+.chart-empty > small { font-size: 11px; line-height: 1.5; }
 .chart-source-tooltip { min-width: 238px; max-width: 330px; color: var(--ink); }
 .chart-source-total, .chart-source-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .chart-source-total { font-size: 13px; font-weight: 750; }
@@ -641,8 +648,10 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .access-page { padding: 16px; }
   .access-card { padding: 30px 22px; }
   .access-choice-card { padding: 28px 20px; }
-  .access-brand-lockup { margin-bottom: 22px; gap: 12px; }
-  .access-brand-lockup > strong { font-size: 14px; }
+  .access-brand-lockup { width: 100%; margin-bottom: 24px; gap: 14px; }
+  .access-brand-lockup .access-brand { width: 76px; height: 76px; border-radius: 17px; }
+  .access-brand-copy strong { font-size: 22px; }
+  .access-brand-copy span { margin-top: 6px; font-size: 14px; }
   .access-choice-heading h1 { font-size: 31px; }
   .access-mode-grid { grid-template-columns: 1fr; }
   body { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
