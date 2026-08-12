@@ -287,6 +287,8 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .education-source-note { margin-top: 18px; padding: 0 4px 8px; color: #858585; font-size: 10px; line-height: 1.65; }
 .education-source-note strong { color: #707070; font-size: 10px; font-weight: 720; }
 .education-source-note p { max-width: 1120px; margin: 5px 0 0; }
+.education-source-note a { margin-inline: 2px; color: #686868; font-weight: 680; text-decoration: underline; text-decoration-color: #b8b8b8; text-underline-offset: 2px; }
+.education-source-note a:hover, .education-source-note a:focus-visible { color: var(--accent-strong); text-decoration-color: currentColor; }
 .inline-empty { min-height: 100px; padding: 24px; border: 1px dashed #cbc5c5; border-radius: 12px; color: var(--ink-muted); display: flex; align-items: center; justify-content: center; text-align: center; }
 .input-wrap { position: relative; min-width: 0; }
 .input-wrap .input-suffix { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-muted); font-size: 12px; pointer-events: none; }

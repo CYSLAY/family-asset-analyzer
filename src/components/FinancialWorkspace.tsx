@@ -437,7 +437,7 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
     </EntrySection>
     <aside className="education-source-note" aria-label="教育费用数据来源">
       <strong>费用估算口径与数据来源</strong>
-      <p>估算基准截至 2026 年 8 月，均按人民币现价现金口径展示。国内教育费用结合参考图标准与公立、私立教育常见支出估算；香港留学参考香港大学非本地生学费、住宿及生活费；英国参考 British Council 国际学生学费与生活费区间；美国参考 College Board 2025–26 学年学费、住宿及膳食标准。其他国家和地区采用公开教育费用的市场中位规划值。</p>
+      <p>估算基准截至 2026 年 8 月，均按人民币现价现金口径展示。国内教育费用结合参考图标准与公立、私立教育常见支出估算；香港留学参考<a href="https://admissions.hku.hk/fees-and-scholarships/fees" target="_blank" rel="noreferrer">香港大学非本地生学费、住宿及生活费</a>；英国参考<a href="https://study-uk.britishcouncil.org/moving-uk/cost-studying" target="_blank" rel="noreferrer">British Council 国际学生学费与生活费区间</a>；美国参考<a href="https://research.collegeboard.org/trends/college-pricing" target="_blank" rel="noreferrer">College Board 2025–26 学年学费、住宿及膳食标准</a>。其他国家和地区采用公开教育费用的市场中位规划值。</p>
       <p>以上结果用于家庭财务规划，不构成学校正式报价；实际费用会因院校、专业、城市、汇率、通胀、奖学金及个人生活方式而变化，请以院校最新公布资料为准。</p>
     </aside>
   </div>
