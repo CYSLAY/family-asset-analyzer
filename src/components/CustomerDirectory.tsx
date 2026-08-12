@@ -9,11 +9,12 @@ import {
   UserPlusIcon,
   UsersThreeIcon,
 } from '@phosphor-icons/react'
-import { createMember, type CustomerProfile, type FamilyMember, type IncomeStability } from '../types/domain'
+import { createMember, intakeCompletion, isIntakeComplete, type CustomerProfile, type FamilyMember, type IncomeStability } from '../types/domain'
 import { useCustomerStore } from '../stores/customerStore'
 
 interface CustomerDirectoryProps {
-  onOpenDashboard: () => void
+  onStartIntake: () => void
+  onOpenReport: () => void
 }
 
 const stabilityLabels: Record<IncomeStability, string> = {
@@ -24,7 +25,7 @@ const stabilityLabels: Record<IncomeStability, string> = {
   none: '暂无收入',
 }
 
-export function CustomerDirectory({ onOpenDashboard }: CustomerDirectoryProps) {
+export function CustomerDirectory({ onStartIntake, onOpenReport }: CustomerDirectoryProps) {
   const {
     customers,
     selectedCustomerId,
@@ -43,7 +44,6 @@ export function CustomerDirectory({ onOpenDashboard }: CustomerDirectoryProps) {
   const [creating, setCreating] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
-  const selected = customers.find((item) => item.id === selectedCustomerId) ?? null
   const visibleCustomers = useMemo(() => {
     const keyword = search.trim().toLocaleLowerCase('zh-CN')
     return customers.filter((customer) => {
@@ -59,21 +59,6 @@ export function CustomerDirectory({ onOpenDashboard }: CustomerDirectoryProps) {
     await addCustomer(newName)
     setNewName('')
     setCreating(false)
-  }
-
-  if (selected) {
-    return (
-      <CustomerEditor
-        customer={selected}
-        onBack={() => selectCustomer('')}
-        onDashboard={onOpenDashboard}
-        onUpdate={(patch) => updateCustomer(selected.id, patch)}
-        onAddMember={(member) => addMember(selected.id, member)}
-        onUpdateMember={(memberId, patch) => updateMember(selected.id, memberId, patch)}
-        onRemoveMember={(memberId) => removeMember(selected.id, memberId)}
-        onArchive={() => archiveCustomer(selected.id, !selected.archivedAt)}
-      />
-    )
   }
 
   return (
@@ -111,12 +96,15 @@ export function CustomerDirectory({ onOpenDashboard }: CustomerDirectoryProps) {
         <section className="customer-list" aria-label={showArchived ? '已归档客户' : '当前客户'}>
           {visibleCustomers.map((customer) => (
             <article className="customer-row" key={customer.id}>
-              <button className="customer-main" type="button" onClick={() => selectCustomer(customer.id)}>
+              <button className="customer-main" type="button" onClick={() => { selectCustomer(customer.id); onStartIntake() }}>
                 <span className="customer-avatar">{customer.primaryContactName.slice(0, 1)}</span>
-                <span><strong>{customer.householdName}</strong><small>{customer.city || '城市待补充'}　{customer.members.length} 位成员</small></span>
+                <span><strong>{customer.householdName}</strong><small>{customer.city || '城市待补充'}　{customer.members.length} 位成员　{intakeCompletion(customer)}% 已确认</small></span>
               </button>
               <div className="customer-meta"><span>最近保存</span><strong>{formatDate(customer.updatedAt)}</strong></div>
-              {showArchived ? (
+              {!showArchived ? <div className="row-actions archive-actions">
+                <button className="subtle-button compact-row-button" type="button" onClick={() => { selectCustomer(customer.id); onStartIntake() }}>继续录入</button>
+                <button className="subtle-button compact-row-button" disabled={!isIntakeComplete(customer)} type="button" onClick={() => { selectCustomer(customer.id); onOpenReport() }}>{isIntakeComplete(customer) ? '查看报告' : '报告待完成'}</button>
+              </div> : (
                 <div className="row-actions">
                   <button className="icon-button" title="恢复档案" type="button" onClick={() => archiveCustomer(customer.id, false)}><CheckCircleIcon size={19} /></button>
                   {confirmDelete === customer.id ? (
@@ -125,7 +113,7 @@ export function CustomerDirectory({ onOpenDashboard }: CustomerDirectoryProps) {
                     <button className="icon-button danger" title="永久删除" type="button" onClick={() => setConfirmDelete(customer.id)}><TrashIcon size={19} /></button>
                   )}
                 </div>
-              ) : null}
+              )}
             </article>
           ))}
         </section>
@@ -159,7 +147,7 @@ function CustomerEditor({ customer, onBack, onDashboard, onUpdate, onAddMember, 
         <button className="back-button" type="button" onClick={onBack}><ArrowLeftIcon size={18} /> 所有客户</button>
         <div className="editor-toolbar-actions">
           <button className="subtle-button" type="button" onClick={onArchive}><ArchiveIcon size={18} /> {customer.archivedAt ? '恢复档案' : '归档'}</button>
-          <button className="primary-action compact" type="button" onClick={onDashboard}>查看工作台</button>
+          <button className="primary-action compact" type="button" onClick={onDashboard}>返回信息录入</button>
         </div>
       </div>
 

@@ -13,7 +13,7 @@ import {
 } from '../types/domain'
 import { useCustomerStore } from '../stores/customerStore'
 
-export type FinancialSection = 'balance' | 'cashflow' | 'goals'
+export type FinancialSection = 'fixed' | 'liquid' | 'cashflow' | 'goals'
 
 interface Props {
   section: FinancialSection
@@ -21,6 +21,8 @@ interface Props {
 }
 
 const assetLabels = { cash: '现金', bank: '银行存款与理财', fund: '基金', stock: '股票', bond: '债券', property: '房产', vehicle: '车辆', pension: '养老金与公积金', receivable: '私人债权', other: '其他资产' }
+const fixedAssetLabels = { property: '房产', vehicle: '车辆' }
+const liquidAssetLabels = { cash: '现金', bank: '银行存款与理财', fund: '基金', stock: '股票', bond: '债券', pension: '养老金与公积金', receivable: '私人债权', other: '其他资产' }
 const liabilityLabels = { mortgage: '房贷', car_loan: '车贷', consumer_loan: '消费贷款', credit_card: '信用卡', private_loan: '私人借款', other: '其他负债' }
 const frequencyLabels = { monthly: '每月', quarterly: '每季度', yearly: '每年' }
 
@@ -32,36 +34,44 @@ export function FinancialWorkspace({ section, onChooseCustomer }: Props) {
     return <section className="empty-state financial-empty"><UsersThreeIcon size={34} /><h2>请先选择客户</h2><p>所有资产、负债和收支都必须归属于一份客户档案。</p><button className="primary-action compact" type="button" onClick={onChooseCustomer}>选择客户 <ArrowRightIcon size={18} /></button></section>
   }
 
-  if (section === 'balance') return <BalanceEditor customer={customer} onUpdate={(patch) => updateCustomer(customer.id, patch)} />
+  if (section === 'fixed' || section === 'liquid') return <BalanceEditor mode={section} customer={customer} onUpdate={(patch) => updateCustomer(customer.id, patch)} />
   if (section === 'cashflow') return <CashFlowEditor customer={customer} onUpdate={(patch) => updateCustomer(customer.id, patch)} />
   return <GoalEditor customer={customer} onUpdate={(patch) => updateCustomer(customer.id, patch)} />
 }
 
-function BalanceEditor({ customer, onUpdate }: EditorProps) {
+function BalanceEditor({ customer, onUpdate, mode }: EditorProps & { mode: 'fixed' | 'liquid' }) {
   function updateAsset(id: string, patch: Partial<AssetEntry>) { onUpdate({ assets: customer.assets.map((item) => item.id === id ? { ...item, ...patch } : item) }) }
   function updateLiability(id: string, patch: Partial<LiabilityEntry>) { onUpdate({ liabilities: customer.liabilities.map((item) => item.id === id ? { ...item, ...patch } : item) }) }
   const totalAssets = customer.assets.reduce((sum, item) => sum + item.currentValue, 0)
   const totalLiabilities = customer.liabilities.reduce((sum, item) => sum + item.balance, 0)
+  const isFixed = (asset: AssetEntry) => asset.category === 'property' || asset.category === 'vehicle'
+  const visibleAssets = customer.assets.filter((asset) => mode === 'fixed' ? isFixed(asset) : !isFixed(asset))
+  const visibleAssetTotal = visibleAssets.reduce((sum, item) => sum + item.currentValue, 0)
+  const addAsset = () => {
+    const asset = createAsset()
+    if (mode === 'fixed') Object.assign(asset, { category: 'property', liquidity: 'long_term', availableForEmergency: false })
+    onUpdate({ assets: [...customer.assets, asset] })
+  }
 
   return <div className="financial-page">
-    <PageTitle title="资产负债" description="逐项保留原始金额、流动性和债务期限，分析结果会由这些数据实时计算。" />
-    <SummaryLine items={[['总资产', totalAssets], ['总负债', totalLiabilities], ['净资产', totalAssets - totalLiabilities]]} />
-    <EntrySection title="家庭资产" description="现金、金融资产和固定资产分别记录，避免只留下一个总数。" action="添加资产" onAdd={() => onUpdate({ assets: [...customer.assets, createAsset()] })}>
-      {customer.assets.length ? customer.assets.map((asset) => <article className="entry-card" key={asset.id}>
+    <PageTitle title={mode === 'fixed' ? '固定资产' : '流动资产与负债'} description={mode === 'fixed' ? '记录房产、车辆等长期持有资产的当前市值与权属。' : '记录可变现资金和每笔债务，供流动性与偿债压力分析使用。'} />
+    <SummaryLine items={mode === 'fixed' ? [['固定资产合计', visibleAssetTotal], ['家庭总资产', totalAssets]] : [['流动资产', visibleAssetTotal], ['总负债', totalLiabilities], ['流动资产减负债', visibleAssetTotal - totalLiabilities]]} />
+    <EntrySection title={mode === 'fixed' ? '房产与车辆' : '现金及金融资产'} description={mode === 'fixed' ? '每项资产独立记录，后续可准确计算固定资产占比。' : '包括现金、存款、基金、股票、债券、公积金及其他可变现资产。'} action={mode === 'fixed' ? '添加固定资产' : '添加流动资产'} onAdd={addAsset}>
+      {visibleAssets.length ? visibleAssets.map((asset) => <article className="entry-card" key={asset.id}>
         <EntryHeader name={asset.name || assetLabels[asset.category]} onDelete={() => onUpdate({ assets: customer.assets.filter((item) => item.id !== asset.id) })} />
         <div className="form-grid four-columns">
           <Field label="资产名称"><input value={asset.name} onChange={(e) => updateAsset(asset.id, { name: e.target.value })} placeholder="例如：自住房" /></Field>
-          <Field label="资产类型"><select value={asset.category} onChange={(e) => updateAsset(asset.id, { category: e.target.value as AssetEntry['category'] })}>{options(assetLabels)}</select></Field>
+          <Field label="资产类型"><select value={asset.category} onChange={(e) => updateAsset(asset.id, { category: e.target.value as AssetEntry['category'] })}>{options(mode === 'fixed' ? fixedAssetLabels : liquidAssetLabels)}</select></Field>
           <MoneyField label="当前价值" value={asset.currentValue} onChange={(value) => updateAsset(asset.id, { currentValue: value })} />
           <Field label="所属成员"><select value={asset.ownerMemberId ?? ''} onChange={(e) => updateAsset(asset.id, { ownerMemberId: e.target.value || null })}><option value="">家庭共有</option>{memberOptions(customer)}</select></Field>
           <Field label="变现速度"><select value={asset.liquidity} onChange={(e) => updateAsset(asset.id, { liquidity: e.target.value as AssetEntry['liquidity'] })}><option value="immediate">随时可用</option><option value="within_month">一个月内</option><option value="long_term">长期资产</option></select></Field>
           <Field label="年收益率（可选）"><input type="number" value={asset.annualReturnRate ?? ''} onChange={(e) => updateAsset(asset.id, { annualReturnRate: nullableNumber(e.target.value) })} /><span className="input-suffix">%</span></Field>
           <label className="checkbox-field span-two"><input type="checkbox" checked={asset.availableForEmergency} onChange={(e) => updateAsset(asset.id, { availableForEmergency: e.target.checked })} /><span><strong>可作为应急资金</strong><small>将计入现金储备充足度</small></span></label>
         </div>
-      </article>) : <InlineEmpty text="还没有资产记录。先从现金、银行账户或房产开始。" />}
+      </article>) : <InlineEmpty text={mode === 'fixed' ? '如家庭没有房产或车辆，也可以直接确认本步骤。' : '还没有流动资产记录。先从现金或银行账户开始。'} />}
     </EntrySection>
 
-    <EntrySection title="家庭负债" description="余额用于净资产分析，月供和一年内还款用于偿债压力分析。" action="添加负债" onAdd={() => onUpdate({ liabilities: [...customer.liabilities, createLiability()] })}>
+    {mode === 'liquid' ? <EntrySection title="家庭负债" description="余额用于净资产分析，月供和一年内还款用于偿债压力分析。" action="添加负债" onAdd={() => onUpdate({ liabilities: [...customer.liabilities, createLiability()] })}>
       {customer.liabilities.length ? customer.liabilities.map((liability) => <article className="entry-card" key={liability.id}>
         <EntryHeader name={liability.name || liabilityLabels[liability.category]} onDelete={() => onUpdate({ liabilities: customer.liabilities.filter((item) => item.id !== liability.id) })} />
         <div className="form-grid four-columns">
@@ -74,7 +84,7 @@ function BalanceEditor({ customer, onUpdate }: EditorProps) {
           <MoneyField label="未来一年应还" value={liability.dueWithinOneYear} onChange={(value) => updateLiability(liability.id, { dueWithinOneYear: value })} />
         </div>
       </article>) : <InlineEmpty text="当前没有负债记录。无负债家庭可以保持为空。" />}
-    </EntrySection>
+    </EntrySection> : null}
   </div>
 }
 
@@ -105,7 +115,7 @@ function CashFlowEditor({ customer, onUpdate }: EditorProps) {
 function GoalEditor({ customer, onUpdate }: EditorProps) {
   function updateGoal(id: string, patch: Partial<EducationGoal>) { onUpdate({ educationGoals: customer.educationGoals.map((item) => item.id === id ? { ...item, ...patch } : item) }) }
   return <div className="financial-page">
-    <PageTitle title="家庭目标" description="先完成教育目标，后续可在同一结构中扩展购房、养老和其他大额目标。" />
+    <PageTitle title="教育期望" description="按子女分别记录教育路线、开始时间、费用假设和已准备资金。" />
     <EntrySection title="子女教育期望" description="费用会根据开始时间、学费增长率和就读年限估算未来需求。" action="添加教育目标" onAdd={() => onUpdate({ educationGoals: [...customer.educationGoals, createEducationGoal()] })}>
       {customer.educationGoals.length ? customer.educationGoals.map((goal) => <article className="entry-card" key={goal.id}>
         <EntryHeader name="教育资金目标" onDelete={() => onUpdate({ educationGoals: customer.educationGoals.filter((item) => item.id !== goal.id) })} />

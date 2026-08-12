@@ -25,6 +25,7 @@ export async function getCustomers(): Promise<CustomerProfile[]> {
     incomes: row.incomes ?? [],
     expenses: row.expenses ?? [],
     educationGoals: row.educationGoals ?? [],
+    intakeCompletedSteps: row.intakeCompletedSteps ?? [],
   })).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 }
 

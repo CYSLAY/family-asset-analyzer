@@ -26,9 +26,24 @@ export interface CustomerProfile {
   incomes: CashFlowEntry[]
   expenses: CashFlowEntry[]
   educationGoals: EducationGoal[]
+  intakeCompletedSteps?: IntakeStepKey[]
   createdAt: string
   updatedAt: string
   archivedAt: string | null
+}
+
+export type IntakeStepKey = 'profile' | 'members' | 'fixed_assets' | 'liquid_assets' | 'cashflow' | 'education'
+
+export const intakeStepKeys: IntakeStepKey[] = ['profile', 'members', 'fixed_assets', 'liquid_assets', 'cashflow', 'education']
+
+export function isIntakeComplete(customer: CustomerProfile) {
+  const completed = new Set(customer.intakeCompletedSteps ?? [])
+  return intakeStepKeys.every((step) => completed.has(step))
+}
+
+export function intakeCompletion(customer: CustomerProfile) {
+  const completed = new Set(customer.intakeCompletedSteps ?? [])
+  return Math.round((intakeStepKeys.filter((step) => completed.has(step)).length / intakeStepKeys.length) * 100)
 }
 
 export type AssetCategory = 'cash' | 'bank' | 'fund' | 'stock' | 'bond' | 'property' | 'vehicle' | 'pension' | 'receivable' | 'other'
@@ -116,6 +131,7 @@ export function createCustomer(primaryContactName: string): CustomerProfile {
     incomes: [],
     expenses: [],
     educationGoals: [],
+    intakeCompletedSteps: [],
     createdAt: now,
     updatedAt: now,
     archivedAt: null,

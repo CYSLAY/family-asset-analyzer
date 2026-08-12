@@ -32,8 +32,8 @@ export function AccessGate({ onAllowed }: Props) {
 
   return <main className="access-page">
     <section className="access-card">
-      <div className="access-brand" aria-hidden="true">衡</div>
-      <span className="quiet-label">家庭资产分析</span>
+      <div className="access-brand" aria-hidden="true">家</div>
+      <span className="quiet-label">家庭财务分析</span>
       <h1>进入客户工作区</h1>
       <p>请输入白名单用户名和访问密码。</p>
       <form onSubmit={submit}>
