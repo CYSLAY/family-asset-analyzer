@@ -36,6 +36,10 @@ export function CustomerDirectory({ onStartIntake, onOpenReport }: CustomerDirec
         .some((value) => value.toLocaleLowerCase('zh-CN').includes(keyword))
     })
   }, [customers, search])
+  const customerGroups = [
+    { key: 'advisor', title: '顾问录入', description: '由您在管理工作区建立和维护的客户档案', customers: visibleCustomers.filter((customer) => customer.source !== 'self_service') },
+    { key: 'self_service', title: '客户自填', description: '客户通过“家庭财务自测”独立填写并自动提交的档案', customers: visibleCustomers.filter((customer) => customer.source === 'self_service') },
+  ]
 
   async function handleCreate() {
     if (!newName.trim()) return
@@ -87,22 +91,25 @@ export function CustomerDirectory({ onStartIntake, onOpenReport }: CustomerDirec
       ) : null}
 
       {visibleCustomers.length ? (
-        <section className="customer-list" aria-label="客户档案列表">
-          {visibleCustomers.map((customer) => (
-            <article className="customer-row" key={customer.id}>
-              <button className="customer-main" type="button" onClick={() => { selectCustomer(customer.id); onStartIntake() }}>
-                <span className="customer-avatar">{customer.primaryContactName.slice(0, 1)}</span>
-                <span><strong>{customer.householdName}</strong><small>{customer.city || '城市待补充'}　{customer.members.length} 位成员　{intakeCompletion(customer)}% 已填写</small></span>
-              </button>
-              <div className="customer-meta"><span>最近保存</span><strong>{formatDate(customer.updatedAt)}</strong></div>
-              <div className="row-actions customer-row-actions">
-                <button className="subtle-button compact-row-button" type="button" onClick={() => { selectCustomer(customer.id); onStartIntake() }}>继续录入</button>
-                <button className="subtle-button compact-row-button" type="button" onClick={() => { selectCustomer(customer.id); onOpenReport() }}>查看报告</button>
-                <button className="customer-delete-button" type="button" onClick={() => { setDeleteError(''); setPendingDelete(customer) }}><TrashIcon size={16} /> 删除</button>
-              </div>
-            </article>
-          ))}
-        </section>
+        <div className="customer-source-groups">
+          {customerGroups.map((group) => group.customers.length ? <section className="customer-source-section" key={group.key} aria-label={group.title}>
+            <header className="customer-source-heading"><div><span className={`customer-source-mark ${group.key}`} /> <strong>{group.title}</strong><p>{group.description}</p></div><span>{group.customers.length} 份档案</span></header>
+            <div className="customer-list">
+              {group.customers.map((customer) => <article className="customer-row" key={customer.id}>
+                <button className="customer-main" type="button" onClick={() => { selectCustomer(customer.id); onStartIntake() }}>
+                  <span className="customer-avatar">{customer.primaryContactName.slice(0, 1) || '家'}</span>
+                  <span><strong>{customer.householdName}</strong><small>{customer.city || '城市待补充'}　{customer.members.length} 位成员　{intakeCompletion(customer)}% 已填写</small></span>
+                </button>
+                <div className="customer-meta"><span>最近保存</span><strong>{formatDate(customer.updatedAt)}</strong></div>
+                <div className="row-actions customer-row-actions">
+                  <button className="subtle-button compact-row-button" type="button" onClick={() => { selectCustomer(customer.id); onStartIntake() }}>继续录入</button>
+                  <button className="subtle-button compact-row-button" type="button" onClick={() => { selectCustomer(customer.id); onOpenReport() }}>查看报告</button>
+                  <button className="customer-delete-button" type="button" onClick={() => { setDeleteError(''); setPendingDelete(customer) }}><TrashIcon size={16} /> 删除</button>
+                </div>
+              </article>)}
+            </div>
+          </section> : null)}
+        </div>
       ) : (
         <section className="empty-state">
           <UsersThreeIcon size={34} />

@@ -28,6 +28,7 @@ import {
 interface Props {
   onOpenReport: () => void
   onOpenCustomers: () => void
+  selfService?: boolean
 }
 
 type IntakeView = 'overview' | IntakeStepKey
@@ -52,7 +53,7 @@ const stabilityLabels: Record<IncomeStability, string> = {
 const popularCities = ['北京', '上海', '广州', '深圳', '香港']
 const otherCities = ['杭州', '成都', '重庆', '天津', '苏州', '南京', '武汉', '西安', '厦门', '青岛', '宁波', '东莞', '佛山', '珠海', '澳门', '台北', '其他城市或地区']
 
-export function IntakeWorkspace({ onOpenReport, onOpenCustomers }: Props) {
+export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = false }: Props) {
   const { customers, selectedCustomerId, selectCustomer, addCustomer, updateCustomer } = useCustomerStore()
   const [view, setView] = useState<IntakeView>('overview')
   const [newName, setNewName] = useState('')
@@ -108,9 +109,9 @@ export function IntakeWorkspace({ onOpenReport, onOpenCustomers }: Props) {
   return <div className="intake-workspace">
     <header className="intake-header">
       <div>
-        <button className="back-button" type="button" onClick={() => { selectCustomer(''); setView('overview') }}><ArrowLeftIcon size={17} /> 切换客户</button>
-        <h1>{customer.householdName}</h1>
-        <p>可自由选择任意模块录入，系统会根据已有内容自动更新填写状态。</p>
+        <button className="back-button" type="button" onClick={() => { if (selfService) setView('overview'); else selectCustomer('') }}><ArrowLeftIcon size={17} /> {selfService ? '返回填写总览' : '切换客户'}</button>
+        <h1>{selfService ? customer.primaryContactName ? `${customer.primaryContactName}的家庭资料` : '我的家庭资料' : customer.householdName}</h1>
+        <p>{selfService ? '可按任意顺序填写，资料会自动保存在本机并同步至云端。' : '可自由选择任意模块录入，系统会根据已有内容自动更新填写状态。'}</p>
       </div>
       <div className="intake-progress-number"><strong>{intakeCompletion(customer)}%</strong><span>模块已有资料</span></div>
     </header>
@@ -170,7 +171,14 @@ function ProfileForm({ customer, onUpdate }: { customer: CustomerProfile; onUpda
   const hasLegacyCity = Boolean(customer.city && !knownCities.includes(customer.city))
   return <section className="form-section module-form">
     <div className="form-grid two-columns">
-      <Field label="主要联系人姓名"><input value={customer.primaryContactName} onChange={(event) => onUpdate({ primaryContactName: event.target.value })} /></Field>
+      <Field label="主要联系人姓名"><input value={customer.primaryContactName} onChange={(event) => {
+        const name = event.target.value
+        onUpdate({
+          primaryContactName: name,
+          householdName: name.trim() ? `${name.trim()}家庭` : customer.source === 'self_service' ? '我的家庭' : customer.householdName,
+          members: customer.members.map((member, index) => index === 0 && member.relation === '本人' ? { ...member, name } : member),
+        })
+      }} /></Field>
       <Field label="所在城市"><select value={customer.city} onChange={(event) => onUpdate({ city: event.target.value })}>
         <option value="">请选择城市或地区</option>
         {hasLegacyCity ? <option value={customer.city}>{customer.city}（原有资料）</option> : null}

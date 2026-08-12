@@ -16,6 +16,7 @@ export interface FamilyMember {
 
 export interface CustomerProfile {
   id: string
+  source?: 'advisor' | 'self_service'
   householdName: string
   primaryContactName: string
   city: string
@@ -50,7 +51,7 @@ export function hasIntakeStepData(customer: CustomerProfile, step: IntakeStepKey
     || goal.stagePlans?.some((plan) => Boolean(plan.route)),
   )
 
-  if (step === 'profile') return Boolean(customer.primaryContactName.trim() || customer.householdName.trim() || customer.city.trim() || customer.notes.trim())
+  if (step === 'profile') return Boolean(customer.primaryContactName.trim() || customer.city.trim() || customer.notes.trim())
   if (step === 'members') return customer.members.some((member) => Boolean(member.name.trim() || member.birthDate || member.jobType.trim() || member.phone.trim() || member.healthNotes.trim() || member.heightCm || member.weightKg))
   if (step === 'fixed_assets') return customer.assets.some((asset) => (asset.category === 'property' || asset.category === 'vehicle') && meaningfulAsset(asset))
   if (step === 'liquid_assets') return customer.assets.some((asset) => asset.category !== 'property' && asset.category !== 'vehicle' && meaningfulAsset(asset)) || customer.liabilities.some(meaningfulLiability)
@@ -155,11 +156,12 @@ export function createMember(overrides: Partial<FamilyMember> = {}): FamilyMembe
   }
 }
 
-export function createCustomer(primaryContactName: string): CustomerProfile {
+export function createCustomer(primaryContactName: string, source: CustomerProfile['source'] = 'advisor'): CustomerProfile {
   const now = new Date().toISOString()
   const cleanName = primaryContactName.trim()
   return {
     id: crypto.randomUUID(),
+    source,
     householdName: `${cleanName}家庭`,
     primaryContactName: cleanName,
     city: '',

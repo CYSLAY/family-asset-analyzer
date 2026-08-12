@@ -2,6 +2,7 @@ import type { CustomerProfile } from '../types/domain'
 import { getCustomers, putCustomer } from './localDb'
 import { supabase } from './supabase'
 import { migrateCustomerProfile } from './customerMigrations'
+import { listPublicIntakesForAdvisor, pushPublicIntakeAsAdvisor } from './publicIntake'
 
 interface RemoteRecord {
   id: string
@@ -36,7 +37,10 @@ export async function deleteWorkspaceCustomer(username: string, accessCode: stri
 
 export async function synchronizeWorkspace(username: string, accessCode: string) {
   if (!supabase) return getCustomers()
-  const { data, error } = await supabase.rpc('workspace_list_customers', { p_username: username, p_access_code: accessCode })
+  const [{ data, error }, publicCustomers] = await Promise.all([
+    supabase.rpc('workspace_list_customers', { p_username: username, p_access_code: accessCode }),
+    listPublicIntakesForAdvisor(username, accessCode),
+  ])
   if (error) throw error
   const local = await getCustomers()
   const records = (data ?? []) as RemoteRecord[]
@@ -44,7 +48,7 @@ export async function synchronizeWorkspace(username: string, accessCode: string)
   const remoteMigrationIds = new Set<string>()
 
   for (const record of records) {
-    const migration = migrateCustomerProfile(record.document)
+    const migration = migrateCustomerProfile({ ...record.document, source: 'advisor' })
     if (migration.changed) remoteMigrationIds.add(record.id)
     const localCustomer = merged.get(record.id)
     if (!localCustomer || record.client_updated_at > localCustomer.updatedAt) {
@@ -52,9 +56,17 @@ export async function synchronizeWorkspace(username: string, accessCode: string)
       merged.set(record.id, migration.customer)
     }
   }
+  for (const publicCustomer of publicCustomers) {
+    const localCustomer = merged.get(publicCustomer.id)
+    if (!localCustomer || publicCustomer.updatedAt > localCustomer.updatedAt) {
+      await putCustomer(publicCustomer)
+      merged.set(publicCustomer.id, publicCustomer)
+    }
+  }
   for (const id of remoteMigrationIds) {
     const customer = merged.get(id)
-    if (customer) await pushWorkspaceCustomer(username, accessCode, customer)
+    if (customer?.source === 'self_service') await pushPublicIntakeAsAdvisor(username, accessCode, customer)
+    else if (customer) await pushWorkspaceCustomer(username, accessCode, customer)
   }
   return getCustomers()
 }

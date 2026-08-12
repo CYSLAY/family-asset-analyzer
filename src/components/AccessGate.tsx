@@ -1,11 +1,15 @@
 import { useState, type FormEvent } from 'react'
-import { ArrowRightIcon, ShieldCheckIcon } from '@phosphor-icons/react'
+import { ArrowLeftIcon, ArrowRightIcon, BriefcaseIcon, HouseLineIcon, ShieldCheckIcon } from '@phosphor-icons/react'
 import { isUsernameAllowed, normalizeUsername, saveAccessSession } from '../lib/access'
 import { confirmWorkspaceUsername } from '../lib/usernameSync'
 
-interface Props { onAllowed: (username: string) => void }
+interface Props {
+  onAdminAllowed: (username: string) => void
+  onStartSelfService: () => void
+}
 
-export function AccessGate({ onAllowed }: Props) {
+export function AccessGate({ onAdminAllowed, onStartSelfService }: Props) {
+  const [screen, setScreen] = useState<'choice' | 'admin'>('choice')
   const [username, setUsername] = useState('')
   const [accessCode, setAccessCode] = useState('')
   const [error, setError] = useState('')
@@ -25,24 +29,48 @@ export function AccessGate({ onAllowed }: Props) {
         setError('用户名或访问密码不正确')
         return
       }
-      onAllowed(saveAccessSession(normalized, accessCode))
+      onAdminAllowed(saveAccessSession(normalized, accessCode))
     } catch { setError('暂时无法验证，请检查网络后重试') }
     finally { setChecking(false) }
   }
 
-  return <main className="access-page">
-    <section className="access-card">
-      <div className="access-brand" aria-hidden="true">家</div>
-      <span className="quiet-label">家庭财务分析</span>
-      <h1>进入客户工作区</h1>
-      <p>请输入白名单用户名和访问密码。</p>
+  if (screen === 'admin') return <main className="access-page">
+    <section className="access-card admin-access-card">
+      <button className="access-back-button" type="button" onClick={() => { setScreen('choice'); setError('') }}><ArrowLeftIcon size={17} /> 返回模式选择</button>
+      <span className="quiet-label">顾问管理</span>
+      <h1>进入管理工作区</h1>
+      <p>请输入管理员用户名和访问密码。</p>
       <form onSubmit={submit}>
         <label className="field-block"><span>用户名</span><input autoCapitalize="none" autoComplete="username" autoFocus value={username} onChange={(event) => { setUsername(event.target.value); setError('') }} placeholder="请输入用户名" /></label>
         <label className="field-block"><span>访问密码</span><input type="password" inputMode="numeric" autoComplete="current-password" value={accessCode} onChange={(event) => { setAccessCode(event.target.value); setError('') }} placeholder="请输入访问密码" /></label>
         {error ? <p className="access-error" role="alert">{error}</p> : null}
-        <button className="primary-action" disabled={checking || !username.trim() || !accessCode} type="submit">{checking ? '正在验证' : '进入工具'} <ArrowRightIcon size={18} /></button>
+        <button className="primary-action" disabled={checking || !username.trim() || !accessCode} type="submit">{checking ? '正在验证' : '进入管理工作区'} <ArrowRightIcon size={18} /></button>
       </form>
-      <div className="access-foot"><ShieldCheckIcon size={17} /><span>名单外用户无法查看客户工作区</span></div>
+      <div className="access-foot"><ShieldCheckIcon size={17} /><span>管理员工作区受账号和访问密码保护</span></div>
+    </section>
+  </main>
+
+  return <main className="access-page access-choice-page">
+    <section className="access-choice-card">
+      <div className="access-choice-heading">
+        <div className="access-brand" aria-hidden="true">家</div>
+        <span className="quiet-label">家庭财务分析</span>
+        <h1>选择使用方式</h1>
+        <p>您可以自行梳理家庭资料并查看初步报告，也可以进入顾问管理工作区。</p>
+      </div>
+      <div className="access-mode-grid">
+        <button className="access-mode-card self-service-mode" type="button" onClick={onStartSelfService}>
+          <span className="access-mode-icon"><HouseLineIcon size={26} /></span>
+          <span><small>无需账号</small><strong>家庭财务自测</strong><em>按自己的节奏填写资料，完成后即可查看专属分析报告。</em></span>
+          <ArrowRightIcon className="access-mode-arrow" size={20} />
+        </button>
+        <button className="access-mode-card" type="button" onClick={() => setScreen('admin')}>
+          <span className="access-mode-icon"><BriefcaseIcon size={26} /></span>
+          <span><small>管理员入口</small><strong>顾问管理</strong><em>管理顾问录入与客户自填档案，查看并解读分析报告。</em></span>
+          <ArrowRightIcon className="access-mode-arrow" size={20} />
+        </button>
+      </div>
+      <div className="access-choice-foot"><ShieldCheckIcon size={17} /><span>客户自填资料将加密传输，并与其他客户档案隔离保存</span></div>
     </section>
   </main>
 }

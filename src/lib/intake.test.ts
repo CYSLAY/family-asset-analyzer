@@ -23,4 +23,11 @@ describe('automatic intake status', () => {
     expect(hasIntakeStepData(customer, 'fixed_assets')).toBe(true)
     expect(intakeCompletion(customer)).toBe(50)
   })
+
+  it('does not count the self-service placeholder household name as entered data', () => {
+    const customer = createCustomer('', 'self_service')
+    customer.householdName = '我的家庭'
+    expect(hasIntakeStepData(customer, 'profile')).toBe(false)
+    expect(intakeCompletion(customer)).toBe(0)
+  })
 })

@@ -7,6 +7,8 @@ import type { ComposeOption } from 'echarts/core'
 import type { GaugeSeriesOption, PieSeriesOption } from 'echarts/charts'
 import type { TooltipComponentOption } from 'echarts/components'
 import { ArrowRightIcon, CaretDownIcon, InfoIcon } from '@phosphor-icons/react'
+import wechatQr from '../../assets/branding/jojo-wechat-qr-original.jpg'
+import qrLogoBadge from '../../assets/branding/jojo-qr-logo-badge.png'
 import { analyzeCustomer, annualize, type HealthLevel, type MetricResult } from '../lib/analysis'
 import { useCustomerStore } from '../stores/customerStore'
 import type { CustomerProfile } from '../types/domain'
@@ -88,6 +90,23 @@ export function AnalysisDashboard({ onChooseCustomer }: Props) {
     </ReportSection>
 
     <ReportSection id="education-report" index="03" title="教育目标准备" description="教育路线已经纳入档案；资金准备度只在费用假设完整时计算。"><div className="health-grid one-up"><HealthPanel metric={metric('education_readiness')} max={100} healthyRange="目标越临近，已准备资金覆盖比例应越高" /></div></ReportSection>
+
+    <section className="report-consult-panel" aria-labelledby="report-consult-title">
+      <div className="report-consult-copy">
+        <span className="quiet-label">报告专业解读</span>
+        <h2 id="report-consult-title">让数字真正成为家庭决策的依据</h2>
+        <p>这份报告呈现当前资料下的家庭财务结构。添加 Jojo 微信好友，可预约一对一报告解读，进一步讨论资产配置、现金流安排与家庭目标。</p>
+        <div className="report-consult-note"><strong>添加时可备注</strong><span>“家庭财务报告”，便于更快为您安排解读。</span></div>
+      </div>
+      <div className="wechat-contact-card">
+        <div className="wechat-qr-composite">
+          <img className="wechat-qr-base" src={wechatQr} alt="Jojo 微信好友二维码" />
+          <img className="wechat-qr-badge" src={qrLogoBadge} alt="" aria-hidden="true" />
+        </div>
+        <strong>扫码添加 Jojo</strong>
+        <span>获取报告专业解读与咨询</span>
+      </div>
+    </section>
   </div>
 }
 
