@@ -178,7 +178,7 @@ function ProfileForm({ customer, requireName, onUpdate }: { customer: CustomerPr
   const knownCities = [...popularCities, ...otherCities]
   const hasLegacyCity = Boolean(customer.city && !knownCities.includes(customer.city))
   return <section className="form-section module-form">
-    {requireName && !customer.primaryContactName.trim() ? <p className="profile-required-note" role="status">请先填写主要联系人姓名。填写前资料仅保存在当前设备，不会上传云端。</p> : null}
+    {requireName && !customer.primaryContactName.trim() ? <p className="profile-required-note" role="status">请填写联系人姓名，否则无法填写其他内容</p> : null}
     <div className="form-grid two-columns">
       <Field label={requireName ? '主要联系人姓名（必填）' : '主要联系人姓名'}><input required={requireName} aria-required={requireName} value={customer.primaryContactName} placeholder="请输入姓名" onChange={(event) => {
         const name = event.target.value
