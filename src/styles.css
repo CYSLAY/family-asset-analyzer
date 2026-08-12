@@ -57,7 +57,8 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .save-status.has-error { color: var(--danger); }
 .access-page { min-height: 100dvh; padding: 28px; background: radial-gradient(circle at 75% 15%, rgba(207,31,44,.10), transparent 32%), var(--surface-muted); display: grid; place-items: center; }
 .access-card { width: min(100%, 440px); padding: 42px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: 0 28px 80px rgba(60,20,24,.12); }
-.access-brand { width: 54px; height: 54px; margin-bottom: 28px; border-radius: 15px; color: white; background: var(--accent); display: grid; place-items: center; font-size: 22px; font-weight: 800; }
+.access-brand { width: 72px; height: 72px; margin-bottom: 28px; padding: 4px; border: 1px solid #dedede; border-radius: 18px; background: #fff; display: grid; place-items: center; overflow: hidden; box-shadow: 0 8px 20px rgba(34,34,34,.06); }
+.access-brand img { width: 100%; height: 100%; display: block; object-fit: cover; border-radius: 13px; }
 .access-card h1 { margin: 9px 0 0; color: var(--ink); font-size: 32px; letter-spacing: -.035em; }
 .access-card > p { margin: 10px 0 26px; color: var(--ink-muted); line-height: 1.65; }
 .access-card form { display: grid; gap: 14px; }

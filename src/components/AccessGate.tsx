@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { ArrowLeftIcon, ArrowRightIcon, BriefcaseIcon, HouseLineIcon, ShieldCheckIcon } from '@phosphor-icons/react'
+import jojoLogo from '../../assets/branding/jojo-personal-logo.png'
 import { isUsernameAllowed, normalizeUsername, saveAccessSession } from '../lib/access'
 import { confirmWorkspaceUsername } from '../lib/usernameSync'
 
@@ -37,6 +38,7 @@ export function AccessGate({ onAdminAllowed, onStartSelfService }: Props) {
   if (screen === 'admin') return <main className="access-page">
     <section className="access-card admin-access-card">
       <button className="access-back-button" type="button" onClick={() => { setScreen('choice'); setError('') }}><ArrowLeftIcon size={17} /> 返回模式选择</button>
+      <div className="access-brand"><img src={jojoLogo} alt="Jojo" /></div>
       <span className="quiet-label">顾问管理</span>
       <h1>进入管理工作区</h1>
       <p>请输入管理员用户名和访问密码。</p>
@@ -53,7 +55,7 @@ export function AccessGate({ onAdminAllowed, onStartSelfService }: Props) {
   return <main className="access-page access-choice-page">
     <section className="access-choice-card">
       <div className="access-choice-heading">
-        <div className="access-brand" aria-hidden="true">家</div>
+        <div className="access-brand"><img src={jojoLogo} alt="Jojo" /></div>
         <span className="quiet-label">家庭财务分析</span>
         <h1>选择使用方式</h1>
         <p>您可以自行梳理家庭资料并查看初步报告，也可以进入顾问管理工作区。</p>
