@@ -31,7 +31,7 @@ const liquidityLabels = { immediate: '随时可用', within_month: '一个月内
 
 type AssetPreset = Pick<AssetEntry, 'name' | 'category' | 'liquidity' | 'availableForEmergency'>
 type LiabilityPreset = Pick<LiabilityEntry, 'name' | 'category'>
-type FlowPreset = Pick<CashFlowEntry, 'name' | 'category' | 'frequency' | 'necessary'>
+type FlowPreset = Pick<CashFlowEntry, 'name' | 'category' | 'frequency' | 'necessary'> & { aliases?: string[] }
 
 const fixedAssetPresets: AssetPreset[] = [
   { name: '自住房', category: 'property', liquidity: 'long_term', availableForEmergency: false },
@@ -59,25 +59,21 @@ const liabilityPresets: LiabilityPreset[] = [
   { name: '其他负债', category: 'other' },
 ]
 const incomePresets: FlowPreset[] = [
-  { name: '税后工资', category: '工作收入', frequency: 'yearly', necessary: false },
-  { name: '奖金与佣金', category: '工作收入', frequency: 'yearly', necessary: false },
-  { name: '经营收入', category: '经营收入', frequency: 'yearly', necessary: false },
-  { name: '投资与理财收入', category: '投资收入', frequency: 'yearly', necessary: false },
-  { name: '租金收入', category: '其他收入', frequency: 'monthly', necessary: false },
-  { name: '养老金及其他收入', category: '其他收入', frequency: 'monthly', necessary: false },
+  { name: '税后收入', category: '工作收入', frequency: 'yearly', necessary: false, aliases: ['税后工资'] },
+  { name: '奖金、佣金', category: '工作收入', frequency: 'yearly', necessary: false, aliases: ['奖金与佣金'] },
+  { name: '住房公积金', category: '住房公积金', frequency: 'monthly', necessary: false },
+  { name: '日常提取', category: '经营收入', frequency: 'monthly', necessary: false, aliases: ['经营收入'] },
+  { name: '其他收入', category: '其他收入', frequency: 'yearly', necessary: false, aliases: ['投资与理财收入', '租金收入', '养老金及其他收入'] },
 ]
 const expensePresets: FlowPreset[] = [
-  { name: '餐饮日用', category: '基本生活', frequency: 'monthly', necessary: true },
-  { name: '居住与物业', category: '住房支出', frequency: 'monthly', necessary: true },
+  { name: '餐饮零食', category: '基本生活', frequency: 'monthly', necessary: true, aliases: ['餐饮日用'] },
   { name: '交通通讯', category: '基本生活', frequency: 'monthly', necessary: true },
-  { name: '子女教育', category: '教育支出', frequency: 'yearly', necessary: true },
-  { name: '医疗保健', category: '医疗支出', frequency: 'yearly', necessary: true },
-  { name: '服饰美容', category: '可调整支出', frequency: 'yearly', necessary: false },
-  { name: '娱乐旅游', category: '可调整支出', frequency: 'yearly', necessary: false },
+  { name: '衣服、美容', category: '可调整支出', frequency: 'yearly', necessary: false, aliases: ['服饰美容'] },
+  { name: '娱乐、旅游', category: '可调整支出', frequency: 'yearly', necessary: false, aliases: ['娱乐旅游'] },
+  { name: '学习、爱好', category: '教育支出', frequency: 'yearly', necessary: false, aliases: ['子女教育'] },
   { name: '人情往来', category: '可调整支出', frequency: 'yearly', necessary: false },
-  { name: '保险保障', category: '保障支出', frequency: 'yearly', necessary: true },
-  { name: '投资储蓄', category: '投资支出', frequency: 'monthly', necessary: false },
-  { name: '其他支出', category: '其他支出', frequency: 'yearly', necessary: false },
+  { name: '医疗保健', category: '医疗支出', frequency: 'yearly', necessary: true },
+  { name: '其他支出', category: '其他支出', frequency: 'yearly', necessary: false, aliases: ['居住与物业', '保险保障', '投资储蓄'] },
 ]
 const educationRoutes = ['公立', '私立', '留学']
 const popularDestinations = ['香港', '英国', '美国']
@@ -225,7 +221,7 @@ function CashFlowEditor({ customer, onUpdate }: EditorProps) {
       const presets = isIncome ? incomePresets : expensePresets
       const claimed = new Set<string>()
       const rows = presets.map((preset) => {
-        const entry = customer[key].find((item) => !claimed.has(item.id) && item.name === preset.name)
+        const entry = customer[key].find((item) => !claimed.has(item.id) && (item.name === preset.name || preset.aliases?.includes(item.name)))
         if (entry) claimed.add(entry.id)
         return { preset, entry }
       })
@@ -375,7 +371,7 @@ function LiabilitySheetRow({ preset, entry, onChange, onDelete }: { preset: Liab
 
 function CashFlowSheetRow({ preset, entry, customer, showNecessary, onChange, onDelete }: { preset: FlowPreset; entry?: CashFlowEntry; customer: CustomerProfile; showNecessary: boolean; onChange: (patch: Partial<CashFlowEntry>) => void; onDelete?: () => void }) {
   return <div className={`sheet-row ${entry ? 'has-data' : ''}`}>
-    <div className="sheet-item-label"><strong>{entry?.name || preset.name}</strong><small>{entry?.category || preset.category}</small>{onDelete ? <button type="button" aria-label={`删除${entry?.name || preset.name}`} onClick={onDelete}><TrashIcon size={14} /></button> : null}</div>
+    <div className="sheet-item-label"><strong>{onDelete ? entry?.name || preset.name : preset.name}</strong><small>{entry?.category || preset.category}</small>{onDelete ? <button type="button" aria-label={`删除${entry?.name || preset.name}`} onClick={onDelete}><TrashIcon size={14} /></button> : null}</div>
     <SheetMoneyInput label={`${preset.name}每期金额`} value={entry?.amount ?? 0} onChange={(amount) => onChange({ amount })} />
     <label className="sheet-select-wrap"><span className="sr-only">{preset.name}频率</span><select aria-label={`${preset.name}频率`} value={entry?.frequency ?? preset.frequency} onChange={(event) => onChange({ frequency: event.target.value as CashFlowEntry['frequency'] })}>{options(frequencyLabels)}</select></label>
     <label className="sheet-select-wrap"><span className="sr-only">{preset.name}归属成员</span><select aria-label={`${preset.name}归属成员`} value={entry?.memberId ?? ''} onChange={(event) => onChange({ memberId: event.target.value || null })}><option value="">整个家庭</option>{memberOptions(customer)}</select></label>
