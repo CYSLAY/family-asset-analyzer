@@ -368,7 +368,7 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
                 <div className={plan.route === '留学' ? 'study-abroad-combo is-active' : 'study-abroad-combo'}>
                   <button className={`route-chip ${plan.route === '留学' ? 'is-selected' : ''}`} type="button" aria-pressed={plan.route === '留学'} onClick={() => updateRoute(goal, plan.stage, '留学')}>留学</button>
                   {plan.route === '留学' ? <label className="education-destination-control"><span className="sr-only">{plan.stage}留学国家或地区</span><select value={plan.destination ?? ''} aria-label={`${plan.stage}留学国家或地区`} onChange={(event) => updateDestination(goal, plan.stage, event.target.value)}>
-                    <option value="">选择地区</option>
+                    <option value="">地区</option>
                     <optgroup label="热门选项">{popularDestinations.map((destination) => <option value={destination} key={destination}>{destination}</option>)}</optgroup>
                     <optgroup label="其他国家和地区">{otherDestinations.map((destination) => <option value={destination} key={destination}>{destination}</option>)}</optgroup>
                   </select></label> : null}

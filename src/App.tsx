@@ -72,13 +72,13 @@ export function App() {
         {navigation.map((item) => {
           const Icon = item.icon
           const active = view === item.view || view === 'analysis' && item.view === 'customers'
-          return <button className={active ? 'nav-item is-active' : 'nav-item'} key={item.view} type="button" onClick={() => openMainView(item.view)}>
+          return <button aria-label={item.label} className={active ? 'nav-item is-active' : 'nav-item'} key={item.view} type="button" onClick={() => openMainView(item.view)}>
             <Icon size={21} weight={active ? 'fill' : 'regular'} /><span>{item.label}</span>
           </button>
         })}
       </nav>
 
-      <button className="sync-card" type="button" onClick={() => { clearAccessUser(); setAccessUser(null) }}>
+      <button aria-label="退出当前工作区" className="sync-card" type="button" onClick={() => { clearAccessUser(); setAccessUser(null) }}>
         <UserCircleIcon size={20} />
         <div><strong>{accessUser}</strong><span>{workspaceSync === 'synced' ? '云端工作区已连接' : workspaceSync === 'syncing' ? '正在连接云端' : workspaceSync === 'error' ? '云端连接失败' : '退出当前工作区'}</span></div>
       </button>
@@ -112,7 +112,7 @@ export function App() {
       {navigation.map((item) => {
         const Icon = item.icon
         const active = view === item.view || view === 'analysis' && item.view === 'customers'
-        return <button className={active ? 'is-active' : ''} key={item.view} type="button" onClick={() => openMainView(item.view)}><Icon size={21} /><span>{item.label}</span></button>
+        return <button aria-label={item.label} className={active ? 'is-active' : ''} key={item.view} type="button" onClick={() => openMainView(item.view)}><Icon size={21} /><span>{item.label}</span></button>
       })}
     </nav>
   </div>

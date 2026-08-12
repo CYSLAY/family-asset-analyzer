@@ -64,9 +64,9 @@ export function AnalysisDashboard({ onChooseCustomer }: Props) {
 
       <div className="health-grid">
         <HealthPanel metric={metric('fixed_asset_ratio')} max={100} healthyRange="固定资产低于50%通常较灵活，超过70%需关注流动性" />
-        <HealthPanel metric={metric('emergency_months')} max={12} healthyRange="3–6个月是基础参考，家庭责任和收入波动会提高目标" />
+        <HealthPanel metric={metric('emergency_months')} max={12} healthyRange="3-6个月是基础参考，家庭责任和收入波动会提高目标" />
         <HealthPanel metric={metric('liquid_coverage')} max={10} healthyRange="流动资产达到一年内债务的3倍及以上较健康" />
-        <HealthPanel metric={metric('debt_ratio')} max={100} healthyRange="0%–30%较低，30%–50%需关注，超过50%压力上升" />
+        <HealthPanel metric={metric('debt_ratio')} max={100} healthyRange="0%-30%较低，30%-50%需关注，超过50%压力上升" />
       </div>
     </ReportSection>
 
@@ -138,7 +138,7 @@ function MetricNarrative({ metric }: { metric: MetricResult }) {
 
 function BreakdownTable({ items, total }: { items: BreakdownItem[]; total: number }) {
   if (!items.length) return <div className="breakdown-empty">暂无可展示的明细</div>
-  return <div className="breakdown-table"><div className="breakdown-head"><span>类别</span><span>金额</span><span>占比</span></div>{items.map((item) => <div className="breakdown-row" key={item.name}><span><i style={{ background: item.color }} />{item.name}</span><strong>{formatMoney(item.value)}</strong><span>{total > 0 ? formatPercent(item.value / total * 100) : '—'}</span></div>)}</div>
+  return <div className="breakdown-table"><div className="breakdown-head"><span>类别</span><span>金额</span><span>占比</span></div>{items.map((item) => <div className="breakdown-row" key={item.name}><span><i style={{ background: item.color }} />{item.name}</span><strong>{formatMoney(item.value)}</strong><span>{total > 0 ? formatPercent(item.value / total * 100) : '暂无'}</span></div>)}</div>
 }
 
 function EChart({ option, empty, compact = false }: { option: ChartOption; empty: boolean; compact?: boolean }) {
