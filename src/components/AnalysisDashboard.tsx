@@ -9,7 +9,7 @@ import type { GridComponentOption, TooltipComponentOption } from 'echarts/compon
 import { ArrowRightIcon, CaretDownIcon, CheckCircleIcon, InfoIcon, PrinterIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { analyzeCustomer, type HealthLevel, type MetricResult } from '../lib/analysis'
 import { useCustomerStore } from '../stores/customerStore'
-import { isIntakeComplete, type CustomerProfile } from '../types/domain'
+import type { CustomerProfile } from '../types/domain'
 
 interface Props { onChooseCustomer: () => void }
 
@@ -25,11 +25,6 @@ export function AnalysisDashboard({ onChooseCustomer }: Props) {
 
   if (!customer || !analysis) return <section className="empty-state financial-empty"><InfoIcon size={34} /><h2>请先选择客户</h2><p>分析报告只读取当前客户的原始资料。</p><button className="primary-action compact" type="button" onClick={onChooseCustomer}>选择客户 <ArrowRightIcon size={18} /></button></section>
 
-  if (!isIntakeComplete(customer)) return <section className="empty-state financial-empty"><InfoIcon size={34} /><h2>报告尚未开放</h2><p>请先在信息录入中确认全部资料模块，再生成财务分析报告。</p><button className="primary-action compact" type="button" onClick={onChooseCustomer}>返回客户档案 <ArrowRightIcon size={18} /></button></section>
-
-  const hasFinancialData = customer.assets.length + customer.liabilities.length + customer.incomes.length + customer.expenses.length > 0
-  if (!hasFinancialData) return <section className="empty-state financial-empty"><InfoIcon size={34} /><h2>等待财务数据</h2><p>至少录入一项资产、负债、收入或支出后生成报告。</p></section>
-
   const priorityMetrics = analysis.priorityKeys.map((key) => analysis.metrics.find((item) => item.key === key)).filter(Boolean) as MetricResult[]
   const filteredMetrics = analysis.metrics.filter((metric) => topic === 'all' || topic === 'balance' && ['net_worth','debt_ratio','fixed_asset_ratio','liquid_coverage','debt_service_ratio','emergency_months'].includes(metric.key) || topic === 'cashflow' && ['savings_rate','income_concentration'].includes(metric.key) || topic === 'goals' && metric.key === 'education_readiness')
 
@@ -41,10 +36,10 @@ export function AnalysisDashboard({ onChooseCustomer }: Props) {
         <p>结果由当前原始数据实时计算。参考区间用于识别风险，不代表投资或贷款审批建议。</p>
         <button className="report-print-button" type="button" onClick={() => window.print()}><PrinterIcon size={17} /> 打印或保存 PDF</button>
       </div>
-      <div className={`score-block level-${analysis.overallLevel}`}><span>结构健康度</span><strong>{analysis.score ?? '待完善'}</strong><small>{analysis.score === null ? '需要更多数据' : '内部启发式，满分 100'}</small></div>
+      <div className={`score-block level-${analysis.overallLevel}`}><span>结构健康度</span><strong>{analysis.score ?? '资料不足'}</strong><small>{analysis.score === null ? '已展示当前可计算项目' : '内部启发式，满分 100'}</small></div>
     </section>
 
-    {priorityMetrics.length ? <section className="priority-section"><div className="section-heading plain"><div><h2>优先处理</h2><p>严重问题不会被其他高分项目抵消。</p></div></div><div className="priority-list">{priorityMetrics.map((metric, index) => <article key={metric.key}><span>{index + 1}</span><div><strong>{metric.title}</strong><p>{metric.action}</p></div></article>)}</div></section> : <section className="positive-banner"><CheckCircleIcon size={22} weight="fill" /><div><strong>暂未发现紧急问题</strong><p>仍建议定期更新原始数据，并逐项查看指标依据。</p></div></section>}
+    {analysis.score === null ? <section className="positive-banner data-gap-banner"><InfoIcon size={22} weight="fill" /><div><strong>报告已按现有资料生成</strong><p>暂时无法计算的指标会标为“资料不足”，继续录入后会自动更新。</p></div></section> : priorityMetrics.length ? <section className="priority-section"><div className="section-heading plain"><div><h2>优先处理</h2><p>严重问题不会被其他高分项目抵消。</p></div></div><div className="priority-list">{priorityMetrics.map((metric, index) => <article key={metric.key}><span>{index + 1}</span><div><strong>{metric.title}</strong><p>{metric.action}</p></div></article>)}</div></section> : <section className="positive-banner"><CheckCircleIcon size={22} weight="fill" /><div><strong>暂未发现紧急问题</strong><p>仍建议定期更新原始数据，并逐项查看指标依据。</p></div></section>}
 
     <section className="analysis-charts">
       <ChartPanel title="资产与负债结构"><AssetChart customer={customer} /></ChartPanel>
@@ -103,7 +98,7 @@ function EChart({ option, empty }: { option: ChartOption; empty: boolean }) {
 }
 
 function formatMetric(metric: MetricResult) {
-  if (metric.value === null) return '待完善'
+  if (metric.value === null) return '资料不足'
   if (metric.unit === 'currency') return formatMoney(metric.value)
   if (metric.unit === 'percent') return `${metric.value.toFixed(1)}%`
   if (metric.unit === 'months') return `${metric.value.toFixed(1)} 个月`

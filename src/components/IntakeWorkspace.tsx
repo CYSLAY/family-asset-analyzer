@@ -3,11 +3,9 @@ import {
   ArrowLeftIcon,
   ArrowRightIcon,
   BuildingsIcon,
-  CheckCircleIcon,
   ClipboardTextIcon,
   CurrencyCircleDollarIcon,
   FileTextIcon,
-  LockKeyIcon,
   PlusIcon,
   TrendUpIcon,
   TrashIcon,
@@ -19,9 +17,8 @@ import { FinancialWorkspace } from './FinancialWorkspace'
 import { useCustomerStore } from '../stores/customerStore'
 import {
   createMember,
+  hasIntakeStepData,
   intakeCompletion,
-  intakeStepKeys,
-  isIntakeComplete,
   type CustomerProfile,
   type FamilyMember,
   type IncomeStability,
@@ -94,7 +91,7 @@ export function IntakeWorkspace({ onOpenReport, onOpenArchive }: Props) {
         {recentCustomers.length ? <div className="intake-customer-list">
           {recentCustomers.map((item) => <button className="intake-customer-row" type="button" key={item.id} onClick={() => { selectCustomer(item.id); setView('overview') }}>
             <span className="customer-avatar">{item.primaryContactName.slice(0, 1)}</span>
-            <span><strong>{item.householdName}</strong><small>{intakeCompletion(item)}% 已确认</small></span>
+            <span><strong>{item.householdName}</strong><small>{intakeCompletion(item)}% 已填写</small></span>
             <ArrowRightIcon size={18} />
           </button>)}
         </div> : <div className="inline-empty">还没有客户资料。新建客户后即可开始录入。</div>}
@@ -102,26 +99,17 @@ export function IntakeWorkspace({ onOpenReport, onOpenArchive }: Props) {
     </div>
   }
 
-  const activeCustomer = customer
-  const completed = new Set(activeCustomer.intakeCompletedSteps ?? [])
-  const allComplete = isIntakeComplete(activeCustomer)
+  const filled = new Set(stepMeta.filter((item) => hasIntakeStepData(customer, item.key)).map((item) => item.key))
   const activeMeta = stepMeta.find((item) => item.key === view)
-
-  async function toggleComplete(step: IntakeStepKey) {
-    const next = new Set(activeCustomer.intakeCompletedSteps ?? [])
-    if (next.has(step)) next.delete(step)
-    else next.add(step)
-    await updateCustomer(activeCustomer.id, { intakeCompletedSteps: intakeStepKeys.filter((key) => next.has(key)) })
-  }
 
   return <div className="intake-workspace">
     <header className="intake-header">
       <div>
         <button className="back-button" type="button" onClick={() => { selectCustomer(''); setView('overview') }}><ArrowLeftIcon size={17} /> 切换客户</button>
         <h1>{customer.householdName}</h1>
-        <p>可自由选择任意模块录入，已确认的资料仍可继续修改。</p>
+        <p>可自由选择任意模块录入，系统会根据已有内容自动更新填写状态。</p>
       </div>
-      <div className="intake-progress-number"><strong>{intakeCompletion(customer)}%</strong><span>资料已确认</span></div>
+      <div className="intake-progress-number"><strong>{intakeCompletion(customer)}%</strong><span>模块已有资料</span></div>
     </header>
 
     <div className="intake-layout">
@@ -131,59 +119,52 @@ export function IntakeWorkspace({ onOpenReport, onOpenArchive }: Props) {
         </button>
         {stepMeta.map((item) => {
           const Icon = item.icon
-          const isDone = completed.has(item.key)
+          const isDone = filled.has(item.key)
           return <button className={view === item.key ? 'module-nav-item is-active' : 'module-nav-item'} type="button" key={item.key} onClick={() => setView(item.key)}>
-            <Icon size={19} /><span><strong>{item.title}</strong><small>{isDone ? '已确认' : '待确认'}</small></span>{isDone ? <CheckCircleIcon className="module-check" size={17} weight="fill" /> : null}
+            <Icon size={19} /><span><strong>{item.title}</strong><small>{isDone ? '已填写' : '待确认'}</small></span>
           </button>
         })}
-        <button className={allComplete ? 'module-nav-item report-link' : 'module-nav-item report-link is-locked'} type="button" onClick={allComplete ? onOpenReport : () => setView('overview')}>
-          {allComplete ? <FileTextIcon size={19} /> : <LockKeyIcon size={19} />}<span><strong>财务分析报告</strong><small>{allComplete ? '资产负债与收支储蓄' : '完成全部模块后开放'}</small></span>
+        <button className="module-nav-item report-link" type="button" onClick={onOpenReport}>
+          <FileTextIcon size={19} /><span><strong>财务分析报告</strong><small>按现有资料生成</small></span>
         </button>
       </aside>
 
       <main className="intake-content">
-        {view === 'overview' ? <IntakeOverview customer={customer} completed={completed} onOpen={setView} onOpenReport={onOpenReport} /> : <>
-          <div className="module-content-heading"><div><span className="section-kicker">资料模块</span><h2>{activeMeta?.title}</h2><p>{activeMeta?.description}</p></div><span className={completed.has(view) ? 'confirmation-badge is-done' : 'confirmation-badge'}>{completed.has(view) ? '已确认' : '待确认'}</span></div>
+        {view === 'overview' ? <IntakeOverview filled={filled} onOpen={setView} onOpenReport={onOpenReport} /> : <>
+          <div className="module-content-heading"><div><span className="section-kicker">资料模块</span><h2>{activeMeta?.title}</h2><p>{activeMeta?.description}</p></div><span className={filled.has(view) ? 'confirmation-badge is-done' : 'confirmation-badge'}>{filled.has(view) ? '已填写' : '待确认'}</span></div>
           {view === 'profile' ? <ProfileForm customer={customer} onUpdate={(patch) => updateCustomer(customer.id, patch)} /> : null}
           {view === 'members' ? <MemberForm customer={customer} /> : null}
           {view === 'fixed_assets' ? <FinancialWorkspace section="fixed" onChooseCustomer={() => selectCustomer('')} /> : null}
           {view === 'liquid_assets' ? <FinancialWorkspace section="liquid" onChooseCustomer={() => selectCustomer('')} /> : null}
           {view === 'cashflow' ? <FinancialWorkspace section="cashflow" onChooseCustomer={() => selectCustomer('')} /> : null}
           {view === 'education' ? <FinancialWorkspace section="goals" onChooseCustomer={() => selectCustomer('')} /> : null}
-          <div className="module-confirm-bar">
-            <div><strong>{completed.has(view) ? '本模块已确认' : '资料填写完成了吗？'}</strong><span>{completed.has(view) ? '继续修改会保留确认状态，也可取消确认。' : '确认只标记完成情况，不会锁定或删除资料。'}</span></div>
-            <button className={completed.has(view) ? 'subtle-button' : 'primary-action compact'} type="button" onClick={() => void toggleComplete(view)}>
-              <CheckCircleIcon size={18} /> {completed.has(view) ? '取消确认' : '确认本模块'}
-            </button>
-          </div>
         </>}
       </main>
     </div>
   </div>
 }
 
-function IntakeOverview({ customer, completed, onOpen, onOpenReport }: { customer: CustomerProfile; completed: Set<IntakeStepKey>; onOpen: (view: IntakeView) => void; onOpenReport: () => void }) {
-  const missing = stepMeta.filter((item) => !completed.has(item.key))
+function IntakeOverview({ filled, onOpen, onOpenReport }: { filled: Set<IntakeStepKey>; onOpen: (view: IntakeView) => void; onOpenReport: () => void }) {
   return <>
     <section className="overview-lead">
       <span className="section-kicker">录入总览</span>
       <h2>选择要补充的资料</h2>
-      <p>录入没有固定顺序。每个模块完成后单独确认，所有确认完成后生成财务分析报告。</p>
+      <p>录入没有固定顺序。填写任意有效内容后，模块会自动标记为已填写。</p>
     </section>
     <section className="module-grid">
       {stepMeta.map((item) => {
         const Icon = item.icon
-        const done = completed.has(item.key)
+        const done = filled.has(item.key)
         return <button className={done ? 'module-card is-done' : 'module-card'} type="button" key={item.key} onClick={() => onOpen(item.key)}>
           <span className="module-icon"><Icon size={23} /></span>
           <span><strong>{item.title}</strong><small>{item.description}</small></span>
-          <span className="module-state">{done ? '已确认' : '进入录入'}</span>
+          <span className="module-state">{done ? '已填写' : '进入录入'}</span>
         </button>
       })}
     </section>
-    <section className={missing.length ? 'report-gate' : 'report-gate is-ready'}>
-      <div>{missing.length ? <LockKeyIcon size={26} /> : <FileTextIcon size={26} />}<div><h3>财务分析报告</h3><p>{missing.length ? '还需确认：' + missing.map((item) => item.title).join('、') : '原始资料已全部确认，可以查看资产负债和收支储蓄分析。'}</p></div></div>
-      <button className="primary-action compact" type="button" disabled={missing.length > 0} onClick={onOpenReport}>查看报告 <ArrowRightIcon size={18} /></button>
+    <section className="report-gate is-ready">
+      <div><FileTextIcon size={26} /><div><h3>财务分析报告</h3><p>随时根据现有资料生成，缺少数据的指标会明确显示“资料不足”。</p></div></div>
+      <button className="primary-action compact" type="button" onClick={onOpenReport}>查看报告 <ArrowRightIcon size={18} /></button>
     </section>
   </>
 }

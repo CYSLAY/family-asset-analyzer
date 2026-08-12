@@ -8,6 +8,12 @@ describe('financial analysis', () => {
     expect(result.metrics.find((item) => item.key === 'savings_rate')?.value).toBeNull()
   })
 
+  it('does not treat an empty balance sheet as zero net worth', () => {
+    const result = analyzeCustomer(createCustomer('空白资料'))
+    expect(result.metrics.find((item) => item.key === 'net_worth')?.value).toBeNull()
+    expect(result.score).toBeNull()
+  })
+
   it('changes savings copy across deficit and healthy ranges', () => {
     const deficit = createCustomer('赤字')
     deficit.incomes = [{ ...createCashFlow('income'), amount: 10000 }]

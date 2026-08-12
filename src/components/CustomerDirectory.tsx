@@ -9,7 +9,7 @@ import {
   UserPlusIcon,
   UsersThreeIcon,
 } from '@phosphor-icons/react'
-import { createMember, intakeCompletion, isIntakeComplete, type CustomerProfile, type FamilyMember, type IncomeStability } from '../types/domain'
+import { createMember, intakeCompletion, type CustomerProfile, type FamilyMember, type IncomeStability } from '../types/domain'
 import { useCustomerStore } from '../stores/customerStore'
 
 interface CustomerDirectoryProps {
@@ -98,12 +98,12 @@ export function CustomerDirectory({ onStartIntake, onOpenReport }: CustomerDirec
             <article className="customer-row" key={customer.id}>
               <button className="customer-main" type="button" onClick={() => { selectCustomer(customer.id); onStartIntake() }}>
                 <span className="customer-avatar">{customer.primaryContactName.slice(0, 1)}</span>
-                <span><strong>{customer.householdName}</strong><small>{customer.city || '城市待补充'}　{customer.members.length} 位成员　{intakeCompletion(customer)}% 已确认</small></span>
+                <span><strong>{customer.householdName}</strong><small>{customer.city || '城市待补充'}　{customer.members.length} 位成员　{intakeCompletion(customer)}% 已填写</small></span>
               </button>
               <div className="customer-meta"><span>最近保存</span><strong>{formatDate(customer.updatedAt)}</strong></div>
               {!showArchived ? <div className="row-actions archive-actions">
                 <button className="subtle-button compact-row-button" type="button" onClick={() => { selectCustomer(customer.id); onStartIntake() }}>继续录入</button>
-                <button className="subtle-button compact-row-button" disabled={!isIntakeComplete(customer)} type="button" onClick={() => { selectCustomer(customer.id); onOpenReport() }}>{isIntakeComplete(customer) ? '查看报告' : '报告待完成'}</button>
+                <button className="subtle-button compact-row-button" type="button" onClick={() => { selectCustomer(customer.id); onOpenReport() }}>查看报告</button>
               </div> : (
                 <div className="row-actions">
                   <button className="icon-button" title="恢复档案" type="button" onClick={() => archiveCustomer(customer.id, false)}><CheckCircleIcon size={19} /></button>

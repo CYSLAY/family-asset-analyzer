@@ -12,7 +12,6 @@ import { IntakeWorkspace } from './components/IntakeWorkspace'
 import { clearAccessUser, getAccessSession, getAccessUser } from './lib/access'
 import { synchronizeWorkspace } from './lib/usernameSync'
 import { useCustomerStore } from './stores/customerStore'
-import { isIntakeComplete } from './types/domain'
 
 const AnalysisDashboard = lazy(() => import('./components/AnalysisDashboard').then((module) => ({ default: module.AnalysisDashboard })))
 
@@ -56,7 +55,7 @@ export function App() {
   }
 
   function openReport() {
-    if (selectedCustomer && isIntakeComplete(selectedCustomer)) setView('analysis')
+    if (selectedCustomer) setView('analysis')
   }
 
   return <div className="app-shell">

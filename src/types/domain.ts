@@ -36,14 +36,34 @@ export type IntakeStepKey = 'profile' | 'members' | 'fixed_assets' | 'liquid_ass
 
 export const intakeStepKeys: IntakeStepKey[] = ['profile', 'members', 'fixed_assets', 'liquid_assets', 'cashflow', 'education']
 
+export function hasIntakeStepData(customer: CustomerProfile, step: IntakeStepKey) {
+  const meaningfulAsset = (asset: AssetEntry) => Boolean(asset.name.trim()) || asset.currentValue > 0 || asset.ownerMemberId !== null || asset.annualReturnRate !== null
+  const meaningfulLiability = (liability: LiabilityEntry) => Boolean(liability.name.trim()) || liability.balance > 0 || liability.monthlyPayment > 0 || liability.dueWithinOneYear > 0 || liability.annualInterestRate !== null || liability.remainingMonths !== null
+  const meaningfulFlow = (flow: CashFlowEntry) => Boolean(flow.name.trim()) || flow.amount > 0 || flow.memberId !== null
+  const meaningfulEducation = (goal: EducationGoal) => Boolean(
+    goal.childMemberId
+    || goal.currentStage !== '未开始'
+    || goal.yearsUntilStart > 0
+    || goal.annualCostToday > 0
+    || goal.preparedAmount > 0
+    || (goal.extraTrainingCostAnnual ?? 0) > 0
+    || goal.stagePlans?.some((plan) => Boolean(plan.route)),
+  )
+
+  if (step === 'profile') return Boolean(customer.primaryContactName.trim() || customer.householdName.trim() || customer.city.trim() || customer.notes.trim())
+  if (step === 'members') return customer.members.some((member) => Boolean(member.name.trim() || member.birthDate || member.jobType.trim() || member.phone.trim() || member.healthNotes.trim() || member.heightCm || member.weightKg))
+  if (step === 'fixed_assets') return customer.assets.some((asset) => (asset.category === 'property' || asset.category === 'vehicle') && meaningfulAsset(asset))
+  if (step === 'liquid_assets') return customer.assets.some((asset) => asset.category !== 'property' && asset.category !== 'vehicle' && meaningfulAsset(asset)) || customer.liabilities.some(meaningfulLiability)
+  if (step === 'cashflow') return customer.incomes.some(meaningfulFlow) || customer.expenses.some(meaningfulFlow)
+  return customer.educationGoals.some(meaningfulEducation)
+}
+
 export function isIntakeComplete(customer: CustomerProfile) {
-  const completed = new Set(customer.intakeCompletedSteps ?? [])
-  return intakeStepKeys.every((step) => completed.has(step))
+  return intakeStepKeys.every((step) => hasIntakeStepData(customer, step))
 }
 
 export function intakeCompletion(customer: CustomerProfile) {
-  const completed = new Set(customer.intakeCompletedSteps ?? [])
-  return Math.round((intakeStepKeys.filter((step) => completed.has(step)).length / intakeStepKeys.length) * 100)
+  return Math.round((intakeStepKeys.filter((step) => hasIntakeStepData(customer, step)).length / intakeStepKeys.length) * 100)
 }
 
 export type AssetCategory = 'cash' | 'bank' | 'fund' | 'stock' | 'bond' | 'property' | 'vehicle' | 'pension' | 'receivable' | 'other'
@@ -95,7 +115,25 @@ export interface EducationGoal {
   durationYears: number
   inflationRate: number
   preparedAmount: number
+  extraTrainingCostAnnual?: number
+  stagePlans?: EducationStagePlan[]
 }
+
+export interface EducationStagePlan {
+  stage: string
+  durationYears: number
+  route: string
+}
+
+export const educationStageDefaults: EducationStagePlan[] = [
+  { stage: '早教', durationYears: 3, route: '' },
+  { stage: '幼儿园', durationYears: 3, route: '' },
+  { stage: '小学', durationYears: 6, route: '' },
+  { stage: '初中', durationYears: 3, route: '' },
+  { stage: '高中', durationYears: 3, route: '' },
+  { stage: '本科', durationYears: 4, route: '' },
+  { stage: '研究生', durationYears: 2, route: '' },
+]
 
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -151,5 +189,17 @@ export function createCashFlow(type: 'income' | 'expense'): CashFlowEntry {
 }
 
 export function createEducationGoal(): EducationGoal {
-  return { id: crypto.randomUUID(), childMemberId: null, currentStage: '未开始', targetRoute: '公立（本地）', yearsUntilStart: 0, annualCostToday: 0, durationYears: 3, inflationRate: 5, preparedAmount: 0 }
+  return {
+    id: crypto.randomUUID(),
+    childMemberId: null,
+    currentStage: '未开始',
+    targetRoute: '',
+    yearsUntilStart: 0,
+    annualCostToday: 0,
+    durationYears: 3,
+    inflationRate: 5,
+    preparedAmount: 0,
+    extraTrainingCostAnnual: 0,
+    stagePlans: educationStageDefaults.map((plan) => ({ ...plan })),
+  }
 }

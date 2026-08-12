@@ -58,7 +58,7 @@ export function analyzeCustomer(customer: CustomerProfile): FinancialAnalysis {
   const educationPrepared = customer.educationGoals.reduce((sum, goal) => sum + goal.preparedAmount, 0)
 
   const metrics = [
-    netWorthMetric(assets - liabilities),
+    netWorthMetric(assets - liabilities, customer.assets.length > 0 || customer.liabilities.length > 0),
     debtRatioMetric(assets, liabilities),
     fixedAssetMetric(assets, fixedAssets),
     liquidCoverageMetric(liquidAssets, dueWithinOneYear),
@@ -97,7 +97,8 @@ function getEmergencyTarget(customer: CustomerProfile) {
   return Math.min(12, target)
 }
 
-function netWorthMetric(value: number): MetricResult {
+function netWorthMetric(value: number, hasBalanceData: boolean): MetricResult {
+  if (!hasBalanceData) return metric('net_worth', '净资产', null, 'currency', 'neutral', '等待资产负债数据', '尚未录入资产或负债，不能把空白资料判断为净资产等于零。', '补充任意一项资产或负债后自动计算。', '总资产 - 总负债', '大于 0 是基础，仍需结合现金流判断')
   if (value < 0) return metric('net_worth', '净资产', value, 'currency', 'critical', '净资产为负', '现有资产不足以覆盖全部负债，家庭抗风险空间有限。', '先停止新增非必要负债，并制定高息和短期债务的偿还顺序。', '总资产 - 总负债', '大于 0 是基础，仍需结合现金流判断')
   if (value === 0) return metric('net_worth', '净资产', value, 'currency', 'warning', '资产刚好覆盖负债', '当前没有净资产缓冲，任何资产价格下降都可能使净资产转负。', '优先建立现金结余并逐步降低负债余额。', '总资产 - 总负债', '大于 0 是基础，仍需结合现金流判断')
   return metric('net_worth', '净资产', value, 'currency', 'healthy', '净资产为正', '家庭资产能够覆盖当前负债。', '继续观察净资产是否随时间稳定增长。', '总资产 - 总负债', '不设置统一金额门槛，关注方向与增长')

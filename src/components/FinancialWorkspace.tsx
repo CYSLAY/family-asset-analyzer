@@ -5,10 +5,12 @@ import {
   createCashFlow,
   createEducationGoal,
   createLiability,
+  educationStageDefaults,
   type AssetEntry,
   type CashFlowEntry,
   type CustomerProfile,
   type EducationGoal,
+  type EducationStagePlan,
   type LiabilityEntry,
 } from '../types/domain'
 import { useCustomerStore } from '../stores/customerStore'
@@ -25,6 +27,8 @@ const fixedAssetLabels = { property: '房产', vehicle: '车辆' }
 const liquidAssetLabels = { cash: '现金', bank: '银行存款与理财', fund: '基金', stock: '股票', bond: '债券', pension: '养老金与公积金', receivable: '私人债权', other: '其他资产' }
 const liabilityLabels = { mortgage: '房贷', car_loan: '车贷', consumer_loan: '消费贷款', credit_card: '信用卡', private_loan: '私人借款', other: '其他负债' }
 const frequencyLabels = { monthly: '每月', quarterly: '每季度', yearly: '每年' }
+const schoolRoutes = ['公立（本地）', '公立（外地）', '私立（中国）', '其他']
+const higherEducationRoutes = ['中国', '私立（美国）', '私立（加拿大）', '其他']
 
 export function FinancialWorkspace({ section, onChooseCustomer }: Props) {
   const { customers, selectedCustomerId, updateCustomer } = useCustomerStore()
@@ -114,22 +118,55 @@ function CashFlowEditor({ customer, onUpdate }: EditorProps) {
 
 function GoalEditor({ customer, onUpdate }: EditorProps) {
   function updateGoal(id: string, patch: Partial<EducationGoal>) { onUpdate({ educationGoals: customer.educationGoals.map((item) => item.id === id ? { ...item, ...patch } : item) }) }
+  function plansFor(goal: EducationGoal): EducationStagePlan[] {
+    return educationStageDefaults.map((defaultPlan) => {
+      const saved = goal.stagePlans?.find((plan) => plan.stage === defaultPlan.stage)
+      const legacyRoute = !saved && goal.currentStage === defaultPlan.stage ? goal.targetRoute : ''
+      return { ...defaultPlan, ...saved, route: saved?.route ?? legacyRoute }
+    })
+  }
+  function updateRoute(goal: EducationGoal, stage: string, route: string) {
+    const stagePlans = plansFor(goal).map((plan) => plan.stage === stage ? { ...plan, route: plan.route === route ? '' : route } : plan)
+    const selectedPlan = stagePlans.find((plan) => plan.stage === stage)
+    updateGoal(goal.id, {
+      stagePlans,
+      targetRoute: selectedPlan?.route || stagePlans.find((plan) => plan.route)?.route || '',
+      durationYears: selectedPlan?.durationYears ?? goal.durationYears,
+    })
+  }
   return <div className="financial-page">
-    <PageTitle title="教育期望" description="按子女分别记录教育路线、开始时间、费用假设和已准备资金。" />
-    <EntrySection title="子女教育期望" description="费用会根据开始时间、学费增长率和就读年限估算未来需求。" action="添加教育目标" onAdd={() => onUpdate({ educationGoals: [...customer.educationGoals, createEducationGoal()] })}>
-      {customer.educationGoals.length ? customer.educationGoals.map((goal) => <article className="entry-card" key={goal.id}>
-        <EntryHeader name="教育资金目标" onDelete={() => onUpdate({ educationGoals: customer.educationGoals.filter((item) => item.id !== goal.id) })} />
-        <div className="form-grid four-columns">
+    <PageTitle title="教育期望" description="选择子女与当前阶段，再逐行点选未来教育路线；没有规划的阶段可以留空。" />
+    <EntrySection title="子女教育路线" description="每位子女一张路线表，常见阶段年限已经预设，可随时修改资金假设。" action="添加子女规划" onAdd={() => onUpdate({ educationGoals: [...customer.educationGoals, createEducationGoal()] })}>
+      {customer.educationGoals.length ? customer.educationGoals.map((goal) => {
+        const childName = customer.members.find((member) => member.id === goal.childMemberId)?.name
+        return <article className="entry-card education-card" key={goal.id}>
+        <EntryHeader name={childName ? `${childName}的教育规划` : '子女教育规划'} onDelete={() => onUpdate({ educationGoals: customer.educationGoals.filter((item) => item.id !== goal.id) })} />
+        <div className="form-grid three-columns education-basics">
           <Field label="对应子女"><select value={goal.childMemberId ?? ''} onChange={(e) => updateGoal(goal.id, { childMemberId: e.target.value || null })}><option value="">暂未指定</option>{customer.members.filter((m) => m.relation === '子女').map((m) => <option value={m.id} key={m.id}>{m.name || '未命名子女'}</option>)}</select></Field>
-          <Field label="当前阶段"><select value={goal.currentStage} onChange={(e) => updateGoal(goal.id, { currentStage: e.target.value })}><option>未开始</option><option>幼儿园</option><option>小学</option><option>初中</option><option>高中</option><option>本科</option><option>研究生</option></select></Field>
-          <Field label="目标路线"><select value={goal.targetRoute} onChange={(e) => updateGoal(goal.id, { targetRoute: e.target.value })}><option>公立（本地）</option><option>公立（外地）</option><option>私立（中国）</option><option>私立（美国）</option><option>私立（加拿大）</option><option>其他海外路线</option></select></Field>
+          <Field label="当前教育阶段"><select value={goal.currentStage} onChange={(e) => updateGoal(goal.id, { currentStage: e.target.value })}><option>未开始</option><option>早教</option><option>幼儿园</option><option>小学</option><option>初中</option><option>高中</option><option>本科</option><option>研究生</option><option>已完成</option></select></Field>
+          <MoneyField label="其他培训费用／年" value={goal.extraTrainingCostAnnual ?? 0} onChange={(value) => updateGoal(goal.id, { extraTrainingCostAnnual: value })} />
+        </div>
+
+        <div className="education-pathway" aria-label="教育路线设置">
+          {plansFor(goal).map((plan) => {
+            const routes = plan.stage === '本科' || plan.stage === '研究生' ? higherEducationRoutes : plan.stage === '早教' ? ['私立（中国）', '不安排'] : schoolRoutes
+            return <div className="education-stage-row" key={plan.stage}>
+              <div className="education-stage-label"><strong>{plan.stage}</strong><span>{plan.durationYears} 年</span></div>
+              <div className="education-route-options">{routes.map((route) => <button className={`route-chip ${plan.route === route ? 'is-selected' : ''}`} type="button" key={route} aria-pressed={plan.route === route} onClick={() => updateRoute(goal, plan.stage, route)}>{route}</button>)}</div>
+            </div>
+          })}
+        </div>
+
+        <div className="education-funding">
+          <div className="education-funding-heading"><strong>资金假设（可选）</strong><span>填写后可估算教育资金准备度</span></div>
+          <div className="form-grid four-columns">
           <Field label="距离开始年数"><input type="number" min="0" value={goal.yearsUntilStart} onChange={(e) => updateGoal(goal.id, { yearsUntilStart: numberValue(e.target.value) })} /></Field>
           <MoneyField label="当前每年费用" value={goal.annualCostToday} onChange={(value) => updateGoal(goal.id, { annualCostToday: value })} />
-          <Field label="预计就读年数"><input type="number" min="1" value={goal.durationYears} onChange={(e) => updateGoal(goal.id, { durationYears: numberValue(e.target.value) })} /></Field>
           <Field label="学费年增长率"><input type="number" min="0" value={goal.inflationRate} onChange={(e) => updateGoal(goal.id, { inflationRate: numberValue(e.target.value) })} /><span className="input-suffix">%</span></Field>
           <MoneyField label="已准备资金" value={goal.preparedAmount} onChange={(value) => updateGoal(goal.id, { preparedAmount: value })} />
+          </div>
         </div>
-      </article>) : <InlineEmpty text="还没有教育目标。可为每位子女分别建立。" />}
+      </article>}) : <InlineEmpty text="还没有教育规划。可为每位子女分别添加一张路线表。" />}
     </EntrySection>
   </div>
 }
