@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildCashFlowProjection, createCashFlowPlanFromCustomer } from './cashFlowPlan'
+import { buildCashFlowProjection, createCashFlowPlanFromCustomer, expenseCoverageBand } from './cashFlowPlan'
 import { createCustomer } from '../types/domain'
 
 describe('cash flow plan', () => {
@@ -39,5 +39,13 @@ describe('cash flow plan', () => {
     const rows = buildCashFlowProjection(plan)
     expect(rows[0].totalIncome).toBe(1000000)
     expect(rows[1].totalIncome).toBe(1200000)
+  })
+
+  it('classifies expense coverage into planning bands', () => {
+    expect(expenseCoverageBand(4).band).toBe('steady')
+    expect(expenseCoverageBand(5).band).toBe('manageable')
+    expect(expenseCoverageBand(8).band).toBe('attention')
+    expect(expenseCoverageBand(12).band).toBe('pressure')
+    expect(expenseCoverageBand(null).band).toBe('unavailable')
   })
 })

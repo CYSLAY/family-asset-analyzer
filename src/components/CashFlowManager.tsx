@@ -7,6 +7,7 @@ import {
 import {
   buildCashFlowProjection,
   createCashFlowPlanFromCustomer,
+  expenseCoverageBand,
   mergeCustomerDataIntoPlan,
 } from '../lib/cashFlowPlan'
 import { useCustomerStore } from '../stores/customerStore'
@@ -104,6 +105,19 @@ export function CashFlowManager({ onOpenCustomer }: Props) {
         </div>
       </div>
       <ProjectionTable plan={plan} rows={rows.slice(0, displayYears)} onUpdateAmount={updateYearAmount} />
+      <details className="cashflow-coverage-guide">
+        <summary>覆盖支出率说明与分级依据</summary>
+        <div className="cashflow-coverage-guide-body">
+          <div><strong>计算口径</strong><p>年度总支出 ÷ 当年收益情景资金 × 100%。数值越低，表示当年支出相对可用资金的占用越小；可覆盖年数可粗略理解为 100 ÷ 覆盖支出率。</p></div>
+          <ul aria-label="覆盖支出率等级">
+            <li className="coverage-steady"><i /> <strong>≤ 4%</strong><span>稳健</span></li>
+            <li className="coverage-manageable"><i /> <strong>4%–6%</strong><span>可控</span></li>
+            <li className="coverage-attention"><i /> <strong>6%–10%</strong><span>需关注</span></li>
+            <li className="coverage-pressure"><i /> <strong>&gt; 10%</strong><span>压力较高</span></li>
+          </ul>
+          <p className="cashflow-coverage-disclaimer">分级借鉴长期资金提取率的常用规划区间，但本指标包含全部家庭支出，不等同于退休提取率，也不构成投资或收益判断。实际结论还需结合稳定收入、保障安排、资产流动性和规划年限综合评估。参考：<a href="https://investor.vanguard.com/investor-resources-education/retirement/early-retirement" target="_blank" rel="noreferrer">Vanguard 4% rule</a>、<a href="https://www.fidelity.com/viewpoints/retirement/how-long-will-savings-last" target="_blank" rel="noreferrer">Fidelity sustainable withdrawal rate</a>。</p>
+        </div>
+      </details>
       <p className="cashflow-model-note">计算口径：首年资金总额 = 当下存量资金 + 首年净现金流；收益情景资金 =（上年收益情景资金 + 当年净现金流）×（1 + 预期年化收益率）。本表用于现金流情景梳理，不构成收益保证。</p>
     </section>
   </div>
@@ -134,8 +148,9 @@ function EditableMoneyCell({ label, value, onChange }: { label: string; value: n
 }
 
 function CoverageCell({ value }: { value: number | null }) {
-  const fill = value === null ? 0 : Math.min(100, Math.max(0, value))
-  return <td className="cashflow-coverage-cell" style={{ '--coverage-fill': `${fill}%` } as CSSProperties}><span>{value === null ? '暂无' : `${value.toFixed(1)}%`}</span></td>
+  const status = expenseCoverageBand(value)
+  const fill = value === null ? 0 : Math.min(100, Math.max(0, value / 12 * 100))
+  return <td className={`cashflow-coverage-cell coverage-${status.band}`} title={`${status.label}：年度支出占收益情景资金的${value === null ? '比例暂不可计算' : `${value.toFixed(1)}%`}`} style={{ '--coverage-fill': `${fill}%` } as CSSProperties}><span>{value === null ? '暂无' : `${value.toFixed(1)}%`}</span></td>
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="field-block"><span>{label}</span>{children}</label> }

@@ -16,6 +16,16 @@ export interface CashFlowProjectionRow {
   expenseCoverageRate: number | null
 }
 
+export type ExpenseCoverageBand = 'steady' | 'manageable' | 'attention' | 'pressure' | 'unavailable'
+
+export function expenseCoverageBand(value: number | null): { band: ExpenseCoverageBand; label: string } {
+  if (value === null || !Number.isFinite(value)) return { band: 'unavailable', label: '暂无法判断' }
+  if (value <= 4) return { band: 'steady', label: '稳健' }
+  if (value <= 6) return { band: 'manageable', label: '可控' }
+  if (value <= 10) return { band: 'attention', label: '需关注' }
+  return { band: 'pressure', label: '压力较高' }
+}
+
 const defaultIncomeLabels = ['主要收入', '配偶收入', '房租收入', '其他收入']
 const defaultExpenseLabels = ['生活支出', '教育支出', '养老支出', '房贷支出', '旅游支出', '保费支出', '娱乐支出', '生意支出', '父母医疗']
 
