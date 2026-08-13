@@ -91,6 +91,12 @@ export function AnalysisDashboard({ onChooseCustomer, onOpenCashFlow }: Props) {
 
     <ReportSection id="education-report" index="03" title="教育目标准备" description="教育路线已经纳入档案；资金准备度只在费用假设完整时计算。"><div className="health-grid one-up"><HealthPanel metric={metric('education_readiness')} max={100} healthyRange="目标越临近，已准备资金覆盖比例应越高" /></div></ReportSection>
 
+    {onOpenCashFlow ? <section className="report-cashflow-entry" aria-labelledby="report-cashflow-entry-title">
+      <div className="report-cashflow-entry-icon"><TableIcon size={25} /></div>
+      <div><h2 id="report-cashflow-entry-title">继续梳理长期现金流</h2><p>已自动关联 {customer.householdName}，可直接查看年度收支、资金结余和收益情景。</p></div>
+      <button className="primary-action compact" type="button" onClick={onOpenCashFlow}>进入现金流梳理 <ArrowRightIcon size={17} /></button>
+    </section> : null}
+
     <section className="report-consult-panel" aria-labelledby="report-consult-title">
       <div className="report-consult-copy">
         <span className="quiet-label">报告专业解读</span>
@@ -107,11 +113,6 @@ export function AnalysisDashboard({ onChooseCustomer, onOpenCashFlow }: Props) {
         <span>获取报告专业解读与咨询</span>
       </div>
     </section>
-    {onOpenCashFlow ? <section className="report-cashflow-entry" aria-labelledby="report-cashflow-entry-title">
-      <div className="report-cashflow-entry-icon"><TableIcon size={25} /></div>
-      <div><h2 id="report-cashflow-entry-title">继续梳理长期现金流</h2><p>已自动关联 {customer.householdName}，可直接查看年度收支、资金结余和收益情景。</p></div>
-      <button className="primary-action compact" type="button" onClick={onOpenCashFlow}>进入现金流梳理 <ArrowRightIcon size={17} /></button>
-    </section> : null}
   </div>
 }
 
