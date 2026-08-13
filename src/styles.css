@@ -477,7 +477,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .wechat-contact-card { padding: 14px 14px 18px; border: 1px solid #e2ccce; border-radius: 14px; background: white; text-align: center; }
 .wechat-qr-composite { width: 100%; position: relative; overflow: hidden; border-radius: 10px; background: white; }
 .wechat-qr-base { width: 100%; height: auto; display: block; }
-.wechat-qr-badge { position: absolute; z-index: 1; left: 49.7%; top: 54%; width: 17%; height: auto; transform: translate(-50%,-50%); border: 2px solid white; border-radius: 10%; object-fit: cover; }
+.wechat-qr-badge { position: absolute; z-index: 1; left: 49.7%; top: 54%; width: 19%; height: auto; transform: translate(-50%,-50%); border: 0; border-radius: 12%; background: white; object-fit: cover; box-shadow: 0 0 0 4px white; }
 .wechat-contact-card > strong, .wechat-contact-card > span { display: block; }
 .wechat-contact-card > strong { margin-top: 12px; color: var(--ink); font-size: 14px; }
 .wechat-contact-card > span { margin-top: 5px; color: var(--ink-muted); font-size: 10px; }
