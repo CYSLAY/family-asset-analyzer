@@ -23,6 +23,7 @@ export function CashFlowManager({ onOpenCustomer }: Props) {
   const plan = useMemo(() => customer ? customer.cashFlowPlan ?? createCashFlowPlanFromCustomer(customer) : null, [customer])
   const rows = useMemo(() => plan ? buildCashFlowProjection(plan) : [], [plan])
   const [displayYears, setDisplayYears] = useState(5)
+  const [hideBlankColumns, setHideBlankColumns] = useState(false)
 
   function savePlan(next: CashFlowPlan) {
     if (customer) void updateCustomer(customer.id, { cashFlowPlan: next })
@@ -50,6 +51,16 @@ export function CashFlowManager({ onOpenCustomer }: Props) {
       ...plan,
       [kind]: plan[kind].map((item) => item.id === itemId
         ? { ...item, yearlyAmounts: { ...item.yearlyAmounts, [String(year)]: value } }
+        : item),
+    })
+  }
+
+  function applyAmountToColumn(kind: 'incomes' | 'expenses', itemId: string, value: number) {
+    if (!plan) return
+    savePlan({
+      ...plan,
+      [kind]: plan[kind].map((item) => item.id === itemId
+        ? { ...item, yearlyAmounts: createYearlyAmounts(plan.baseYear, plan.projectionYears, value) }
         : item),
     })
   }
@@ -104,7 +115,7 @@ export function CashFlowManager({ onOpenCustomer }: Props) {
           </details>
         </div>
       </div>
-      <ProjectionTable plan={plan} rows={rows.slice(0, displayYears)} onUpdateAmount={updateYearAmount} />
+      <ProjectionTable plan={plan} rows={rows.slice(0, displayYears)} hideBlankColumns={hideBlankColumns} onToggleBlankColumns={() => setHideBlankColumns((value) => !value)} onUpdateAmount={updateYearAmount} onApplyColumn={applyAmountToColumn} />
       <details className="cashflow-coverage-guide">
         <summary>覆盖支出率说明与分级依据</summary>
         <div className="cashflow-coverage-guide-body">
@@ -132,22 +143,29 @@ function ManagerHeading({ customers, selectedCustomerId, onSelect }: { customers
   </header>
 }
 
-function ProjectionTable({ plan, rows, onUpdateAmount }: { plan: CashFlowPlan; rows: ReturnType<typeof buildCashFlowProjection>; onUpdateAmount: (kind: 'incomes' | 'expenses', itemId: string, year: number, value: number) => void }) {
+function ProjectionTable({ plan, rows, hideBlankColumns, onToggleBlankColumns, onUpdateAmount, onApplyColumn }: { plan: CashFlowPlan; rows: ReturnType<typeof buildCashFlowProjection>; hideBlankColumns: boolean; onToggleBlankColumns: () => void; onUpdateAmount: (kind: 'incomes' | 'expenses', itemId: string, year: number, value: number) => void; onApplyColumn: (kind: 'incomes' | 'expenses', itemId: string, value: number) => void }) {
   const coverageScaleMaximum = coverageBarScaleMaximum(rows.map((row) => row.expenseCoverageRate))
+  const visibleIncomeIndexes = visibleItemIndexes(plan.incomes.length, rows.map((row) => row.incomeValues), hideBlankColumns)
+  const visibleExpenseIndexes = visibleItemIndexes(plan.expenses.length, rows.map((row) => row.expenseValues), hideBlankColumns)
   return <div className="cashflow-table-scroll">
     <table className="cashflow-projection-table">
       <thead>
-        <tr><th>年度</th><th>年份</th>{plan.members.map((member) => <th key={member.id}>{member.name}年龄</th>)}{plan.incomes.map((item) => <th key={item.id}>{item.label}</th>)}<th className="cashflow-total-column">总收入</th>{plan.expenses.map((item) => <th key={item.id}>{item.label}</th>)}<th className="cashflow-total-column">总支出</th><th>每年增量资金</th><th>资金总额</th><th>收益情景（{plan.annualReturnRate}%）</th><th>利息差</th><th>覆盖支出率</th></tr>
+        <tr><th>年度</th><th>年份</th>{plan.members.map((member) => <th key={member.id}>{member.name}年龄</th>)}{visibleIncomeIndexes.map((index) => <ToggleColumnHeader key={plan.incomes[index].id} label={plan.incomes[index].label} compact={hideBlankColumns} onToggle={onToggleBlankColumns} />)}<ToggleColumnHeader className="cashflow-total-column" label="总收入" compact={hideBlankColumns} onToggle={onToggleBlankColumns} />{visibleExpenseIndexes.map((index) => <ToggleColumnHeader key={plan.expenses[index].id} label={plan.expenses[index].label} compact={hideBlankColumns} onToggle={onToggleBlankColumns} />)}<ToggleColumnHeader className="cashflow-total-column" label="总支出" compact={hideBlankColumns} onToggle={onToggleBlankColumns} /><th>每年增量资金</th><th>资金总额</th><th>收益情景（{plan.annualReturnRate}%）</th><th>利息差</th><th>覆盖支出率</th></tr>
       </thead>
       <tbody>{rows.map((row) => <tr key={row.year}>
-        <td>{row.offset + 1}</td><td>{row.year}</td>{row.memberAges.map((age, index) => <td key={plan.members[index]?.id ?? index}>{age ?? '待补充'}</td>)}{row.incomeValues.map((value, index) => <EditableMoneyCell key={plan.incomes[index].id} label={`${row.year}年${plan.incomes[index].label}`} value={value} onChange={(next) => onUpdateAmount('incomes', plan.incomes[index].id, row.year, next)} />)}<td className="cashflow-total-column">{formatTableMoney(row.totalIncome)}</td>{row.expenseValues.map((value, index) => <EditableMoneyCell key={plan.expenses[index].id} label={`${row.year}年${plan.expenses[index].label}`} value={value} onChange={(next) => onUpdateAmount('expenses', plan.expenses[index].id, row.year, next)} />)}<td className="cashflow-total-column">{formatTableMoney(row.totalExpenses)}</td><td className={row.annualNet < 0 ? 'negative-cell' : ''}>{formatTableMoney(row.annualNet)}</td><td className={row.balanceWithoutReturn < 0 ? 'negative-cell' : ''}>{formatTableMoney(row.balanceWithoutReturn)}</td><td className={row.balanceWithReturn < 0 ? 'negative-cell' : 'return-cell'}>{formatTableMoney(row.balanceWithReturn)}</td><td>{formatTableMoney(row.interestDifference)}</td><CoverageCell value={row.expenseCoverageRate} scaleMaximum={coverageScaleMaximum} depleted={row.balanceWithReturn <= 0} />
+        <td>{row.offset + 1}</td><td>{row.year}</td>{row.memberAges.map((age, index) => <td key={plan.members[index]?.id ?? index}>{age ?? '待补充'}</td>)}{visibleIncomeIndexes.map((index) => <EditableMoneyCell key={plan.incomes[index].id} label={`${row.year}年${plan.incomes[index].label}`} value={row.incomeValues[index]} onChange={(next) => onUpdateAmount('incomes', plan.incomes[index].id, row.year, next)} onApplyColumn={(next) => onApplyColumn('incomes', plan.incomes[index].id, next)} />)}<td className="cashflow-total-column">{formatTableMoney(row.totalIncome)}</td>{visibleExpenseIndexes.map((index) => <EditableMoneyCell key={plan.expenses[index].id} label={`${row.year}年${plan.expenses[index].label}`} value={row.expenseValues[index]} onChange={(next) => onUpdateAmount('expenses', plan.expenses[index].id, row.year, next)} onApplyColumn={(next) => onApplyColumn('expenses', plan.expenses[index].id, next)} />)}<td className="cashflow-total-column">{formatTableMoney(row.totalExpenses)}</td><td className={row.annualNet < 0 ? 'negative-cell' : ''}>{formatTableMoney(row.annualNet)}</td><td className={row.balanceWithoutReturn < 0 ? 'negative-cell' : ''}>{formatTableMoney(row.balanceWithoutReturn)}</td><td className={row.balanceWithReturn < 0 ? 'negative-cell' : 'return-cell'}>{formatTableMoney(row.balanceWithReturn)}</td><td>{formatTableMoney(row.interestDifference)}</td><CoverageCell value={row.expenseCoverageRate} scaleMaximum={coverageScaleMaximum} depleted={row.balanceWithReturn <= 0} />
       </tr>)}</tbody>
     </table>
   </div>
 }
 
-function EditableMoneyCell({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
-  return <td className="cashflow-editable-cell"><input aria-label={label} inputMode="decimal" type="number" min="0" step="1000" value={Math.round(value) || ''} onChange={(event) => onChange(numberValue(event.target.value, 0))} /></td>
+function ToggleColumnHeader({ label, compact, onToggle, className = '' }: { label: string; compact: boolean; onToggle: () => void; className?: string }) {
+  const help = compact ? '点击展开全部收入与支出列' : '点击隐藏当前区间内全为空白的收入与支出列'
+  return <th className={`${className} cashflow-toggle-column-header`.trim()}><button aria-label={`${label}，${help}`} aria-pressed={compact} data-tooltip={help} type="button" onClick={onToggle}>{label}</button></th>
+}
+
+function EditableMoneyCell({ label, value, onChange, onApplyColumn }: { label: string; value: number; onChange: (value: number) => void; onApplyColumn: (value: number) => void }) {
+  return <td className="cashflow-editable-cell"><input aria-label={label} inputMode="decimal" type="number" min="0" step="1000" value={Math.round(value) || ''} onChange={(event) => onChange(numberValue(event.target.value, 0))} /><button aria-label={`将${label}的金额应用到整列`} data-tooltip="将此金额应用到该项目的全部预测年份" type="button" onClick={() => onApplyColumn(value)}>整列</button></td>
 }
 
 function CoverageCell({ value, scaleMaximum, depleted }: { value: number | null; scaleMaximum: number; depleted: boolean }) {
@@ -169,4 +187,6 @@ function coverageBarScaleMaximum(values: Array<number | null>) {
   const maximum = Math.max(0, ...values.filter((value): value is number => value !== null && Number.isFinite(value)))
   return Math.max(50, Math.ceil(maximum / 25) * 25)
 }
+function visibleItemIndexes(count: number, values: number[][], hideBlank: boolean) { return Array.from({ length: count }, (_, index) => index).filter((index) => !hideBlank || values.some((row) => Math.abs(row[index] ?? 0) >= .5)) }
+function createYearlyAmounts(baseYear: number, projectionYears: number, value: number) { return Object.fromEntries(Array.from({ length: projectionYears }, (_, index) => [String(baseYear + index), value])) }
 function shiftYearlyAmounts(values: Record<string, number> | undefined, shift: number) { return values ? Object.fromEntries(Object.entries(values).map(([year, amount]) => [String(Number(year) + shift), amount])) : undefined }

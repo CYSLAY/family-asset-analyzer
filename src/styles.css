@@ -667,10 +667,22 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .cashflow-projection-table .cashflow-total-column { color: #183c60; background: #eaf1fa; font-weight: 760; }
 .cashflow-projection-table .return-cell { color: #22624f; background: #eef8f4; font-weight: 720; }
 .cashflow-projection-table .negative-cell { color: var(--danger); background: #fff0f1; font-weight: 720; }
-.cashflow-editable-cell { padding: 4px 6px !important; background: #fffdfd; }
-.cashflow-editable-cell input { width: 100%; min-width: 68px; height: 32px; padding: 0 5px; border: 1px solid transparent; border-radius: 6px; color: var(--ink); background: transparent; text-align: right; font: inherit; font-variant-numeric: tabular-nums; }
+.cashflow-toggle-column-header { padding: 0 !important; }
+.cashflow-toggle-column-header > button { width: 100%; min-height: 48px; padding: 4px 7px; border: 0; color: inherit; background: transparent; font: inherit; font-weight: inherit; line-height: inherit; cursor: pointer; }
+.cashflow-toggle-column-header > button:hover, .cashflow-toggle-column-header > button[aria-pressed="true"] { color: var(--accent-strong); background: rgba(207,31,44,.07); }
+.cashflow-toggle-column-header > button[aria-pressed="true"]::after { content: "展开"; margin-top: 2px; color: var(--accent); display: block; font-size: 8px; }
+.cashflow-editable-cell { position: relative; padding: 4px 6px !important; background: #fffdfd; }
+.cashflow-editable-cell input { width: 100%; min-width: 68px; height: 32px; padding: 0 5px; border: 1px solid transparent; border-radius: 6px; color: var(--ink); background: transparent; text-align: right; font: inherit; font-variant-numeric: tabular-nums; appearance: textfield; -moz-appearance: textfield; }
+.cashflow-editable-cell input::-webkit-outer-spin-button, .cashflow-editable-cell input::-webkit-inner-spin-button { margin: 0; appearance: none; -webkit-appearance: none; }
 .cashflow-editable-cell input:hover { border-color: #e8c9cc; background: white; }
-.cashflow-editable-cell input:focus { outline: 3px solid rgba(207,31,44,.1); border-color: var(--accent); background: white; }
+.cashflow-editable-cell input:focus { padding-right: 35px; outline: 3px solid rgba(207,31,44,.1); border-color: var(--accent); background: white; }
+.cashflow-editable-cell > button { position: absolute; z-index: 2; right: 8px; top: 50%; min-width: 30px; min-height: 24px; padding: 0 4px; transform: translateY(-50%); border: 0; border-radius: 5px; color: white; background: var(--accent); display: inline-flex; align-items: center; justify-content: center; gap: 2px; font-size: 8px; font-weight: 720; opacity: 0; pointer-events: none; cursor: pointer; }
+.cashflow-editable-cell:hover > button, .cashflow-editable-cell:focus-within > button { opacity: 1; pointer-events: auto; }
+.cashflow-editable-cell > button:hover { background: var(--accent-strong); }
+.cashflow-toggle-column-header > button { position: relative; }
+.cashflow-toggle-column-header > button::before, .cashflow-editable-cell > button::before { content: attr(data-tooltip); position: absolute; z-index: 20; left: 50%; bottom: calc(100% + 7px); width: max-content; max-width: 220px; padding: 6px 8px; transform: translateX(-50%) translateY(3px); border-radius: 6px; color: white; background: rgba(35,31,32,.94); font-size: 9px; font-weight: 500; line-height: 1.4; white-space: normal; opacity: 0; pointer-events: none; box-shadow: 0 8px 20px rgba(30,20,20,.16); }
+.cashflow-toggle-column-header > button::before { top: calc(100% + 7px); bottom: auto; }
+.cashflow-toggle-column-header > button:hover::before, .cashflow-editable-cell > button:hover::before { transform: translateX(-50%) translateY(0); opacity: 1; }
 .cashflow-coverage-cell { --coverage-fill: 0%; --coverage-light: rgba(140,145,150,.15); --coverage-strong: rgba(120,125,130,.45); position: relative; isolation: isolate; overflow: hidden; font-weight: 760; }
 .cashflow-coverage-cell::before { content: ""; position: absolute; z-index: -1; inset: 5px auto 5px 5px; width: var(--coverage-fill); max-width: calc(100% - 10px); border-radius: 5px; background: linear-gradient(90deg, var(--coverage-light), var(--coverage-strong)); transition: width .2s ease; }
 .cashflow-coverage-cell span { position: relative; z-index: 1; }
