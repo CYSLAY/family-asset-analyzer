@@ -26,6 +26,7 @@ describe('cash flow plan', () => {
     expect(rows[0].annualNet).toBe(-300000)
     expect(rows[0].balanceWithoutReturn).toBe(3400000)
     expect(rows[0].balanceWithReturn).toBeCloseTo(3519000)
+    expect(rows[0].expenseCoverageRate).toBeCloseTo(1300000 / 3400000 * 100)
     expect(rows[1].balanceWithoutReturn).toBe(3100000)
     expect(rows[1].balanceWithReturn).toBeCloseTo(3331665)
   })
@@ -42,10 +43,11 @@ describe('cash flow plan', () => {
   })
 
   it('classifies expense coverage into planning bands', () => {
-    expect(expenseCoverageBand(4).band).toBe('steady')
-    expect(expenseCoverageBand(5).band).toBe('manageable')
-    expect(expenseCoverageBand(8).band).toBe('attention')
-    expect(expenseCoverageBand(12).band).toBe('pressure')
+    expect(expenseCoverageBand(5).band).toBe('long_term')
+    expect(expenseCoverageBand(8).band).toBe('adequate')
+    expect(expenseCoverageBand(15).band).toBe('medium_term')
+    expect(expenseCoverageBand(35).band).toBe('limited')
+    expect(expenseCoverageBand(60).band).toBe('attention')
     expect(expenseCoverageBand(null).band).toBe('unavailable')
   })
 })

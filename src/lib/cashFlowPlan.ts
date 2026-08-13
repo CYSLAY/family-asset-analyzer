@@ -16,14 +16,15 @@ export interface CashFlowProjectionRow {
   expenseCoverageRate: number | null
 }
 
-export type ExpenseCoverageBand = 'steady' | 'manageable' | 'attention' | 'pressure' | 'unavailable'
+export type ExpenseCoverageBand = 'long_term' | 'adequate' | 'medium_term' | 'limited' | 'attention' | 'unavailable'
 
 export function expenseCoverageBand(value: number | null): { band: ExpenseCoverageBand; label: string } {
   if (value === null || !Number.isFinite(value)) return { band: 'unavailable', label: '暂无法判断' }
-  if (value <= 4) return { band: 'steady', label: '稳健' }
-  if (value <= 6) return { band: 'manageable', label: '可控' }
-  if (value <= 10) return { band: 'attention', label: '需关注' }
-  return { band: 'pressure', label: '压力较高' }
+  if (value <= 5) return { band: 'long_term', label: '长期充足' }
+  if (value <= 10) return { band: 'adequate', label: '较充足' }
+  if (value <= 20) return { band: 'medium_term', label: '中期覆盖' }
+  if (value <= 50) return { band: 'limited', label: '缓冲有限' }
+  return { band: 'attention', label: '需重点关注' }
 }
 
 const defaultIncomeLabels = ['主要收入', '配偶收入', '房租收入', '其他收入']
@@ -89,7 +90,7 @@ export function buildCashFlowProjection(plan: CashFlowPlan): CashFlowProjectionR
       balanceWithoutReturn,
       balanceWithReturn,
       interestDifference: balanceWithReturn - balanceWithoutReturn,
-      expenseCoverageRate: balanceWithReturn > 0 ? totalExpenses / balanceWithReturn * 100 : null,
+      expenseCoverageRate: balanceWithoutReturn > 0 ? totalExpenses / balanceWithoutReturn * 100 : null,
     })
   }
   return rows

@@ -674,10 +674,11 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .cashflow-coverage-cell { --coverage-fill: 0%; --coverage-light: rgba(140,145,150,.15); --coverage-strong: rgba(120,125,130,.45); position: relative; isolation: isolate; overflow: hidden; font-weight: 760; }
 .cashflow-coverage-cell::before { content: ""; position: absolute; z-index: -1; inset: 5px auto 5px 5px; width: var(--coverage-fill); max-width: calc(100% - 10px); border-radius: 5px; background: linear-gradient(90deg, var(--coverage-light), var(--coverage-strong)); transition: width .2s ease; }
 .cashflow-coverage-cell span { position: relative; z-index: 1; }
-.coverage-steady { --coverage-light: rgba(62,153,111,.16); --coverage-strong: rgba(45,139,94,.68); color: #17613d; }
-.coverage-manageable { --coverage-light: rgba(105,157,72,.16); --coverage-strong: rgba(113,158,61,.7); color: #496b21; }
-.coverage-attention { --coverage-light: rgba(232,169,54,.18); --coverage-strong: rgba(222,151,25,.72); color: #8a5700; }
-.coverage-pressure { --coverage-light: rgba(229,82,68,.18); --coverage-strong: rgba(204,38,43,.75); color: #a21720; }
+.coverage-long_term { --coverage-light: rgba(49,145,98,.15); --coverage-strong: rgba(37,132,84,.7); color: #17613d; }
+.coverage-adequate { --coverage-light: rgba(86,156,112,.15); --coverage-strong: rgba(78,148,102,.68); color: #356847; }
+.coverage-medium_term { --coverage-light: rgba(224,177,61,.17); --coverage-strong: rgba(215,158,30,.72); color: #805600; }
+.coverage-limited { --coverage-light: rgba(227,126,45,.17); --coverage-strong: rgba(218,105,28,.72); color: #8b4000; }
+.coverage-attention { --coverage-light: rgba(229,82,68,.18); --coverage-strong: rgba(204,38,43,.75); color: #a21720; }
 .coverage-unavailable { color: var(--ink-muted); }
 .cashflow-coverage-guide { border-top: 1px solid var(--line); background: #fbfbfb; }
 .cashflow-coverage-guide summary { min-height: 44px; padding: 0 24px; color: #555; display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 740; cursor: pointer; list-style: none; }
@@ -687,7 +688,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .cashflow-coverage-guide-body { padding: 0 24px 18px; color: var(--ink-muted); font-size: 10px; line-height: 1.65; }
 .cashflow-coverage-guide-body > div strong { color: var(--ink); font-size: 11px; }
 .cashflow-coverage-guide-body > div p { margin: 5px 0 12px; }
-.cashflow-coverage-guide ul { margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 7px; list-style: none; }
+.cashflow-coverage-guide ul { margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 7px; list-style: none; }
 .cashflow-coverage-guide li { min-width: 0; padding: 9px 10px; border: 1px solid #e5e5e5; border-radius: 8px; background: white; display: grid; grid-template-columns: 8px 1fr; align-items: center; gap: 2px 7px; }
 .cashflow-coverage-guide li i { width: 8px; height: 8px; grid-row: 1 / 3; border-radius: 50%; background: var(--coverage-strong); }
 .cashflow-coverage-guide li strong { color: currentColor; font-size: 10px; }

@@ -108,14 +108,15 @@ export function CashFlowManager({ onOpenCustomer }: Props) {
       <details className="cashflow-coverage-guide">
         <summary>覆盖支出率说明与分级依据</summary>
         <div className="cashflow-coverage-guide-body">
-          <div><strong>计算口径</strong><p>年度总支出 ÷ 当年收益情景资金 × 100%。数值越低，表示当年支出相对可用资金的占用越小；可覆盖年数可粗略理解为 100 ÷ 覆盖支出率。</p></div>
+          <div><strong>计算口径</strong><p>年度总支出 ÷ 当年资金总额 × 100%。数值越低，表示当年支出对资金存量的消耗越小；不考虑收益、通胀和收入变化时，资金可覆盖年数约等于 100 ÷ 覆盖支出率。</p></div>
           <ul aria-label="覆盖支出率等级">
-            <li className="coverage-steady"><i /> <strong>≤ 4%</strong><span>稳健</span></li>
-            <li className="coverage-manageable"><i /> <strong>4%–6%</strong><span>可控</span></li>
-            <li className="coverage-attention"><i /> <strong>6%–10%</strong><span>需关注</span></li>
-            <li className="coverage-pressure"><i /> <strong>&gt; 10%</strong><span>压力较高</span></li>
+            <li className="coverage-long_term"><i /> <strong>≤ 5%</strong><span>可覆盖20年以上</span></li>
+            <li className="coverage-adequate"><i /> <strong>5%–10%</strong><span>可覆盖10–20年</span></li>
+            <li className="coverage-medium_term"><i /> <strong>10%–20%</strong><span>可覆盖5–10年</span></li>
+            <li className="coverage-limited"><i /> <strong>20%–50%</strong><span>可覆盖2–5年</span></li>
+            <li className="coverage-attention"><i /> <strong>&gt; 50%</strong><span>不足2年</span></li>
           </ul>
-          <p className="cashflow-coverage-disclaimer">分级借鉴长期资金提取率的常用规划区间，但本指标包含全部家庭支出，不等同于退休提取率，也不构成投资或收益判断。实际结论还需结合稳定收入、保障安排、资产流动性和规划年限综合评估。参考：<a href="https://investor.vanguard.com/investor-resources-education/retirement/early-retirement" target="_blank" rel="noreferrer">Vanguard 4% rule</a>、<a href="https://www.fidelity.com/viewpoints/retirement/how-long-will-savings-last" target="_blank" rel="noreferrer">Fidelity sustainable withdrawal rate</a>。</p>
+          <p className="cashflow-coverage-disclaimer">目前国内没有针对“年度总支出 ÷ 资金总额”的统一标准，上述区间按资金可覆盖年数建立，用于长期现金流规划。中国家庭常用的3–6个月备用金标准只衡量短期流动性，不能替代本指标；工作期家庭还需结合年度净现金流，退休期家庭则应更重视长期覆盖年数。参考：<a href="https://www.cgbchina.com.cn/Info/17775570" target="_blank" rel="noreferrer">广发银行资产配置</a>、<a href="https://group.ccb.com/chn/2021-06/09/article_2021082106144860154.shtml" target="_blank" rel="noreferrer">建设银行家庭财富规划</a>、<a href="https://soe.xmu.edu.cn/zhongguojiatingcaifuyuxiaofeibaogao2025niandisijidu.pdf" target="_blank" rel="noreferrer">中国家庭财富与消费报告</a>。</p>
         </div>
       </details>
       <p className="cashflow-model-note">计算口径：首年资金总额 = 当下存量资金 + 首年净现金流；收益情景资金 =（上年收益情景资金 + 当年净现金流）×（1 + 预期年化收益率）。本表用于现金流情景梳理，不构成收益保证。</p>
@@ -149,8 +150,9 @@ function EditableMoneyCell({ label, value, onChange }: { label: string; value: n
 
 function CoverageCell({ value }: { value: number | null }) {
   const status = expenseCoverageBand(value)
-  const fill = value === null ? 0 : Math.min(100, Math.max(0, value / 12 * 100))
-  return <td className={`cashflow-coverage-cell coverage-${status.band}`} title={`${status.label}：年度支出占收益情景资金的${value === null ? '比例暂不可计算' : `${value.toFixed(1)}%`}`} style={{ '--coverage-fill': `${fill}%` } as CSSProperties}><span>{value === null ? '暂无' : `${value.toFixed(1)}%`}</span></td>
+  const fill = value === null ? 0 : Math.min(100, Math.max(0, value / 50 * 100))
+  const years = value && value > 0 ? 100 / value : null
+  return <td className={`cashflow-coverage-cell coverage-${status.band}`} title={`${status.label}：${value === null ? '比例暂不可计算' : `年度支出占资金总额的${value.toFixed(1)}%，约可覆盖${formatCoverageYears(years)}`}`} style={{ '--coverage-fill': `${fill}%` } as CSSProperties}><span>{value === null ? '暂无' : `${value.toFixed(1)}%`}</span></td>
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="field-block"><span>{label}</span>{children}</label> }
@@ -159,4 +161,5 @@ function numberValue(value: string, fallback: number) { const result = Number(va
 function nullableNumber(value: string) { if (!value) return null; const result = Number(value); return Number.isFinite(result) ? result : null }
 function formatMoney(value: number) { return new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', maximumFractionDigits: 0 }).format(value) }
 function formatTableMoney(value: number) { if (Math.abs(value) < 0.5) return '-'; return new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 0 }).format(value) }
+function formatCoverageYears(value: number | null) { return value === null ? '长期' : value >= 100 ? '100年以上' : `${value.toFixed(1)}年` }
 function shiftYearlyAmounts(values: Record<string, number> | undefined, shift: number) { return values ? Object.fromEntries(Object.entries(values).map(([year, amount]) => [String(Number(year) + shift), amount])) : undefined }
