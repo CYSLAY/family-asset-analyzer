@@ -90,7 +90,7 @@ export function buildCashFlowProjection(plan: CashFlowPlan): CashFlowProjectionR
       balanceWithoutReturn,
       balanceWithReturn,
       interestDifference: balanceWithReturn - balanceWithoutReturn,
-      expenseCoverageRate: balanceWithoutReturn > 0 ? totalExpenses / balanceWithoutReturn * 100 : null,
+      expenseCoverageRate: balanceWithReturn > 0 ? totalExpenses / balanceWithReturn * 100 : null,
     })
   }
   return rows

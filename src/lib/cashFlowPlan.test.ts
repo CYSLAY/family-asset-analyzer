@@ -26,7 +26,7 @@ describe('cash flow plan', () => {
     expect(rows[0].annualNet).toBe(-300000)
     expect(rows[0].balanceWithoutReturn).toBe(3400000)
     expect(rows[0].balanceWithReturn).toBeCloseTo(3519000)
-    expect(rows[0].expenseCoverageRate).toBeCloseTo(1300000 / 3400000 * 100)
+    expect(rows[0].expenseCoverageRate).toBeCloseTo(1300000 / 3519000 * 100)
     expect(rows[1].balanceWithoutReturn).toBe(3100000)
     expect(rows[1].balanceWithReturn).toBeCloseTo(3331665)
   })
