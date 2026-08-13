@@ -615,6 +615,9 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .cashflow-manager-heading p { max-width: 680px; margin: 11px 0 0; color: var(--ink-muted); line-height: 1.65; }
 .cashflow-customer-select { width: min(380px, 100%); flex: 0 0 auto; position: relative; display: grid; gap: 7px; }
 .cashflow-customer-select > span { color: var(--ink-muted); font-size: 11px; font-weight: 700; }
+.cashflow-self-customer { width: min(300px, 100%); flex: 0 0 auto; padding: 13px 15px; border: 1px solid var(--line); border-radius: var(--radius-control); background: white; display: grid; gap: 4px; box-shadow: 0 8px 24px rgba(60,20,24,.035); }
+.cashflow-self-customer span, .cashflow-self-customer small { color: var(--ink-muted); font-size: 10px; }
+.cashflow-self-customer strong { color: var(--ink); font-size: 14px; }
 .cashflow-customer-search-control { min-width: 0; min-height: 46px; padding: 0 11px; border: 1px solid var(--line); border-radius: var(--radius-control); color: var(--ink-muted); background: white; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 8px; }
 .cashflow-customer-search-control:focus-within { outline: 3px solid rgba(207,31,44,.12); border-color: var(--accent); }
 .cashflow-customer-search-control input { width: 100%; min-width: 0; height: 42px; padding: 0; border: 0; outline: 0; color: var(--ink); background: transparent; font: inherit; }
@@ -732,7 +735,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 
 @media (max-width: 1280px) and (min-width: 721px) {
   .cashflow-manager-heading { display: block; }
-  .cashflow-customer-select { width: 100%; margin-top: 18px; }
+  .cashflow-customer-select, .cashflow-self-customer { width: 100%; margin-top: 18px; }
   .cashflow-settings-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 
@@ -818,7 +821,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .section-heading { padding: 20px; }
   .task-row { padding-inline: 18px; }
   .insight-panel { padding: 24px; }
-  .mobile-nav { position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; min-height: calc(64px + env(safe-area-inset-bottom)); padding: 7px 6px env(safe-area-inset-bottom); border-top: 1px solid var(--line); background: rgba(255,255,255,.96); backdrop-filter: blur(16px); display: grid; grid-template-columns: repeat(2, 1fr); }
+  .mobile-nav { position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; min-height: calc(64px + env(safe-area-inset-bottom)); padding: 7px 6px env(safe-area-inset-bottom); border-top: 1px solid var(--line); background: rgba(255,255,255,.96); backdrop-filter: blur(16px); display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
   .mobile-nav button { min-width: 0; min-height: 52px; padding: 4px 2px; border: 0; color: #777; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10px; }
   .mobile-nav button.is-active { color: var(--accent); font-weight: 700; }
   .mobile-nav button:disabled { color: #aaa; cursor: not-allowed; opacity: .6; }
@@ -930,7 +933,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .delete-dialog-actions { display: grid; grid-template-columns: 1fr; }
   .delete-dialog-actions .subtle-button { order: 2; }
   .cashflow-manager-heading { display: block; }
-  .cashflow-customer-select { width: 100%; margin-top: 20px; }
+  .cashflow-customer-select, .cashflow-self-customer { width: 100%; margin-top: 20px; }
   .cashflow-plan-summary { grid-template-columns: 1fr; }
   .cashflow-plan-summary article { min-height: 92px; }
   .cashflow-section-heading { display: block; }

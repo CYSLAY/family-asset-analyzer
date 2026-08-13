@@ -32,6 +32,7 @@ const adminNavigation = [
 
 const selfServiceNavigation = [
   { view: 'intake' as const, label: '资料填写', icon: ClipboardTextIcon },
+  { view: 'cashflow' as const, label: '现金流', icon: ChartLineUpIcon },
   { view: 'analysis' as const, label: '我的报告', icon: ChartDonutIcon },
 ]
 
@@ -98,7 +99,7 @@ export function App() {
 
   function openMainView(next: AppView) {
     if (next === 'customers' && !selfService) selectCustomer('')
-    if (next === 'analysis' && selfService && (!selectedCustomer || !selectedCustomer.primaryContactName.trim())) return
+    if ((next === 'analysis' || next === 'cashflow') && selfService && (!selectedCustomer || !selectedCustomer.primaryContactName.trim())) return
     setView(next)
   }
 
@@ -136,7 +137,7 @@ export function App() {
         {navigation.map((item) => {
           const Icon = item.icon
           const active = view === item.view || !selfService && (view === 'analysis' || view === 'intake') && item.view === 'customers'
-        const locked = selfService && item.view === 'analysis' && !selectedCustomer?.primaryContactName.trim()
+        const locked = selfService && (item.view === 'analysis' || item.view === 'cashflow') && !selectedCustomer?.primaryContactName.trim()
         return <button aria-label={locked ? `${item.label}，请先填写姓名` : item.label} className={active ? 'nav-item is-active' : 'nav-item'} disabled={locked} key={item.view} type="button" onClick={() => openMainView(item.view)}><Icon size={21} weight={active ? 'fill' : 'regular'} /><span>{item.label}</span></button>
         })}
       </nav>
@@ -159,8 +160,8 @@ export function App() {
         {syncState === 'error' && selfService && selfServiceCloudEligible ? <div className="public-sync-warning" role="status">当前资料已保存在本机，云端连接恢复后会继续自动同步。</div> : null}
         {view === 'intake' ? <IntakeWorkspace selfService={selfService} onOpenReport={openReport} onOpenCustomers={() => { if (!selfService) { selectCustomer(''); setView('customers') } }} /> : null}
         {view === 'customers' && !selfService ? <CustomerDirectory onStartIntake={() => setView('intake')} onOpenReport={() => setView('analysis')} onOpenCashFlow={() => setView('cashflow')} /> : null}
-        {view === 'cashflow' && !selfService ? <CashFlowManager onOpenCustomer={() => setView('customers')} /> : null}
-        {view === 'analysis' ? <Suspense fallback={<div className="report-skeleton" aria-label="正在生成分析报告"><span /><span /><span /></div>}><AnalysisDashboard onChooseCustomer={() => { if (selfService) setView('intake'); else { selectCustomer(''); setView('customers') } }} onOpenCashFlow={!selfService ? () => setView('cashflow') : undefined} /></Suspense> : null}
+        {view === 'cashflow' ? <CashFlowManager selfService={selfService} onOpenCustomer={() => setView(selfService ? 'intake' : 'customers')} /> : null}
+        {view === 'analysis' ? <Suspense fallback={<div className="report-skeleton" aria-label="正在生成分析报告"><span /><span /><span /></div>}><AnalysisDashboard onChooseCustomer={() => { if (selfService) setView('intake'); else { selectCustomer(''); setView('customers') } }} onOpenCashFlow={() => setView('cashflow')} /></Suspense> : null}
       </div>
     </main>
 
@@ -168,7 +169,7 @@ export function App() {
       {navigation.map((item) => {
         const Icon = item.icon
         const active = view === item.view || !selfService && (view === 'analysis' || view === 'intake') && item.view === 'customers'
-        const locked = selfService && item.view === 'analysis' && !selectedCustomer?.primaryContactName.trim()
+        const locked = selfService && (item.view === 'analysis' || item.view === 'cashflow') && !selectedCustomer?.primaryContactName.trim()
         return <button aria-label={locked ? `${item.label}，请先填写姓名` : item.label} className={active ? 'is-active' : ''} disabled={locked} key={item.view} type="button" onClick={() => openMainView(item.view)}><Icon size={21} /><span>{item.label}</span></button>
       })}
     </nav>

@@ -19,11 +19,13 @@ import type { CashFlowPlan } from '../types/domain'
 
 interface Props {
   onOpenCustomer: () => void
+  selfService?: boolean
 }
 
-export function CashFlowManager({ onOpenCustomer }: Props) {
+export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) {
   const { customers, selectedCustomerId, selectCustomer, updateCustomer } = useCustomerStore()
   const customer = customers.find((item) => item.id === selectedCustomerId) ?? null
+  const availableCustomers = selfService ? customers.filter((item) => item.id === selectedCustomerId) : customers
   const plan = useMemo(() => customer ? customer.cashFlowPlan ?? createCashFlowPlanFromCustomer(customer) : null, [customer])
   const rows = useMemo(() => plan ? buildCashFlowProjection(plan) : [], [plan])
   const [displayYears, setDisplayYears] = useState(5)
@@ -71,12 +73,12 @@ export function CashFlowManager({ onOpenCustomer }: Props) {
 
   if (!customer || !plan) {
     return <div className="cashflow-manager-page">
-      <ManagerHeading customers={customers} selectedCustomerId="" onSelect={selectCustomer} />
+      <ManagerHeading customers={availableCustomers} selectedCustomerId="" onSelect={selectCustomer} selfService={selfService} />
       <section className="empty-state cashflow-manager-empty">
         <UsersThreeIcon size={34} />
-        <h2>选择客户后开始梳理</h2>
-        <p>系统会先读取客户已填写的收入、支出、负债和流动资产，缺少的项目可继续手动补充。</p>
-        <button className="primary-action compact" type="button" onClick={onOpenCustomer}>前往客户管理</button>
+        <h2>{selfService ? '请先完成联系人姓名' : '选择客户后开始梳理'}</h2>
+        <p>{selfService ? '填写联系人姓名后，即可读取您的收入、支出、负债和流动资产并生成现金流预测。' : '系统会先读取客户已填写的收入、支出、负债和流动资产，缺少的项目可继续手动补充。'}</p>
+        <button className="primary-action compact" type="button" onClick={onOpenCustomer}>{selfService ? '返回资料填写' : '前往客户管理'}</button>
       </section>
     </div>
   }
@@ -85,7 +87,7 @@ export function CashFlowManager({ onOpenCustomer }: Props) {
   const lastRow = rows[Math.min(displayYears, rows.length) - 1]
 
   return <div className="cashflow-manager-page">
-    <ManagerHeading customers={customers} selectedCustomerId={customer.id} onSelect={selectCustomer} />
+    <ManagerHeading customers={availableCustomers} selectedCustomerId={customer.id} onSelect={selectCustomer} selfService={selfService} />
 
     <section className="cashflow-plan-summary" aria-label="现金流梳理摘要">
       <article><span>当前可用资金</span><strong>{formatMoney(plan.initialFunds)}</strong><small>默认读取非房产、非车辆资产</small></article>
@@ -142,10 +144,11 @@ export function CashFlowManager({ onOpenCustomer }: Props) {
 
 type CashFlowCustomerOption = { id: string; householdName: string; primaryContactName: string; source?: 'advisor' | 'self_service' }
 
-function ManagerHeading({ customers, selectedCustomerId, onSelect }: { customers: CashFlowCustomerOption[]; selectedCustomerId: string; onSelect: (id: string) => void }) {
+function ManagerHeading({ customers, selectedCustomerId, onSelect, selfService }: { customers: CashFlowCustomerOption[]; selectedCustomerId: string; onSelect: (id: string) => void; selfService: boolean }) {
+  const selected = customers.find((customer) => customer.id === selectedCustomerId) ?? null
   return <header className="cashflow-manager-heading">
-    <div><span className="section-kicker">顾问工具</span><h1>现金流管理</h1><p>选择客户，读取已有档案并建立可持续更新的家庭现金流预测。</p></div>
-    <CustomerSearchSelect customers={customers} selectedCustomerId={selectedCustomerId} onSelect={onSelect} />
+    <div><span className="section-kicker">{selfService ? '家庭财务自测' : '顾问工具'}</span><h1>现金流管理</h1><p>{selfService ? '根据已填写的家庭资料，建立可持续更新的长期现金流预测。' : '选择客户，读取已有档案并建立可持续更新的家庭现金流预测。'}</p></div>
+    {selfService ? <div className="cashflow-self-customer"><span>当前档案</span><strong>{selected?.primaryContactName || selected?.householdName || '我的家庭'}</strong><small>仅显示您的家庭资料</small></div> : <CustomerSearchSelect customers={customers} selectedCustomerId={selectedCustomerId} onSelect={onSelect} />}
   </header>
 }
 
