@@ -139,6 +139,8 @@ function classifyExpense(value: string) {
 }
 
 function projectedItemAmount(item: CashFlowPlanItem, year: number, baseYear: number) {
+  const override = item.yearlyAmounts?.[String(year)]
+  if (override !== undefined && Number.isFinite(override)) return override
   if (year < item.startYear || year > item.endYear) return 0
   return item.annualAmount * Math.pow(1 + item.growthRate / 100, Math.max(0, year - baseYear))
 }

@@ -1,19 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import {
   ArrowClockwiseIcon,
   CalculatorIcon,
-  PlusIcon,
-  TrashIcon,
   UsersThreeIcon,
 } from '@phosphor-icons/react'
 import {
   buildCashFlowProjection,
   createCashFlowPlanFromCustomer,
-  createPlanItem,
   mergeCustomerDataIntoPlan,
 } from '../lib/cashFlowPlan'
 import { useCustomerStore } from '../stores/customerStore'
-import type { CashFlowPlan, CashFlowPlanItem } from '../types/domain'
+import type { CashFlowPlan } from '../types/domain'
 
 interface Props {
   onOpenCustomer: () => void
@@ -41,14 +38,19 @@ export function CashFlowManager({ onOpenCustomer }: Props) {
     savePlan({
       ...plan,
       baseYear,
-      incomes: plan.incomes.map((item) => ({ ...item, startYear: item.startYear + shift, endYear: item.endYear + shift })),
-      expenses: plan.expenses.map((item) => ({ ...item, startYear: item.startYear + shift, endYear: item.endYear + shift })),
+      incomes: plan.incomes.map((item) => ({ ...item, startYear: item.startYear + shift, endYear: item.endYear + shift, yearlyAmounts: shiftYearlyAmounts(item.yearlyAmounts, shift) })),
+      expenses: plan.expenses.map((item) => ({ ...item, startYear: item.startYear + shift, endYear: item.endYear + shift, yearlyAmounts: shiftYearlyAmounts(item.yearlyAmounts, shift) })),
     })
   }
 
-  function updateItems(kind: 'incomes' | 'expenses', items: CashFlowPlanItem[]) {
+  function updateYearAmount(kind: 'incomes' | 'expenses', itemId: string, year: number, value: number) {
     if (!plan) return
-    savePlan({ ...plan, [kind]: items })
+    savePlan({
+      ...plan,
+      [kind]: plan[kind].map((item) => item.id === itemId
+        ? { ...item, yearlyAmounts: { ...item.yearlyAmounts, [String(year)]: value } }
+        : item),
+    })
   }
 
   if (!customer || !plan) {
@@ -82,23 +84,16 @@ export function CashFlowManager({ onOpenCustomer }: Props) {
       </div>
       <div className="cashflow-settings-grid">
         <Field label="起始年份"><input type="number" min="2000" max="2100" value={plan.baseYear} onChange={(event) => updateBaseYear(numberValue(event.target.value, plan.baseYear))} /></Field>
-        <Field label="长期预测上限"><select value={plan.projectionYears} onChange={(event) => updatePlan({ projectionYears: Number(event.target.value) })}><option value={10}>10 年</option><option value={20}>20 年</option><option value={30}>30 年</option><option value={40}>40 年</option><option value={55}>55 年</option></select></Field>
         <Field label="当下存量资金"><MoneyInput unit="元" value={plan.initialFunds} onChange={(value) => updatePlan({ initialFunds: value })} /></Field>
-        <Field label="预期年化收益率"><PercentInput value={plan.annualReturnRate} onChange={(value) => updatePlan({ annualReturnRate: value })} /></Field>
       </div>
       <div className="cashflow-member-grid">
         {plan.members.length ? plan.members.map((member, index) => <div className="cashflow-member-field" key={member.id}><span>{member.name || `家庭成员 ${index + 1}`}</span><label><input type="number" min="0" max="110" value={member.baseAge ?? ''} placeholder="年龄" onChange={(event) => updatePlan({ members: plan.members.map((item) => item.id === member.id ? { ...item, baseAge: nullableNumber(event.target.value) } : item) })} /><em>岁</em></label></div>) : <p className="cashflow-inline-note">家庭成员尚未填写出生日期，可先在客户资料中补充，也可直接使用下面的现金流表。</p>}
       </div>
     </section>
 
-    <div className="cashflow-assumption-grid">
-      <PlanItemsEditor title="收入项目" description="已有收入已按原频率折算为年金额" kind="incomes" items={plan.incomes} baseYear={plan.baseYear} projectionYears={plan.projectionYears} onChange={updateItems} />
-      <PlanItemsEditor title="支出项目" description="生活支出与月供已自动归类，仍可调整" kind="expenses" items={plan.expenses} baseYear={plan.baseYear} projectionYears={plan.projectionYears} onChange={updateItems} />
-    </div>
-
     <section className="cashflow-projection-panel">
       <div className="cashflow-section-heading">
-        <div><CalculatorIcon size={22} /><div><h2>家庭现金流长期预测</h2><p>结构参考《现金流梳理》表，所有结果均由上方假设实时计算。</p></div></div>
+        <div><CalculatorIcon size={22} /><div><h2>家庭现金流长期预测</h2><p>收入和支出可在表格中逐年直接修改，调整后自动保存并重新计算。</p></div></div>
         <div className="cashflow-range-controls" aria-label="预测显示区间">
           <button className={displayYears === 5 ? 'is-active' : ''} type="button" onClick={() => setDisplayYears(5)}>5 年</button>
           <button className={displayYears === 10 ? 'is-active' : ''} type="button" onClick={() => setDisplayYears(10)}>10 年</button>
@@ -108,7 +103,7 @@ export function CashFlowManager({ onOpenCustomer }: Props) {
           </details>
         </div>
       </div>
-      <ProjectionTable plan={plan} rows={rows.slice(0, displayYears)} />
+      <ProjectionTable plan={plan} rows={rows.slice(0, displayYears)} onUpdateAmount={updateYearAmount} />
       <p className="cashflow-model-note">计算口径：首年资金总额 = 当下存量资金 + 首年净现金流；收益情景资金 =（上年收益情景资金 + 当年净现金流）×（1 + 预期年化收益率）。本表用于现金流情景梳理，不构成收益保证。</p>
     </section>
   </div>
@@ -121,41 +116,32 @@ function ManagerHeading({ customers, selectedCustomerId, onSelect }: { customers
   </header>
 }
 
-function PlanItemsEditor({ title, description, kind, items, baseYear, projectionYears, onChange }: { title: string; description: string; kind: 'incomes' | 'expenses'; items: CashFlowPlanItem[]; baseYear: number; projectionYears: number; onChange: (kind: 'incomes' | 'expenses', items: CashFlowPlanItem[]) => void }) {
-  function update(id: string, patch: Partial<CashFlowPlanItem>) { onChange(kind, items.map((item) => item.id === id ? { ...item, ...patch } : item)) }
-  return <section className="cashflow-items-panel">
-    <div className="cashflow-items-heading"><div><h2>{title}</h2><p>{description}</p></div><button className="subtle-button" type="button" onClick={() => onChange(kind, [...items, createPlanItem(kind === 'incomes' ? '其他收入' : '其他支出', baseYear, projectionYears)])}><PlusIcon size={16} /> 新增</button></div>
-    <div className="cashflow-item-head"><span>项目</span><span>年金额</span><span>年增长率</span><span>起止年份</span><span /></div>
-    <div className="cashflow-item-list">
-      {items.map((item) => <div className="cashflow-item-row" key={item.id}>
-        <label data-label="项目"><input aria-label={`${title}项目名称`} value={item.label} onChange={(event) => update(item.id, { label: event.target.value })} /></label>
-        <label data-label="年金额"><MoneyInput value={item.annualAmount} onChange={(value) => update(item.id, { annualAmount: value })} /></label>
-        <label data-label="年增长率"><PercentInput value={item.growthRate} onChange={(value) => update(item.id, { growthRate: value })} /></label>
-        <label className="cashflow-year-range" data-label="起止年份"><input aria-label="开始年份" type="number" value={item.startYear} onChange={(event) => update(item.id, { startYear: numberValue(event.target.value, baseYear) })} /><span>至</span><input aria-label="结束年份" type="number" value={item.endYear} onChange={(event) => update(item.id, { endYear: numberValue(event.target.value, baseYear + projectionYears - 1) })} /></label>
-        <button className="cashflow-item-delete" aria-label={`删除${item.label}`} title="删除项目" type="button" onClick={() => onChange(kind, items.filter((entry) => entry.id !== item.id))}><TrashIcon size={16} /></button>
-      </div>)}
-    </div>
-  </section>
-}
-
-function ProjectionTable({ plan, rows }: { plan: CashFlowPlan; rows: ReturnType<typeof buildCashFlowProjection> }) {
+function ProjectionTable({ plan, rows, onUpdateAmount }: { plan: CashFlowPlan; rows: ReturnType<typeof buildCashFlowProjection>; onUpdateAmount: (kind: 'incomes' | 'expenses', itemId: string, year: number, value: number) => void }) {
   return <div className="cashflow-table-scroll">
     <table className="cashflow-projection-table">
       <thead>
-        <tr className="cashflow-group-row"><th colSpan={2 + plan.members.length}>家庭基础信息</th><th colSpan={plan.incomes.length + 1}>收入</th><th colSpan={plan.expenses.length + 1}>支出</th><th colSpan={2}>资金总和</th><th colSpan={3}>收益情景</th></tr>
-        <tr><th>年度</th><th>年份</th>{plan.members.map((member) => <th key={member.id}>{member.name}</th>)}{plan.incomes.map((item) => <th key={item.id}>{item.label}</th>)}<th className="cashflow-total-column">总收入</th>{plan.expenses.map((item) => <th key={item.id}>{item.label}</th>)}<th className="cashflow-total-column">总支出</th><th>每年增量资金</th><th>资金总额</th><th>按 {plan.annualReturnRate}%</th><th>利息差</th><th>覆盖支出率</th></tr>
+        <tr><th>年度</th><th>年份</th>{plan.members.map((member) => <th key={member.id}>{member.name}年龄</th>)}{plan.incomes.map((item) => <th key={item.id}>{item.label}</th>)}<th className="cashflow-total-column">总收入</th>{plan.expenses.map((item) => <th key={item.id}>{item.label}</th>)}<th className="cashflow-total-column">总支出</th><th>每年增量资金</th><th>资金总额</th><th>收益情景（{plan.annualReturnRate}%）</th><th>利息差</th><th>覆盖支出率</th></tr>
       </thead>
       <tbody>{rows.map((row) => <tr key={row.year}>
-        <td>{row.offset + 1}</td><td>{row.year}</td>{row.memberAges.map((age, index) => <td key={plan.members[index]?.id ?? index}>{age ?? '待补充'}</td>)}{row.incomeValues.map((value, index) => <td key={plan.incomes[index].id}>{formatTableMoney(value)}</td>)}<td className="cashflow-total-column">{formatTableMoney(row.totalIncome)}</td>{row.expenseValues.map((value, index) => <td key={plan.expenses[index].id}>{formatTableMoney(value)}</td>)}<td className="cashflow-total-column">{formatTableMoney(row.totalExpenses)}</td><td className={row.annualNet < 0 ? 'negative-cell' : ''}>{formatTableMoney(row.annualNet)}</td><td className={row.balanceWithoutReturn < 0 ? 'negative-cell' : ''}>{formatTableMoney(row.balanceWithoutReturn)}</td><td className={row.balanceWithReturn < 0 ? 'negative-cell' : 'return-cell'}>{formatTableMoney(row.balanceWithReturn)}</td><td>{formatTableMoney(row.interestDifference)}</td><td>{row.expenseCoverageRate === null ? '暂无' : `${row.expenseCoverageRate.toFixed(1)}%`}</td>
+        <td>{row.offset + 1}</td><td>{row.year}</td>{row.memberAges.map((age, index) => <td key={plan.members[index]?.id ?? index}>{age ?? '待补充'}</td>)}{row.incomeValues.map((value, index) => <EditableMoneyCell key={plan.incomes[index].id} label={`${row.year}年${plan.incomes[index].label}`} value={value} onChange={(next) => onUpdateAmount('incomes', plan.incomes[index].id, row.year, next)} />)}<td className="cashflow-total-column">{formatTableMoney(row.totalIncome)}</td>{row.expenseValues.map((value, index) => <EditableMoneyCell key={plan.expenses[index].id} label={`${row.year}年${plan.expenses[index].label}`} value={value} onChange={(next) => onUpdateAmount('expenses', plan.expenses[index].id, row.year, next)} />)}<td className="cashflow-total-column">{formatTableMoney(row.totalExpenses)}</td><td className={row.annualNet < 0 ? 'negative-cell' : ''}>{formatTableMoney(row.annualNet)}</td><td className={row.balanceWithoutReturn < 0 ? 'negative-cell' : ''}>{formatTableMoney(row.balanceWithoutReturn)}</td><td className={row.balanceWithReturn < 0 ? 'negative-cell' : 'return-cell'}>{formatTableMoney(row.balanceWithReturn)}</td><td>{formatTableMoney(row.interestDifference)}</td><CoverageCell value={row.expenseCoverageRate} />
       </tr>)}</tbody>
     </table>
   </div>
 }
 
+function EditableMoneyCell({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
+  return <td className="cashflow-editable-cell"><input aria-label={label} inputMode="decimal" type="number" min="0" step="1000" value={Math.round(value) || ''} onChange={(event) => onChange(numberValue(event.target.value, 0))} /></td>
+}
+
+function CoverageCell({ value }: { value: number | null }) {
+  const fill = value === null ? 0 : Math.min(100, Math.max(0, value))
+  return <td className="cashflow-coverage-cell" style={{ '--coverage-fill': `${fill}%` } as CSSProperties}><span>{value === null ? '暂无' : `${value.toFixed(1)}%`}</span></td>
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="field-block"><span>{label}</span>{children}</label> }
 function MoneyInput({ value, onChange, unit = '元/年' }: { value: number; onChange: (value: number) => void; unit?: string }) { return <span className="cashflow-number-input"><input type="number" min="0" step="1000" value={value || ''} onChange={(event) => onChange(numberValue(event.target.value, 0))} /><em>{unit}</em></span> }
-function PercentInput({ value, onChange }: { value: number; onChange: (value: number) => void }) { return <span className="cashflow-number-input"><input type="number" step="0.1" value={value} onChange={(event) => onChange(numberValue(event.target.value, 0))} /><em>%</em></span> }
 function numberValue(value: string, fallback: number) { const result = Number(value); return Number.isFinite(result) ? result : fallback }
 function nullableNumber(value: string) { if (!value) return null; const result = Number(value); return Number.isFinite(result) ? result : null }
 function formatMoney(value: number) { return new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', maximumFractionDigits: 0 }).format(value) }
 function formatTableMoney(value: number) { if (Math.abs(value) < 0.5) return '-'; return new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 0 }).format(value) }
+function shiftYearlyAmounts(values: Record<string, number> | undefined, shift: number) { return values ? Object.fromEntries(Object.entries(values).map(([year, amount]) => [String(Number(year) + shift), amount])) : undefined }

@@ -47,6 +47,7 @@ export interface CashFlowPlanItem {
   growthRate: number
   startYear: number
   endYear: number
+  yearlyAmounts?: Record<string, number>
 }
 
 export interface CashFlowPlan {

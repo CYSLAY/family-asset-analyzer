@@ -29,4 +29,15 @@ describe('cash flow plan', () => {
     expect(rows[1].balanceWithoutReturn).toBe(3100000)
     expect(rows[1].balanceWithReturn).toBeCloseTo(3331665)
   })
+
+  it('uses a directly edited yearly amount without changing other years', () => {
+    const customer = createCustomer('嘉玲')
+    const plan = createCashFlowPlanFromCustomer(customer, 2026)
+    plan.projectionYears = 2
+    plan.incomes = [{ id: 'income', label: '主要收入', annualAmount: 1000000, growthRate: 0, startYear: 2026, endYear: 2027, yearlyAmounts: { '2027': 1200000 } }]
+    plan.expenses = []
+    const rows = buildCashFlowProjection(plan)
+    expect(rows[0].totalIncome).toBe(1000000)
+    expect(rows[1].totalIncome).toBe(1200000)
+  })
 })
