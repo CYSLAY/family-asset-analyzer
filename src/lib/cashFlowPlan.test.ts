@@ -50,4 +50,17 @@ describe('cash flow plan', () => {
     expect(expenseCoverageBand(60).band).toBe('attention')
     expect(expenseCoverageBand(null).band).toBe('unavailable')
   })
+
+  it('stops calculating expense coverage after scenario funds are depleted', () => {
+    const customer = createCustomer('嘉玲')
+    const plan = createCashFlowPlanFromCustomer(customer, 2026)
+    plan.projectionYears = 1
+    plan.initialFunds = 100000
+    plan.annualReturnRate = 0
+    plan.incomes = []
+    plan.expenses = [{ id: 'expense', label: '生活支出', annualAmount: 200000, growthRate: 0, startYear: 2026, endYear: 2026 }]
+    const [row] = buildCashFlowProjection(plan)
+    expect(row.balanceWithReturn).toBe(-100000)
+    expect(row.expenseCoverageRate).toBeNull()
+  })
 })
