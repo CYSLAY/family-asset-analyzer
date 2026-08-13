@@ -4,6 +4,7 @@ import {
   CaretRightIcon,
   MagnifyingGlassIcon,
   PlusIcon,
+  TableIcon,
   TrashIcon,
   UserPlusIcon,
   UsersThreeIcon,
@@ -15,9 +16,10 @@ import { useCustomerStore } from '../stores/customerStore'
 interface CustomerDirectoryProps {
   onStartIntake: () => void
   onOpenReport: () => void
+  onOpenCashFlow: () => void
 }
 
-export function CustomerDirectory({ onStartIntake, onOpenReport }: CustomerDirectoryProps) {
+export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow }: CustomerDirectoryProps) {
   const {
     customers,
     selectCustomer,
@@ -62,15 +64,17 @@ export function CustomerDirectory({ onStartIntake, onOpenReport }: CustomerDirec
 
   return (
     <div className="directory-page">
-      <section className="directory-heading">
+      <section className="intake-start-hero customer-management-hero">
         <div>
-          <h1>客户档案</h1>
-          <p>每个家庭使用独立编号保存，同名客户不会互相覆盖。</p>
+          <span className="section-kicker">客户管理</span>
+          <h1>开始进行家庭财务分析</h1>
+          <p>为您量身定制的家庭资产管理计划</p>
         </div>
         <button className="primary-action" type="button" onClick={() => setCreating(true)}><PlusIcon size={18} /> 新建客户</button>
       </section>
 
-      <section className="directory-tools">
+      <section className="directory-tools customer-directory-tools">
+        <div><h2>客户档案</h2><p>顾问录入与客户自填分开管理，同名客户不会互相覆盖。</p></div>
         <label className="search-field">
           <MagnifyingGlassIcon size={18} />
           <input value={search} onChange={(event) => { setSearch(event.target.value); setAdvisorPage(1) }} placeholder="搜索姓名、家庭名称或城市" aria-label="搜索客户" />
@@ -102,6 +106,7 @@ export function CustomerDirectory({ onStartIntake, onOpenReport }: CustomerDirec
                 <div className="row-actions customer-row-actions">
                   <button className="subtle-button compact-row-button" type="button" onClick={() => { selectCustomer(customer.id); onStartIntake() }}>继续录入</button>
                   <button className="subtle-button compact-row-button" type="button" onClick={() => { selectCustomer(customer.id); onOpenReport() }}>查看报告</button>
+                  <button className="subtle-button compact-row-button" type="button" onClick={() => { selectCustomer(customer.id); onOpenCashFlow() }}><TableIcon size={15} /> 现金流</button>
                   <button className="customer-delete-button" type="button" onClick={() => { setDeleteError(''); setPendingDelete(customer) }}><TrashIcon size={16} /> 删除</button>
                 </div>
               </article>)}

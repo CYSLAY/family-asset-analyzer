@@ -6,14 +6,14 @@ import { SVGRenderer } from 'echarts/renderers'
 import type { ComposeOption } from 'echarts/core'
 import type { GaugeSeriesOption, PieSeriesOption } from 'echarts/charts'
 import type { TooltipComponentOption } from 'echarts/components'
-import { ArrowRightIcon, CaretDownIcon, InfoIcon } from '@phosphor-icons/react'
+import { ArrowRightIcon, CaretDownIcon, InfoIcon, TableIcon } from '@phosphor-icons/react'
 import wechatQr from '../../assets/branding/jojo-wechat-qr-original.jpg'
 import qrLogoBadge from '../../assets/branding/jojo-qr-logo-badge-inverted.png'
 import { analyzeCustomer, annualize, type HealthLevel, type MetricResult } from '../lib/analysis'
 import { useCustomerStore } from '../stores/customerStore'
 import type { CustomerProfile } from '../types/domain'
 
-interface Props { onChooseCustomer: () => void }
+interface Props { onChooseCustomer: () => void; onOpenCashFlow?: () => void }
 interface BreakdownSource { label: string; amount: number; frequency?: 'monthly' | 'quarterly' | 'yearly' }
 interface BreakdownEntry { name: string; value: number; source: BreakdownSource }
 interface BreakdownItem { name: string; value: number; color: string; sources: BreakdownSource[] }
@@ -25,7 +25,7 @@ const palette = ['#c91d2a', '#e56a73', '#ef9ea5', '#f2c4c8', '#8d1720', '#b9a1a3
 echarts.use([GaugeChart, PieChart, AriaComponent, TooltipComponent, SVGRenderer])
 type ChartOption = ComposeOption<GaugeSeriesOption | PieSeriesOption | TooltipComponentOption>
 
-export function AnalysisDashboard({ onChooseCustomer }: Props) {
+export function AnalysisDashboard({ onChooseCustomer, onOpenCashFlow }: Props) {
   const { customers, selectedCustomerId } = useCustomerStore()
   const customer = customers.find((item) => item.id === selectedCustomerId) ?? null
   const analysis = useMemo(() => customer ? analyzeCustomer(customer) : null, [customer])
@@ -107,6 +107,11 @@ export function AnalysisDashboard({ onChooseCustomer }: Props) {
         <span>获取报告专业解读与咨询</span>
       </div>
     </section>
+    {onOpenCashFlow ? <section className="report-cashflow-entry" aria-labelledby="report-cashflow-entry-title">
+      <div className="report-cashflow-entry-icon"><TableIcon size={25} /></div>
+      <div><h2 id="report-cashflow-entry-title">继续梳理长期现金流</h2><p>已自动关联 {customer.householdName}，可直接查看年度收支、资金结余和收益情景。</p></div>
+      <button className="primary-action compact" type="button" onClick={onOpenCashFlow}>进入现金流梳理 <ArrowRightIcon size={17} /></button>
+    </section> : null}
   </div>
 }
 

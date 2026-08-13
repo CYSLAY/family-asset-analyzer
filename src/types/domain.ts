@@ -27,10 +27,36 @@ export interface CustomerProfile {
   incomes: CashFlowEntry[]
   expenses: CashFlowEntry[]
   educationGoals: EducationGoal[]
+  cashFlowPlan?: CashFlowPlan
   intakeCompletedSteps?: IntakeStepKey[]
   createdAt: string
   updatedAt: string
   archivedAt: string | null
+}
+
+export interface CashFlowPlanMember {
+  id: string
+  name: string
+  baseAge: number | null
+}
+
+export interface CashFlowPlanItem {
+  id: string
+  label: string
+  annualAmount: number
+  growthRate: number
+  startYear: number
+  endYear: number
+}
+
+export interface CashFlowPlan {
+  baseYear: number
+  projectionYears: number
+  annualReturnRate: number
+  initialFunds: number
+  members: CashFlowPlanMember[]
+  incomes: CashFlowPlanItem[]
+  expenses: CashFlowPlanItem[]
 }
 
 export type IntakeStepKey = 'profile' | 'members' | 'fixed_assets' | 'liquid_assets' | 'cashflow' | 'education'

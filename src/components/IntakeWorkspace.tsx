@@ -101,6 +101,7 @@ export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = f
   }
 
   if (!customer) {
+    if (!selfService) return <section className="empty-state financial-empty"><UsersThreeIcon size={34} /><h2>请从客户管理选择档案</h2><p>客户档案与信息录入已整合到同一个入口。</p><button className="primary-action compact" type="button" onClick={onOpenCustomers}>返回客户管理</button></section>
     return <div className="intake-start">
       <section className="intake-start-hero">
         <div>
@@ -155,7 +156,7 @@ export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = f
   return <div className="intake-workspace">
     <header className="intake-header">
       <div>
-        {!selfService ? <button className="back-button" type="button" onClick={() => selectCustomer('')}><ArrowLeftIcon size={17} /> 切换客户</button> : null}
+        {!selfService ? <button className="back-button" type="button" onClick={onOpenCustomers}><ArrowLeftIcon size={17} /> 返回客户管理</button> : null}
         <h1>{selfService ? customer.primaryContactName ? `${customer.primaryContactName}的家庭资料` : '我的家庭资料' : customer.householdName}</h1>
         <p>{selfService ? selfServiceLocked ? '请先填写主要联系人姓名，之后即可进入其他资料模块。' : '可按任意顺序填写，完成度超过 10% 后会自动同步至云端。' : '可自由选择任意模块录入，系统会根据已有内容自动更新填写状态。'}</p>
       </div>
