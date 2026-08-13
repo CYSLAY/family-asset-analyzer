@@ -1,8 +1,12 @@
-import { useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import {
   ArrowClockwiseIcon,
   CalculatorIcon,
+  CaretDownIcon,
+  CheckIcon,
+  MagnifyingGlassIcon,
   UsersThreeIcon,
+  XIcon,
 } from '@phosphor-icons/react'
 import {
   buildCashFlowProjection,
@@ -136,12 +140,58 @@ export function CashFlowManager({ onOpenCustomer }: Props) {
   </div>
 }
 
-function ManagerHeading({ customers, selectedCustomerId, onSelect }: { customers: Array<{ id: string; householdName: string; primaryContactName: string; source?: 'advisor' | 'self_service' }>; selectedCustomerId: string; onSelect: (id: string) => void }) {
+type CashFlowCustomerOption = { id: string; householdName: string; primaryContactName: string; source?: 'advisor' | 'self_service' }
+
+function ManagerHeading({ customers, selectedCustomerId, onSelect }: { customers: CashFlowCustomerOption[]; selectedCustomerId: string; onSelect: (id: string) => void }) {
   return <header className="cashflow-manager-heading">
     <div><span className="section-kicker">顾问工具</span><h1>现金流管理</h1><p>选择客户，读取已有档案并建立可持续更新的家庭现金流预测。</p></div>
-    <label className="cashflow-customer-select"><span>当前客户</span><select value={selectedCustomerId} onChange={(event) => onSelect(event.target.value)}><option value="">请选择客户</option>{customers.map((customer) => <option value={customer.id} key={customer.id}>{customer.householdName || customer.primaryContactName}{customer.source === 'self_service' ? '（客户自填）' : ''}</option>)}</select></label>
+    <CustomerSearchSelect customers={customers} selectedCustomerId={selectedCustomerId} onSelect={onSelect} />
   </header>
 }
+
+function CustomerSearchSelect({ customers, selectedCustomerId, onSelect }: { customers: CashFlowCustomerOption[]; selectedCustomerId: string; onSelect: (id: string) => void }) {
+  const selected = customers.find((customer) => customer.id === selectedCustomerId) ?? null
+  const [query, setQuery] = useState(() => selected ? customerOptionLabel(selected) : '')
+  const [open, setOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const normalizedQuery = query.trim().toLowerCase()
+  const filtered = customers.filter((customer) => !normalizedQuery || customerSearchText(customer).includes(normalizedQuery))
+
+  useEffect(() => { setQuery(selected ? customerOptionLabel(selected) : '') }, [selectedCustomerId])
+  useEffect(() => { setActiveIndex(0) }, [query])
+
+  function choose(customer: CashFlowCustomerOption) {
+    setQuery(customerOptionLabel(customer))
+    setOpen(false)
+    onSelect(customer.id)
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'ArrowDown') { event.preventDefault(); setOpen(true); setActiveIndex((index) => Math.min(filtered.length - 1, index + 1)) }
+    if (event.key === 'ArrowUp') { event.preventDefault(); setOpen(true); setActiveIndex((index) => Math.max(0, index - 1)) }
+    if (event.key === 'Enter' && open && filtered[activeIndex]) { event.preventDefault(); choose(filtered[activeIndex]) }
+    if (event.key === 'Escape') { setOpen(false); setQuery(selected ? customerOptionLabel(selected) : '') }
+  }
+
+  return <div className="cashflow-customer-select" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) { setOpen(false); setQuery(selected ? customerOptionLabel(selected) : '') } }}>
+    <span>当前客户</span>
+    <div className="cashflow-customer-search-control">
+      <MagnifyingGlassIcon size={17} />
+      <input aria-autocomplete="list" aria-controls="cashflow-customer-options" aria-expanded={open} aria-label="搜索并选择客户" placeholder="搜索姓名或家庭名称" role="combobox" value={query} onChange={(event) => { setQuery(event.target.value); setOpen(true) }} onFocus={(event) => { event.currentTarget.select(); setOpen(true) }} onKeyDown={handleKeyDown} />
+      {query ? <button aria-label="清除客户搜索" type="button" onClick={() => { setQuery(''); setOpen(true); onSelect('') }}><XIcon size={14} /></button> : <CaretDownIcon size={14} />}
+    </div>
+    {open ? <div className="cashflow-customer-options" id="cashflow-customer-options" role="listbox">
+      {filtered.length ? filtered.map((customer, index) => <button aria-selected={customer.id === selectedCustomerId} className={index === activeIndex ? 'is-active' : ''} key={customer.id} role="option" type="button" onClick={() => choose(customer)} onMouseEnter={() => setActiveIndex(index)}>
+        <span><strong>{customer.householdName || customer.primaryContactName || '未命名客户'}</strong>{customer.householdName && customer.primaryContactName && customer.householdName !== customer.primaryContactName ? <small>{customer.primaryContactName}</small> : null}</span>
+        <em>{customer.source === 'self_service' ? '客户自填' : '顾问录入'}</em>
+        {customer.id === selectedCustomerId ? <CheckIcon size={15} weight="bold" /> : null}
+      </button>) : <p>没有找到匹配的客户</p>}
+    </div> : null}
+  </div>
+}
+
+function customerOptionLabel(customer: CashFlowCustomerOption) { return `${customer.householdName || customer.primaryContactName || '未命名客户'}${customer.source === 'self_service' ? '（客户自填）' : ''}` }
+function customerSearchText(customer: CashFlowCustomerOption) { return `${customer.householdName} ${customer.primaryContactName} ${customer.source === 'self_service' ? '客户自填' : '顾问录入'}`.toLowerCase() }
 
 function ProjectionTable({ plan, rows, hideBlankColumns, onToggleBlankColumns, onUpdateAmount, onApplyColumn }: { plan: CashFlowPlan; rows: ReturnType<typeof buildCashFlowProjection>; hideBlankColumns: boolean; onToggleBlankColumns: () => void; onUpdateAmount: (kind: 'incomes' | 'expenses', itemId: string, year: number, value: number) => void; onApplyColumn: (kind: 'incomes' | 'expenses', itemId: string, value: number) => void }) {
   const coverageScaleMaximum = coverageBarScaleMaximum(rows.map((row) => row.expenseCoverageRate))
