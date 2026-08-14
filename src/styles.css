@@ -663,6 +663,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .cashflow-inline-note { grid-column: 1 / -1; margin: 0; color: var(--ink-muted); font-size: 11px; }
 .cashflow-projection-panel { overflow: hidden; }
 .cashflow-projection-panel > .cashflow-section-heading { padding: 22px 24px; }
+.cashflow-projection-actions { flex: 0 0 auto; display: flex; align-items: center; gap: 9px; }
 .cashflow-range-controls { flex: 0 0 auto; position: relative; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-muted); display: flex; align-items: center; gap: 3px; }
 .cashflow-range-controls > button, .cashflow-range-more summary, .cashflow-range-more div button { min-height: 34px; padding: 0 11px; border: 0; border-radius: 7px; color: var(--ink-muted); background: transparent; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; }
 .cashflow-range-controls > button.is-active, .cashflow-range-more summary.is-active, .cashflow-range-more div button.is-active { color: white; background: var(--accent); }
@@ -673,6 +674,9 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .cashflow-range-more[open] summary::after { content: "−"; }
 .cashflow-range-more > div { position: absolute; z-index: 9; top: calc(100% + 8px); right: 0; min-width: 116px; padding: 6px; border: 1px solid var(--line); border-radius: 10px; background: white; display: grid; gap: 3px; box-shadow: 0 14px 32px rgba(60,20,24,.12); }
 .cashflow-range-more div button { width: 100%; justify-content: flex-start; }
+.cashflow-expand-button { min-height: 44px; padding: 0 14px; border: 1px solid #e4b6ba; border-radius: 10px; color: var(--accent-strong); background: white; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-size: 11px; font-weight: 740; white-space: nowrap; cursor: pointer; }
+.cashflow-expand-button:hover { border-color: var(--accent); background: var(--accent-soft); }
+.cashflow-expand-button:active { transform: translateY(1px); }
 .cashflow-table-scroll { max-height: 620px; overflow: auto; border-top: 1px solid var(--line); overscroll-behavior: contain; }
 .cashflow-projection-table { min-width: max-content; width: 100%; border-collapse: separate; border-spacing: 0; color: var(--ink); font-size: 10px; font-variant-numeric: tabular-nums; }
 .cashflow-projection-table th, .cashflow-projection-table td { width: 86px; min-width: 82px; max-width: 94px; height: 42px; padding: 0 7px; border-right: 1px solid #e8e8e8; border-bottom: 1px solid #e8e8e8; text-align: right; white-space: nowrap; }
@@ -728,6 +732,18 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .cashflow-coverage-disclaimer { margin: 12px 0 0; }
 .cashflow-coverage-disclaimer a { color: var(--accent-strong); text-decoration: underline; text-underline-offset: 2px; }
 .cashflow-model-note { margin: 0; padding: 15px 24px 18px; color: var(--ink-muted); background: #fafafa; font-size: 10px; line-height: 1.65; }
+.cashflow-table-modal-backdrop { position: fixed; z-index: 90; inset: 0; padding: clamp(12px,2vw,28px); background: rgba(30,16,18,.64); backdrop-filter: blur(7px); display: grid; place-items: center; }
+.cashflow-table-dialog { width: min(96vw, 1800px); height: min(92dvh, 1050px); min-height: 0; border: 1px solid #e4c5c8; border-radius: 18px; background: white; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 32px 100px rgba(38,9,13,.3); }
+.cashflow-table-dialog-header { flex: 0 0 auto; min-height: 92px; padding: 18px 20px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.cashflow-table-dialog-header h2 { margin: 4px 0 0; color: var(--ink); font-size: clamp(20px,2.1vw,28px); letter-spacing: -.025em; }
+.cashflow-table-dialog-header p { margin: 5px 0 0; color: var(--ink-muted); font-size: 11px; }
+.cashflow-table-dialog-actions { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; }
+.cashflow-table-dialog-close { width: 44px; height: 44px; padding: 0; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: white; display: grid; place-items: center; cursor: pointer; }
+.cashflow-table-dialog-close:hover { color: white; border-color: var(--accent); background: var(--accent); }
+.cashflow-expanded-table { flex: 1 1 auto; min-height: 0; padding: 12px 14px 0; background: #f7f6f6; }
+.cashflow-expanded-table .cashflow-table-scroll { width: 100%; height: 100%; max-height: none; border: 1px solid var(--line); border-radius: 10px 10px 0 0; background: white; }
+.cashflow-table-dialog-footer { flex: 0 0 auto; min-height: 38px; padding: 0 16px; border-top: 1px solid var(--line); color: var(--ink-muted); background: #fafafa; display: flex; align-items: center; gap: 18px; font-size: 9px; }
+.cashflow-table-dialog-footer span:last-child { margin-left: auto; }
 .report-cashflow-entry { margin-top: 20px; padding: 22px 24px; border: 1px solid #e3c4c7; border-radius: var(--radius-card); background: white; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 16px; box-shadow: var(--shadow); }
 .report-cashflow-entry-icon { width: 46px; height: 46px; border-radius: 12px; color: var(--accent); background: var(--accent-soft); display: grid; place-items: center; }
 .report-cashflow-entry h2 { margin: 0; color: var(--ink); font-size: 18px; }
@@ -939,10 +955,23 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .cashflow-section-heading { display: block; }
   .cashflow-section-heading .subtle-button { width: 100%; margin-top: 16px; }
   .cashflow-settings-grid, .cashflow-member-grid { grid-template-columns: 1fr; }
+  .cashflow-projection-actions { width: 100%; margin-top: 14px; }
+  .cashflow-projection-actions .cashflow-range-controls { flex: 1; margin-top: 0; }
   .cashflow-range-controls { width: 100%; margin-top: 14px; }
   .cashflow-range-controls > button { flex: 1; }
   .cashflow-range-more { flex: 1.4; }
   .cashflow-range-more summary { width: 100%; }
+  .cashflow-expand-button { flex: 0 0 auto; }
+  .cashflow-table-modal-backdrop { padding: 0; }
+  .cashflow-table-dialog { width: 100vw; height: 100dvh; max-height: none; border: 0; border-radius: 0; }
+  .cashflow-table-dialog-header { padding: 14px; align-items: flex-start; grid-template-columns: minmax(0,1fr); display: grid; gap: 12px; }
+  .cashflow-table-dialog-header p { display: none; }
+  .cashflow-table-dialog-actions { width: 100%; align-items: flex-start; }
+  .cashflow-table-dialog-actions .cashflow-range-controls { flex: 1; }
+  .cashflow-table-dialog-actions .cashflow-range-controls { margin-top: 0; }
+  .cashflow-expanded-table { padding: 8px 8px 0; }
+  .cashflow-table-dialog-footer { padding-inline: 10px; gap: 10px; }
+  .cashflow-table-dialog-footer span:last-child { display: none; }
   .cashflow-coverage-guide ul { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .report-cashflow-entry { grid-template-columns: auto minmax(0,1fr); }
   .report-cashflow-entry .primary-action { grid-column: 1 / -1; width: 100%; margin-top: 2px; justify-content: center; }

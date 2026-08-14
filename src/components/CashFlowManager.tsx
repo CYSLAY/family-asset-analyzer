@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import {
   ArrowClockwiseIcon,
+  ArrowsOutIcon,
   CalculatorIcon,
   CaretDownIcon,
   CheckIcon,
@@ -30,6 +31,19 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
   const rows = useMemo(() => plan ? buildCashFlowProjection(plan) : [], [plan])
   const [displayYears, setDisplayYears] = useState(5)
   const [hideBlankColumns, setHideBlankColumns] = useState(false)
+  const [tableExpanded, setTableExpanded] = useState(false)
+
+  useEffect(() => {
+    if (!tableExpanded) return
+    const previousOverflow = document.body.style.overflow
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => { if (event.key === 'Escape') setTableExpanded(false) }
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [tableExpanded])
 
   function savePlan(next: CashFlowPlan) {
     if (customer) void updateCustomer(customer.id, { cashFlowPlan: next })
@@ -69,6 +83,11 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
         ? { ...item, yearlyAmounts: createYearlyAmounts(plan.baseYear, plan.projectionYears, value) }
         : item),
     })
+  }
+
+  function selectDisplayYears(years: number) {
+    if (plan && plan.projectionYears < years) updatePlan({ projectionYears: years })
+    setDisplayYears(years)
   }
 
   if (!customer || !plan) {
@@ -112,13 +131,9 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
     <section className="cashflow-projection-panel">
       <div className="cashflow-section-heading">
         <div><CalculatorIcon size={22} /><div><h2>家庭现金流长期预测</h2><p>收入和支出可在表格中逐年直接修改，调整后自动保存并重新计算。</p></div></div>
-        <div className="cashflow-range-controls" aria-label="预测显示区间">
-          <button className={displayYears === 5 ? 'is-active' : ''} type="button" onClick={() => setDisplayYears(5)}>5 年</button>
-          <button className={displayYears === 10 ? 'is-active' : ''} type="button" onClick={() => setDisplayYears(10)}>10 年</button>
-          <details className="cashflow-range-more">
-            <summary className={displayYears > 10 ? 'is-active' : ''}>展开长期周期</summary>
-            <div>{[20, 30, 40, 55].map((years) => <button className={displayYears === years ? 'is-active' : ''} type="button" key={years} onClick={() => { if (plan.projectionYears < years) updatePlan({ projectionYears: years }); setDisplayYears(years) }}>{years} 年</button>)}</div>
-          </details>
+        <div className="cashflow-projection-actions">
+          <RangeControls displayYears={displayYears} onSelect={selectDisplayYears} />
+          <button className="cashflow-expand-button" type="button" onClick={() => setTableExpanded(true)}><ArrowsOutIcon size={16} /> 放大表格</button>
         </div>
       </div>
       <ProjectionTable plan={plan} rows={rows.slice(0, displayYears)} hideBlankColumns={hideBlankColumns} onToggleBlankColumns={() => setHideBlankColumns((value) => !value)} onUpdateAmount={updateYearAmount} onApplyColumn={applyAmountToColumn} />
@@ -139,6 +154,22 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
       </details>
       <p className="cashflow-model-note">计算口径：首年资金总额 = 当下存量资金 + 首年净现金流；收益情景资金 =（上年收益情景资金 + 当年净现金流）×（1 + 预期年化收益率）。本表用于现金流情景梳理，不构成收益保证。</p>
     </section>
+
+    {tableExpanded ? <div className="cashflow-table-modal-backdrop" role="presentation" onMouseDown={() => setTableExpanded(false)}>
+      <section aria-describedby="cashflow-table-dialog-description" aria-labelledby="cashflow-table-dialog-title" aria-modal="true" className="cashflow-table-dialog" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
+        <header className="cashflow-table-dialog-header">
+          <div><span className="section-kicker">现金流管理</span><h2 id="cashflow-table-dialog-title">家庭现金流长期预测</h2><p id="cashflow-table-dialog-description">放大模式保留全部编辑功能，修改后会自动保存并重新计算。</p></div>
+          <div className="cashflow-table-dialog-actions">
+            <RangeControls displayYears={displayYears} onSelect={selectDisplayYears} />
+            <button aria-label="关闭放大表格" autoFocus className="cashflow-table-dialog-close" type="button" onClick={() => setTableExpanded(false)}><XIcon size={20} /></button>
+          </div>
+        </header>
+        <div className="cashflow-expanded-table">
+          <ProjectionTable plan={plan} rows={rows.slice(0, displayYears)} hideBlankColumns={hideBlankColumns} onToggleBlankColumns={() => setHideBlankColumns((value) => !value)} onUpdateAmount={updateYearAmount} onApplyColumn={applyAmountToColumn} />
+        </div>
+        <footer className="cashflow-table-dialog-footer"><span>当前显示 {displayYears} 年</span><span>{hideBlankColumns ? '已隐藏空白收入与支出列' : '已展开全部收入与支出列'}</span><span>按 Esc 也可关闭</span></footer>
+      </section>
+    </div> : null}
   </div>
 }
 
@@ -195,6 +226,19 @@ function CustomerSearchSelect({ customers, selectedCustomerId, onSelect }: { cus
 
 function customerOptionLabel(customer: CashFlowCustomerOption) { return `${customer.householdName || customer.primaryContactName || '未命名客户'}${customer.source === 'self_service' ? '（客户自填）' : ''}` }
 function customerSearchText(customer: CashFlowCustomerOption) { return `${customer.householdName} ${customer.primaryContactName} ${customer.source === 'self_service' ? '客户自填' : '顾问录入'}`.toLowerCase() }
+
+function RangeControls({ displayYears, onSelect }: { displayYears: number; onSelect: (years: number) => void }) {
+  const [open, setOpen] = useState(false)
+  function choose(years: number) { onSelect(years); setOpen(false) }
+  return <div className="cashflow-range-controls" aria-label="预测显示区间">
+    <button className={displayYears === 5 ? 'is-active' : ''} type="button" onClick={() => choose(5)}>5 年</button>
+    <button className={displayYears === 10 ? 'is-active' : ''} type="button" onClick={() => choose(10)}>10 年</button>
+    <details className="cashflow-range-more" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary className={displayYears > 10 ? 'is-active' : ''}>展开长期周期</summary>
+      <div>{[20, 30, 40, 55].map((years) => <button className={displayYears === years ? 'is-active' : ''} type="button" key={years} onClick={() => choose(years)}>{years} 年</button>)}</div>
+    </details>
+  </div>
+}
 
 function ProjectionTable({ plan, rows, hideBlankColumns, onToggleBlankColumns, onUpdateAmount, onApplyColumn }: { plan: CashFlowPlan; rows: ReturnType<typeof buildCashFlowProjection>; hideBlankColumns: boolean; onToggleBlankColumns: () => void; onUpdateAmount: (kind: 'incomes' | 'expenses', itemId: string, year: number, value: number) => void; onApplyColumn: (kind: 'incomes' | 'expenses', itemId: string, value: number) => void }) {
   const coverageScaleMaximum = coverageBarScaleMaximum(rows.map((row) => row.expenseCoverageRate))
