@@ -33,7 +33,9 @@ pnpm run preview
 
 ## Supabase
 
-按 [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) 完成 Publishable key 与两份数据库脚本配置。`.env.local` 已被 Git 忽略，不会上传到 GitHub。
+按 [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) 完成 Publishable key、数据库迁移和顾问密码配置。`.env.local` 已被 Git 忽略，不会上传到 GitHub。
+
+需要从零复制到朋友自己的 GitHub 与 Supabase，或让 Codex 接手自动部署时，请使用完整的 [GitHub Pages + Supabase 标准部署手册](./docs/GITHUB_SUPABASE_DEPLOYMENT.md)。仓库根目录的 [AGENTS.md](./AGENTS.md) 定义了 Codex 必须遵守的安全和发布流程。
 
 数据库迁移位于 `supabase/migrations/`。前端只能使用 Publishable key；Secret key、`service_role` 和数据库密码不得写入浏览器代码。
 
@@ -47,10 +49,10 @@ pnpm run preview
 
 ## 发布说明
 
-当前尚未创建或上传 GitHub 仓库。正式发布前需要确定仓库名称、开源许可证与部署平台，并在托管平台设置两项环境变量：
+当前仓库通过 `.github/workflows/deploy-pages.yml` 自动测试、构建并发布到 GitHub Pages。每次推送 `main` 都会触发部署。仓库需设置：
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
-- `VITE_ALLOWED_USERNAMES`（逗号分隔，默认 `jojo`）
+- `VITE_ALLOWED_USERNAMES`（GitHub Actions Variable，逗号分隔，默认 `jojo`）
 
-不要提交 `.env.local`。
+不要提交 `.env.local`，也不要在任何前端环境变量中使用 Secret key、`service_role` 或数据库密码。
