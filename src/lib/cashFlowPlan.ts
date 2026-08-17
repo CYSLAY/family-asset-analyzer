@@ -1,4 +1,5 @@
 import { annualize } from './analysis'
+import { savingsInsuranceYear } from './savingsInsurance'
 import type { CashFlowPlan, CashFlowPlanItem, CustomerProfile } from '../types/domain'
 
 export interface CashFlowProjectionRow {
@@ -9,12 +10,18 @@ export interface CashFlowProjectionRow {
   totalIncome: number
   expenseValues: number[]
   totalExpenses: number
+  savingsInsurancePremium: number
+  totalOutflows: number
   annualNet: number
   balanceWithoutReturn: number
   balanceWithReturn: number
   interestDifference: number
   fundsExpenseCoverageRate: number | null
   expenseCoverageRate: number | null
+  savingsInsuranceBalance: number
+  savingsInsuranceIrr: number | null
+  balanceWithReturnAndInsurance: number
+  returnCoverageRateWithInsurance: number | null
 }
 
 export type ExpenseCoverageBand = 'long_term' | 'adequate' | 'medium_term' | 'limited' | 'attention' | 'unavailable'
@@ -58,6 +65,7 @@ export function createCashFlowPlanFromCustomer(customer: CustomerProfile, baseYe
     initialFunds: customer.assets
       .filter((asset) => asset.category !== 'property' && asset.category !== 'vehicle')
       .reduce((sum, asset) => sum + asset.currentValue, 0),
+    savingsInsuranceAnnualPremium: 0,
     members,
     incomes,
     expenses,
@@ -76,9 +84,12 @@ export function buildCashFlowProjection(plan: CashFlowPlan): CashFlowProjectionR
     const expenseValues = plan.expenses.map((item) => projectedItemAmount(item, year, plan.baseYear))
     const totalIncome = sum(incomeValues)
     const totalExpenses = sum(expenseValues)
-    const annualNet = totalIncome - totalExpenses
+    const savingsInsurance = savingsInsuranceYear(plan.savingsInsuranceAnnualPremium, offset)
+    const totalOutflows = totalExpenses + savingsInsurance.premium
+    const annualNet = totalIncome - totalOutflows
     balanceWithoutReturn += annualNet
     balanceWithReturn = (balanceWithReturn + annualNet) * (1 + returnRate)
+    const balanceWithReturnAndInsurance = balanceWithReturn + savingsInsurance.balance
     rows.push({
       offset,
       year,
@@ -87,12 +98,18 @@ export function buildCashFlowProjection(plan: CashFlowPlan): CashFlowProjectionR
       totalIncome,
       expenseValues,
       totalExpenses,
+      savingsInsurancePremium: savingsInsurance.premium,
+      totalOutflows,
       annualNet,
       balanceWithoutReturn,
       balanceWithReturn,
       interestDifference: balanceWithReturn - balanceWithoutReturn,
-      fundsExpenseCoverageRate: balanceWithoutReturn > 0 ? totalExpenses / balanceWithoutReturn * 100 : null,
-      expenseCoverageRate: balanceWithReturn > 0 ? totalExpenses / balanceWithReturn * 100 : null,
+      fundsExpenseCoverageRate: balanceWithoutReturn > 0 ? totalOutflows / balanceWithoutReturn * 100 : null,
+      expenseCoverageRate: balanceWithReturn > 0 ? totalOutflows / balanceWithReturn * 100 : null,
+      savingsInsuranceBalance: savingsInsurance.balance,
+      savingsInsuranceIrr: savingsInsurance.irr,
+      balanceWithReturnAndInsurance,
+      returnCoverageRateWithInsurance: balanceWithReturnAndInsurance > 0 ? totalOutflows / balanceWithReturnAndInsurance * 100 : null,
     })
   }
   return rows
@@ -100,6 +117,13 @@ export function buildCashFlowProjection(plan: CashFlowPlan): CashFlowProjectionR
 
 export function createPlanItem(label: string, baseYear: number, projectionYears: number): CashFlowPlanItem {
   return { id: crypto.randomUUID(), label, annualAmount: 0, growthRate: 0, startYear: baseYear, endYear: baseYear + projectionYears - 1 }
+}
+
+export function fillYearlyAmountsBelow(current: Record<string, number> | undefined, sourceYear: number, baseYear: number, projectionYears: number, value: number) {
+  const next = { ...current }
+  const lastYear = baseYear + projectionYears - 1
+  for (let year = Math.max(baseYear, sourceYear + 1); year <= lastYear; year += 1) next[String(year)] = value
+  return next
 }
 
 export function mergeCustomerDataIntoPlan(plan: CashFlowPlan, customer: CustomerProfile): CashFlowPlan {

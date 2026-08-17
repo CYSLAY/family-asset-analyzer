@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildCashFlowProjection, createCashFlowPlanFromCustomer, expenseCoverageBand } from './cashFlowPlan'
+import { buildCashFlowProjection, createCashFlowPlanFromCustomer, expenseCoverageBand, fillYearlyAmountsBelow } from './cashFlowPlan'
 import { createCustomer } from '../types/domain'
 
 describe('cash flow plan', () => {
@@ -80,5 +80,45 @@ describe('cash flow plan', () => {
     expect(row.fundsExpenseCoverageRate).toBeCloseTo(100000 / 900000 * 100)
     expect(row.expenseCoverageRate).toBeCloseTo(100000 / 931500 * 100)
     expect(row.fundsExpenseCoverageRate).not.toBe(row.expenseCoverageRate)
+  })
+
+  it('models five savings-insurance payments and the supplied reference balance schedule', () => {
+    const customer = createCustomer('嘉玲')
+    const plan = createCashFlowPlanFromCustomer(customer, 2026)
+    plan.projectionYears = 6
+    plan.initialFunds = 5000000
+    plan.annualReturnRate = 0
+    plan.savingsInsuranceAnnualPremium = 500000
+    plan.incomes = []
+    plan.expenses = []
+    const rows = buildCashFlowProjection(plan)
+
+    expect(rows.slice(0, 5).map((row) => row.savingsInsurancePremium)).toEqual([500000, 500000, 500000, 500000, 500000])
+    expect(rows[5].savingsInsurancePremium).toBe(0)
+    expect(rows[3].savingsInsuranceBalance).toBe(622290)
+    expect(rows[4].savingsInsuranceBalance).toBe(964294)
+    expect(rows[5].savingsInsuranceBalance).toBe(1283208)
+    expect(rows[4].balanceWithReturn).toBe(2500000)
+    expect(rows[4].balanceWithReturnAndInsurance).toBe(3464294)
+    expect(rows[5].balanceWithReturnAndInsurance).toBe(3783208)
+  })
+
+  it('scales policy balances with the configured annual contribution', () => {
+    const customer = createCustomer('嘉玲')
+    const plan = createCashFlowPlanFromCustomer(customer, 2026)
+    plan.projectionYears = 4
+    plan.initialFunds = 3000000
+    plan.annualReturnRate = 0
+    plan.savingsInsuranceAnnualPremium = 250000
+    plan.incomes = []
+    plan.expenses = []
+    const rows = buildCashFlowProjection(plan)
+    expect(rows[3].savingsInsuranceBalance).toBe(311145)
+    expect(rows[3].totalOutflows).toBe(250000)
+  })
+
+  it('applies an edited amount only to years below the source row', () => {
+    const amounts = fillYearlyAmountsBelow({ '2026': 100, '2027': 200, '2028': 300 }, 2027, 2026, 4, 900)
+    expect(amounts).toEqual({ '2026': 100, '2027': 200, '2028': 900, '2029': 900 })
   })
 })

@@ -650,10 +650,11 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .cashflow-section-heading > div:first-child { display: flex; align-items: start; gap: 12px; color: var(--accent); }
 .cashflow-section-heading h2 { margin: 0; color: var(--ink); font-size: 20px; }
 .cashflow-section-heading p { margin: 6px 0 0; color: var(--ink-muted); font-size: 12px; line-height: 1.55; }
-.cashflow-settings-grid { margin-top: 22px; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+.cashflow-settings-grid { margin-top: 22px; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
 .cashflow-number-input { min-width: 0; position: relative; display: block; }
 .cashflow-number-input input { width: 100%; padding-right: 58px !important; font-variant-numeric: tabular-nums; }
 .cashflow-number-input em { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-muted); font-size: 10px; font-style: normal; pointer-events: none; }
+.cashflow-setting-help { margin-top: 7px; color: var(--ink-muted); display: block; font-size: 10px; font-weight: 500; line-height: 1.45; }
 .cashflow-member-grid { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
 .cashflow-member-field { min-width: 0; padding: 13px 14px; border-radius: 10px; background: var(--surface-muted); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .cashflow-member-field > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); font-size: 12px; font-weight: 720; }
@@ -687,19 +688,25 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .cashflow-projection-table thead th:first-child, .cashflow-projection-table thead th:nth-child(2) { z-index: 5; background: #f0f0f0; }
 .cashflow-projection-table .cashflow-total-column { color: #183c60; background: #eaf1fa; font-weight: 760; }
 .cashflow-projection-table .return-cell { color: #22624f; background: #eef8f4; font-weight: 720; }
+.cashflow-projection-table .insured-total-cell { color: #5c4b20; background: #f8f4e8; font-weight: 760; }
 .cashflow-projection-table .negative-cell { color: var(--danger); background: #fff0f1; font-weight: 720; }
 .cashflow-toggle-column-header { padding: 0 !important; }
 .cashflow-toggle-column-header > button { width: 100%; min-height: 48px; padding: 4px 7px; border: 0; color: inherit; background: transparent; font: inherit; font-weight: inherit; line-height: inherit; cursor: pointer; }
 .cashflow-toggle-column-header > button:hover, .cashflow-toggle-column-header > button[aria-pressed="true"] { color: var(--accent-strong); background: rgba(207,31,44,.07); }
 .cashflow-toggle-column-header > button[aria-pressed="true"]::after { content: "展开"; margin-top: 2px; color: var(--accent); display: block; font-size: 8px; }
 .cashflow-editable-cell { position: relative; padding: 4px 6px !important; background: #fffdfd; }
+.cashflow-editable-cell:hover, .cashflow-editable-cell:focus-within { z-index: 7; overflow: visible; }
 .cashflow-editable-cell input { width: 100%; min-width: 68px; height: 32px; padding: 0 5px; border: 1px solid transparent; border-radius: 6px; color: var(--ink); background: transparent; text-align: right; font: inherit; font-variant-numeric: tabular-nums; appearance: textfield; -moz-appearance: textfield; }
 .cashflow-editable-cell input::-webkit-outer-spin-button, .cashflow-editable-cell input::-webkit-inner-spin-button { margin: 0; appearance: none; -webkit-appearance: none; }
 .cashflow-editable-cell input:hover { border-color: #e8c9cc; background: white; }
-.cashflow-editable-cell input:focus { padding-right: 35px; outline: 3px solid rgba(207,31,44,.1); border-color: var(--accent); background: white; }
-.cashflow-editable-cell > button { position: absolute; z-index: 2; right: 8px; top: 50%; min-width: 30px; min-height: 24px; padding: 0 4px; transform: translateY(-50%); border: 0; border-radius: 5px; color: white; background: var(--accent); display: inline-flex; align-items: center; justify-content: center; gap: 2px; font-size: 8px; font-weight: 720; opacity: 0; pointer-events: none; cursor: pointer; }
+.cashflow-editable-cell input:focus { outline: 3px solid rgba(207,31,44,.1); border-color: var(--accent); background: white; }
+.cashflow-editable-cell > button { position: absolute; z-index: 8; right: -31px; top: 50%; min-width: 32px; min-height: 24px; padding: 0 4px; transform: translateY(-50%); border: 1px solid white; border-radius: 5px; color: white; background: var(--accent); display: inline-flex; align-items: center; justify-content: center; gap: 2px; font-size: 8px; font-weight: 720; opacity: 0; pointer-events: none; box-shadow: 0 3px 10px rgba(90,15,20,.22); cursor: pointer; }
 .cashflow-editable-cell:hover > button, .cashflow-editable-cell:focus-within > button { opacity: 1; pointer-events: auto; }
 .cashflow-editable-cell > button:hover { background: var(--accent-strong); }
+.cashflow-insurance-cell { min-width: 112px !important; max-width: 118px !important; background: #fffaf0; }
+.cashflow-insurance-cell strong { color: #745817; display: block; font-weight: 780; }
+.cashflow-insurance-cell small, .cashflow-insurance-cell em { margin-top: 2px; color: var(--ink-muted); display: block; font-size: 8px; font-style: normal; font-weight: 600; line-height: 1.15; }
+.cashflow-insurance-cell small { color: #a23b31; }
 .cashflow-toggle-column-header > button { position: relative; }
 .cashflow-toggle-column-header > button::before, .cashflow-editable-cell > button::before { content: attr(data-tooltip); position: absolute; z-index: 20; left: 50%; bottom: calc(100% + 7px); width: max-content; max-width: 220px; padding: 6px 8px; transform: translateX(-50%) translateY(3px); border-radius: 6px; color: white; background: rgba(35,31,32,.94); font-size: 9px; font-weight: 500; line-height: 1.4; white-space: normal; opacity: 0; pointer-events: none; box-shadow: 0 8px 20px rgba(30,20,20,.16); }
 .cashflow-toggle-column-header > button::before { top: calc(100% + 7px); bottom: auto; }

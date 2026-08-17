@@ -55,6 +55,7 @@ export interface CashFlowPlan {
   projectionYears: number
   annualReturnRate: number
   initialFunds: number
+  savingsInsuranceAnnualPremium?: number
   members: CashFlowPlanMember[]
   incomes: CashFlowPlanItem[]
   expenses: CashFlowPlanItem[]
