@@ -26,6 +26,7 @@ describe('cash flow plan', () => {
     expect(rows[0].annualNet).toBe(-300000)
     expect(rows[0].balanceWithoutReturn).toBe(3400000)
     expect(rows[0].balanceWithReturn).toBeCloseTo(3519000)
+    expect(rows[0].fundsExpenseCoverageRate).toBeCloseTo(1300000 / 3400000 * 100)
     expect(rows[0].expenseCoverageRate).toBeCloseTo(1300000 / 3519000 * 100)
     expect(rows[1].balanceWithoutReturn).toBe(3100000)
     expect(rows[1].balanceWithReturn).toBeCloseTo(3331665)
@@ -60,7 +61,24 @@ describe('cash flow plan', () => {
     plan.incomes = []
     plan.expenses = [{ id: 'expense', label: '生活支出', annualAmount: 200000, growthRate: 0, startYear: 2026, endYear: 2026 }]
     const [row] = buildCashFlowProjection(plan)
+    expect(row.fundsExpenseCoverageRate).toBeNull()
     expect(row.balanceWithReturn).toBe(-100000)
     expect(row.expenseCoverageRate).toBeNull()
+  })
+
+  it('keeps funds coverage separate from return-scenario coverage', () => {
+    const customer = createCustomer('嘉玲')
+    const plan = createCashFlowPlanFromCustomer(customer, 2026)
+    plan.projectionYears = 1
+    plan.initialFunds = 1000000
+    plan.annualReturnRate = 3.5
+    plan.incomes = []
+    plan.expenses = [{ id: 'expense', label: '生活支出', annualAmount: 100000, growthRate: 0, startYear: 2026, endYear: 2026 }]
+    const [row] = buildCashFlowProjection(plan)
+    expect(row.balanceWithoutReturn).toBe(900000)
+    expect(row.balanceWithReturn).toBeCloseTo(931500)
+    expect(row.fundsExpenseCoverageRate).toBeCloseTo(100000 / 900000 * 100)
+    expect(row.expenseCoverageRate).toBeCloseTo(100000 / 931500 * 100)
+    expect(row.fundsExpenseCoverageRate).not.toBe(row.expenseCoverageRate)
   })
 })

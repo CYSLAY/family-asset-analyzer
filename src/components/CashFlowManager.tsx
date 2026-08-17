@@ -138,9 +138,9 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
       </div>
       <ProjectionTable plan={plan} rows={rows.slice(0, displayYears)} hideBlankColumns={hideBlankColumns} onToggleBlankColumns={() => setHideBlankColumns((value) => !value)} onUpdateAmount={updateYearAmount} onApplyColumn={applyAmountToColumn} />
       <details className="cashflow-coverage-guide">
-        <summary>覆盖支出率说明与分级依据</summary>
+        <summary>资金覆盖率与收益覆盖率说明</summary>
         <div className="cashflow-coverage-guide-body">
-          <div><strong>计算口径</strong><p>年度总支出 ÷ 当年收益情景资金 × 100%。数值越低，表示当年支出对收益情景下资金存量的消耗越小；在该年度情景静态不变时，资金可覆盖年数约等于 100 ÷ 覆盖支出率。</p></div>
+          <div><strong>两种计算口径</strong><p>资金覆盖率＝年度总支出 ÷ 当年资金总额；收益覆盖率＝年度总支出 ÷ 当年收益情景资金。前者不计投资收益，后者计入当前设置的年化收益情景。数值越低，表示当年支出对相应资金存量的消耗越小；在该年度情景静态不变时，资金可覆盖年数约等于 100 ÷ 覆盖率。</p></div>
           <ul aria-label="覆盖支出率等级">
             <li className="coverage-long_term"><i /> <strong>≤ 5%</strong><span>可覆盖20年以上</span></li>
             <li className="coverage-adequate"><i /> <strong>5%–10%</strong><span>可覆盖10–20年</span></li>
@@ -149,7 +149,7 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
             <li className="coverage-attention"><i /> <strong>&gt; 50%</strong><span>不足2年</span></li>
             <li className="coverage-depleted"><i /> <strong>资金 ≤ 0</strong><span>资金耗尽</span></li>
           </ul>
-          <p className="cashflow-coverage-disclaimer">数据条长度按当前显示年份中的最大有效比率进行相对缩放，便于比较年度变化；颜色始终按照上方固定区间判断。收益情景资金小于或等于0时，百分比失去解释意义，系统改为显示“资金耗尽”。目前国内没有针对“年度总支出 ÷ 收益情景资金”的统一标准，上述区间按资金可覆盖年数建立，用于长期现金流规划。中国家庭常用的3–6个月备用金标准只衡量短期流动性，不能替代本指标；工作期家庭还需结合年度净现金流，退休期家庭则应更重视长期覆盖年数。参考：<a href="https://www.cgbchina.com.cn/Info/17775570" target="_blank" rel="noreferrer">广发银行资产配置</a>、<a href="https://group.ccb.com/chn/2021-06/09/article_2021082106144860154.shtml" target="_blank" rel="noreferrer">建设银行家庭财富规划</a>、<a href="https://soe.xmu.edu.cn/zhongguojiatingcaifuyuxiaofeibaogao2025niandisijidu.pdf" target="_blank" rel="noreferrer">中国家庭财富与消费报告</a>。</p>
+          <p className="cashflow-coverage-disclaimer">两列数据条分别按各自在当前显示年份中的最大有效比率进行相对缩放，便于比较年度变化；颜色始终按照上方固定区间判断。对应资金小于或等于0时，百分比失去解释意义，系统改为显示“资金耗尽”。目前国内没有针对这两项长期覆盖率的统一标准，上述区间按资金可覆盖年数建立，用于长期现金流规划。中国家庭常用的3–6个月备用金标准只衡量短期流动性，不能替代本指标；工作期家庭还需结合年度净现金流，退休期家庭则应更重视长期覆盖年数。参考：<a href="https://www.cgbchina.com.cn/Info/17775570" target="_blank" rel="noreferrer">广发银行资产配置</a>、<a href="https://group.ccb.com/chn/2021-06/09/article_2021082106144860154.shtml" target="_blank" rel="noreferrer">建设银行家庭财富规划</a>、<a href="https://soe.xmu.edu.cn/zhongguojiatingcaifuyuxiaofeibaogao2025niandisijidu.pdf" target="_blank" rel="noreferrer">中国家庭财富与消费报告</a>。</p>
         </div>
       </details>
       <p className="cashflow-model-note">计算口径：首年资金总额 = 当下存量资金 + 首年净现金流；收益情景资金 =（上年收益情景资金 + 当年净现金流）×（1 + 预期年化收益率）。本表用于现金流情景梳理，不构成收益保证。</p>
@@ -241,16 +241,17 @@ function RangeControls({ displayYears, onSelect }: { displayYears: number; onSel
 }
 
 function ProjectionTable({ plan, rows, hideBlankColumns, onToggleBlankColumns, onUpdateAmount, onApplyColumn }: { plan: CashFlowPlan; rows: ReturnType<typeof buildCashFlowProjection>; hideBlankColumns: boolean; onToggleBlankColumns: () => void; onUpdateAmount: (kind: 'incomes' | 'expenses', itemId: string, year: number, value: number) => void; onApplyColumn: (kind: 'incomes' | 'expenses', itemId: string, value: number) => void }) {
-  const coverageScaleMaximum = coverageBarScaleMaximum(rows.map((row) => row.expenseCoverageRate))
+  const fundsCoverageScaleMaximum = coverageBarScaleMaximum(rows.map((row) => row.fundsExpenseCoverageRate))
+  const returnCoverageScaleMaximum = coverageBarScaleMaximum(rows.map((row) => row.expenseCoverageRate))
   const visibleIncomeIndexes = visibleItemIndexes(plan.incomes.length, rows.map((row) => row.incomeValues), hideBlankColumns)
   const visibleExpenseIndexes = visibleItemIndexes(plan.expenses.length, rows.map((row) => row.expenseValues), hideBlankColumns)
   return <div className="cashflow-table-scroll">
     <table className="cashflow-projection-table">
       <thead>
-        <tr><th>年度</th><th>年份</th>{plan.members.map((member) => <th key={member.id}>{member.name}年龄</th>)}{visibleIncomeIndexes.map((index) => <ToggleColumnHeader key={plan.incomes[index].id} label={plan.incomes[index].label} compact={hideBlankColumns} onToggle={onToggleBlankColumns} />)}<ToggleColumnHeader className="cashflow-total-column" label="总收入" compact={hideBlankColumns} onToggle={onToggleBlankColumns} />{visibleExpenseIndexes.map((index) => <ToggleColumnHeader key={plan.expenses[index].id} label={plan.expenses[index].label} compact={hideBlankColumns} onToggle={onToggleBlankColumns} />)}<ToggleColumnHeader className="cashflow-total-column" label="总支出" compact={hideBlankColumns} onToggle={onToggleBlankColumns} /><th>每年增量资金</th><th>资金总额</th><th>收益情景（{plan.annualReturnRate}%）</th><th>利息差</th><th>覆盖支出率</th></tr>
+        <tr><th>年度</th><th>年份</th>{plan.members.map((member) => <th key={member.id}>{member.name}年龄</th>)}{visibleIncomeIndexes.map((index) => <ToggleColumnHeader key={plan.incomes[index].id} label={plan.incomes[index].label} compact={hideBlankColumns} onToggle={onToggleBlankColumns} />)}<ToggleColumnHeader className="cashflow-total-column" label="总收入" compact={hideBlankColumns} onToggle={onToggleBlankColumns} />{visibleExpenseIndexes.map((index) => <ToggleColumnHeader key={plan.expenses[index].id} label={plan.expenses[index].label} compact={hideBlankColumns} onToggle={onToggleBlankColumns} />)}<ToggleColumnHeader className="cashflow-total-column" label="总支出" compact={hideBlankColumns} onToggle={onToggleBlankColumns} /><th>每年增量资金</th><th>资金总额</th><th title="年度总支出 ÷ 当年资金总额">资金覆盖率</th><th>收益情景（{plan.annualReturnRate}%）</th><th>利息差</th><th title="年度总支出 ÷ 当年收益情景资金">收益覆盖率</th></tr>
       </thead>
       <tbody>{rows.map((row) => <tr key={row.year}>
-        <td>{row.offset + 1}</td><td>{row.year}</td>{row.memberAges.map((age, index) => <td key={plan.members[index]?.id ?? index}>{age ?? '待补充'}</td>)}{visibleIncomeIndexes.map((index) => <EditableMoneyCell key={plan.incomes[index].id} label={`${row.year}年${plan.incomes[index].label}`} value={row.incomeValues[index]} onChange={(next) => onUpdateAmount('incomes', plan.incomes[index].id, row.year, next)} onApplyColumn={(next) => onApplyColumn('incomes', plan.incomes[index].id, next)} />)}<td className="cashflow-total-column">{formatTableMoney(row.totalIncome)}</td>{visibleExpenseIndexes.map((index) => <EditableMoneyCell key={plan.expenses[index].id} label={`${row.year}年${plan.expenses[index].label}`} value={row.expenseValues[index]} onChange={(next) => onUpdateAmount('expenses', plan.expenses[index].id, row.year, next)} onApplyColumn={(next) => onApplyColumn('expenses', plan.expenses[index].id, next)} />)}<td className="cashflow-total-column">{formatTableMoney(row.totalExpenses)}</td><td className={row.annualNet < 0 ? 'negative-cell' : ''}>{formatTableMoney(row.annualNet)}</td><td className={row.balanceWithoutReturn < 0 ? 'negative-cell' : ''}>{formatTableMoney(row.balanceWithoutReturn)}</td><td className={row.balanceWithReturn < 0 ? 'negative-cell' : 'return-cell'}>{formatTableMoney(row.balanceWithReturn)}</td><td>{formatTableMoney(row.interestDifference)}</td><CoverageCell value={row.expenseCoverageRate} scaleMaximum={coverageScaleMaximum} depleted={row.balanceWithReturn <= 0} />
+        <td>{row.offset + 1}</td><td>{row.year}</td>{row.memberAges.map((age, index) => <td key={plan.members[index]?.id ?? index}>{age ?? '待补充'}</td>)}{visibleIncomeIndexes.map((index) => <EditableMoneyCell key={plan.incomes[index].id} label={`${row.year}年${plan.incomes[index].label}`} value={row.incomeValues[index]} onChange={(next) => onUpdateAmount('incomes', plan.incomes[index].id, row.year, next)} onApplyColumn={(next) => onApplyColumn('incomes', plan.incomes[index].id, next)} />)}<td className="cashflow-total-column">{formatTableMoney(row.totalIncome)}</td>{visibleExpenseIndexes.map((index) => <EditableMoneyCell key={plan.expenses[index].id} label={`${row.year}年${plan.expenses[index].label}`} value={row.expenseValues[index]} onChange={(next) => onUpdateAmount('expenses', plan.expenses[index].id, row.year, next)} onApplyColumn={(next) => onApplyColumn('expenses', plan.expenses[index].id, next)} />)}<td className="cashflow-total-column">{formatTableMoney(row.totalExpenses)}</td><td className={row.annualNet < 0 ? 'negative-cell' : ''}>{formatTableMoney(row.annualNet)}</td><td className={row.balanceWithoutReturn < 0 ? 'negative-cell' : ''}>{formatTableMoney(row.balanceWithoutReturn)}</td><CoverageCell value={row.fundsExpenseCoverageRate} scaleMaximum={fundsCoverageScaleMaximum} depleted={row.balanceWithoutReturn <= 0} basis="资金总额" /><td className={row.balanceWithReturn < 0 ? 'negative-cell' : 'return-cell'}>{formatTableMoney(row.balanceWithReturn)}</td><td>{formatTableMoney(row.interestDifference)}</td><CoverageCell value={row.expenseCoverageRate} scaleMaximum={returnCoverageScaleMaximum} depleted={row.balanceWithReturn <= 0} basis="收益情景资金" />
       </tr>)}</tbody>
     </table>
   </div>
@@ -265,12 +266,12 @@ function EditableMoneyCell({ label, value, onChange, onApplyColumn }: { label: s
   return <td className="cashflow-editable-cell"><input aria-label={label} inputMode="decimal" type="number" min="0" step="1000" value={Math.round(value) || ''} onChange={(event) => onChange(numberValue(event.target.value, 0))} /><button aria-label={`将${label}的金额应用到整列`} data-tooltip="将此金额应用到该项目的全部预测年份" type="button" onClick={() => onApplyColumn(value)}>整列</button></td>
 }
 
-function CoverageCell({ value, scaleMaximum, depleted }: { value: number | null; scaleMaximum: number; depleted: boolean }) {
-  if (depleted) return <td className="cashflow-coverage-cell coverage-depleted" title="收益情景资金已小于或等于0，覆盖支出率不再具有可解释性"><span>资金耗尽</span></td>
+function CoverageCell({ value, scaleMaximum, depleted, basis }: { value: number | null; scaleMaximum: number; depleted: boolean; basis: string }) {
+  if (depleted) return <td className="cashflow-coverage-cell coverage-depleted" title={`${basis}已小于或等于0，覆盖率不再具有可解释性`}><span>资金耗尽</span></td>
   const status = expenseCoverageBand(value)
   const fill = value === null ? 0 : Math.min(100, Math.max(0, value / scaleMaximum * 100))
   const years = value && value > 0 ? 100 / value : null
-  return <td className={`cashflow-coverage-cell coverage-${status.band}`} title={`${status.label}：${value === null ? '比例暂不可计算' : `年度支出占收益情景资金的${value.toFixed(1)}%，约可覆盖${formatCoverageYears(years)}`}`} style={{ '--coverage-fill': `${fill}%` } as CSSProperties}><span>{value === null ? '暂无' : `${value.toFixed(1)}%`}</span></td>
+  return <td className={`cashflow-coverage-cell coverage-${status.band}`} title={`${status.label}：${value === null ? '比例暂不可计算' : `年度支出占${basis}的${value.toFixed(1)}%，约可覆盖${formatCoverageYears(years)}`}`} style={{ '--coverage-fill': `${fill}%` } as CSSProperties}><span>{value === null ? '暂无' : `${value.toFixed(1)}%`}</span></td>
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="field-block"><span>{label}</span>{children}</label> }

@@ -13,6 +13,7 @@ export interface CashFlowProjectionRow {
   balanceWithoutReturn: number
   balanceWithReturn: number
   interestDifference: number
+  fundsExpenseCoverageRate: number | null
   expenseCoverageRate: number | null
 }
 
@@ -90,6 +91,7 @@ export function buildCashFlowProjection(plan: CashFlowPlan): CashFlowProjectionR
       balanceWithoutReturn,
       balanceWithReturn,
       interestDifference: balanceWithReturn - balanceWithoutReturn,
+      fundsExpenseCoverageRate: balanceWithoutReturn > 0 ? totalExpenses / balanceWithoutReturn * 100 : null,
       expenseCoverageRate: balanceWithReturn > 0 ? totalExpenses / balanceWithReturn * 100 : null,
     })
   }
