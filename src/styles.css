@@ -687,9 +687,14 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .cashflow-projection-table th:nth-child(2), .cashflow-projection-table td:nth-child(2) { position: sticky; z-index: 2; left: 52px; width: 68px; min-width: 68px; max-width: 68px; background: white; text-align: center; box-shadow: 10px 0 18px -18px rgba(30,20,20,.7); }
 .cashflow-projection-table thead th:first-child, .cashflow-projection-table thead th:nth-child(2) { z-index: 5; background: #f0f0f0; }
 .cashflow-projection-table .cashflow-total-column { color: #183c60; background: #eaf1fa; font-weight: 760; }
-.cashflow-projection-table .return-cell { color: #22624f; background: #eef8f4; font-weight: 720; }
-.cashflow-projection-table .insured-total-cell { color: #5c4b20; background: #f8f4e8; font-weight: 760; }
 .cashflow-projection-table .negative-cell { color: var(--danger); background: #fff0f1; font-weight: 720; }
+.cashflow-projection-table .insurance-scenario-column { color: #5e4050; background: #f8f1f5; }
+.cashflow-projection-table th.insurance-scenario-column { color: #543346; background: #eadde4; }
+.cashflow-projection-table .insurance-scenario-start { border-left: 3px solid rgba(207,31,44,.4); }
+.cashflow-projection-table tbody tr:hover td.insurance-scenario-column { background: #f2e5ec; }
+.cashflow-projection-table .insurance-expense-cell { color: #91313b; font-weight: 760; }
+.cashflow-projection-table .insurance-assets-cell { color: #5f4050; font-weight: 780; }
+.cashflow-scenario-label { margin-bottom: 3px; color: var(--accent-strong); display: block; font-size: 7px; font-weight: 820; letter-spacing: .02em; }
 .cashflow-toggle-column-header { padding: 0 !important; }
 .cashflow-toggle-column-header > button { width: 100%; min-height: 48px; padding: 4px 7px; border: 0; color: inherit; background: transparent; font: inherit; font-weight: inherit; line-height: inherit; cursor: pointer; }
 .cashflow-toggle-column-header > button:hover, .cashflow-toggle-column-header > button[aria-pressed="true"] { color: var(--accent-strong); background: rgba(207,31,44,.07); }
@@ -700,10 +705,14 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .cashflow-editable-cell input::-webkit-outer-spin-button, .cashflow-editable-cell input::-webkit-inner-spin-button { margin: 0; appearance: none; -webkit-appearance: none; }
 .cashflow-editable-cell input:hover { border-color: #e8c9cc; background: white; }
 .cashflow-editable-cell input:focus { outline: 3px solid rgba(207,31,44,.1); border-color: var(--accent); background: white; }
-.cashflow-editable-cell > button { position: absolute; z-index: 8; right: -31px; top: 50%; min-width: 32px; min-height: 24px; padding: 0 4px; transform: translateY(-50%); border: 1px solid white; border-radius: 5px; color: white; background: var(--accent); display: inline-flex; align-items: center; justify-content: center; gap: 2px; font-size: 8px; font-weight: 720; opacity: 0; pointer-events: none; box-shadow: 0 3px 10px rgba(90,15,20,.22); cursor: pointer; }
-.cashflow-editable-cell:hover > button, .cashflow-editable-cell:focus-within > button { opacity: 1; pointer-events: auto; }
-.cashflow-editable-cell > button:hover { background: var(--accent-strong); }
-.cashflow-insurance-cell { min-width: 112px !important; max-width: 118px !important; background: #fffaf0; }
+.cashflow-editable-cell > .cashflow-apply-down { position: absolute; z-index: 8; right: -31px; top: 50%; min-width: 32px; min-height: 24px; padding: 0 4px; transform: translateY(-50%); border: 1px solid white; border-radius: 5px; color: white; background: var(--accent); display: inline-flex; align-items: center; justify-content: center; gap: 2px; font-size: 8px; font-weight: 720; opacity: 0; pointer-events: none; box-shadow: 0 3px 10px rgba(90,15,20,.22); cursor: pointer; }
+.cashflow-editable-cell:hover > .cashflow-apply-down, .cashflow-editable-cell:focus-within > .cashflow-apply-down { opacity: 1; pointer-events: auto; }
+.cashflow-editable-cell > .cashflow-apply-down:hover { background: var(--accent-strong); }
+.cashflow-fill-handle { position: absolute; z-index: 9; right: 2px; bottom: 2px; width: 9px; height: 9px; padding: 0; border: 2px solid white; border-radius: 3px; background: var(--accent); opacity: 0; cursor: ns-resize; box-shadow: 0 1px 4px rgba(90,15,20,.24); }
+.cashflow-editable-cell:hover > .cashflow-fill-handle, .cashflow-editable-cell:focus-within > .cashflow-fill-handle { opacity: 1; }
+.cashflow-editable-cell.is-fill-target { background: #fff0f2; box-shadow: inset 0 0 0 2px rgba(207,31,44,.35); }
+.cashflow-editable-cell.is-fill-target input { color: var(--accent-strong); }
+.cashflow-insurance-cell { min-width: 112px !important; max-width: 118px !important; background: #f8f1f5; }
 .cashflow-insurance-cell strong { color: #745817; display: block; font-weight: 780; }
 .cashflow-insurance-cell small, .cashflow-insurance-cell em { margin-top: 2px; color: var(--ink-muted); display: block; font-size: 8px; font-style: normal; font-weight: 600; line-height: 1.15; }
 .cashflow-insurance-cell small { color: #a23b31; }

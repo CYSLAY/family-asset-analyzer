@@ -93,7 +93,7 @@ export function AnalysisDashboard({ onChooseCustomer, onOpenCashFlow }: Props) {
 
     {onOpenCashFlow ? <section className="report-cashflow-entry" aria-labelledby="report-cashflow-entry-title">
       <div className="report-cashflow-entry-icon"><TableIcon size={25} /></div>
-      <div><h2 id="report-cashflow-entry-title">继续梳理长期现金流</h2><p>已自动关联 {customer.householdName}，可直接查看年度收支、资金结余和收益情景。</p></div>
+      <div><h2 id="report-cashflow-entry-title">继续梳理长期现金流</h2><p>已自动关联 {customer.householdName}，可直接查看年度收支、资金结余和储蓄险假设场景。</p></div>
       <button className="primary-action compact" type="button" onClick={onOpenCashFlow}>进入现金流梳理 <ArrowRightIcon size={17} /></button>
     </section> : null}
 

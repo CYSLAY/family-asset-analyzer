@@ -11,17 +11,15 @@ export interface CashFlowProjectionRow {
   expenseValues: number[]
   totalExpenses: number
   savingsInsurancePremium: number
-  totalOutflows: number
+  totalExpensesWithInsurance: number
   annualNet: number
   balanceWithoutReturn: number
-  balanceWithReturn: number
-  interestDifference: number
   fundsExpenseCoverageRate: number | null
-  expenseCoverageRate: number | null
   savingsInsuranceBalance: number
   savingsInsuranceIrr: number | null
-  balanceWithReturnAndInsurance: number
-  returnCoverageRateWithInsurance: number | null
+  insuranceScenarioLiquidBalance: number
+  balanceWithSavingsInsurance: number
+  savingsInsuranceCoverageRate: number | null
 }
 
 export type ExpenseCoverageBand = 'long_term' | 'adequate' | 'medium_term' | 'limited' | 'attention' | 'unavailable'
@@ -75,8 +73,7 @@ export function createCashFlowPlanFromCustomer(customer: CustomerProfile, baseYe
 export function buildCashFlowProjection(plan: CashFlowPlan): CashFlowProjectionRow[] {
   const rows: CashFlowProjectionRow[] = []
   let balanceWithoutReturn = plan.initialFunds
-  let balanceWithReturn = plan.initialFunds
-  const returnRate = plan.annualReturnRate / 100
+  let insuranceScenarioLiquidBalance = plan.initialFunds
 
   for (let offset = 0; offset < plan.projectionYears; offset += 1) {
     const year = plan.baseYear + offset
@@ -85,11 +82,12 @@ export function buildCashFlowProjection(plan: CashFlowPlan): CashFlowProjectionR
     const totalIncome = sum(incomeValues)
     const totalExpenses = sum(expenseValues)
     const savingsInsurance = savingsInsuranceYear(plan.savingsInsuranceAnnualPremium, offset)
-    const totalOutflows = totalExpenses + savingsInsurance.premium
-    const annualNet = totalIncome - totalOutflows
+    const totalExpensesWithInsurance = totalExpenses + savingsInsurance.premium
+    const annualNet = totalIncome - totalExpenses
+    const annualNetWithInsurance = totalIncome - totalExpensesWithInsurance
     balanceWithoutReturn += annualNet
-    balanceWithReturn = (balanceWithReturn + annualNet) * (1 + returnRate)
-    const balanceWithReturnAndInsurance = balanceWithReturn + savingsInsurance.balance
+    insuranceScenarioLiquidBalance += annualNetWithInsurance
+    const balanceWithSavingsInsurance = insuranceScenarioLiquidBalance + savingsInsurance.balance
     rows.push({
       offset,
       year,
@@ -99,17 +97,15 @@ export function buildCashFlowProjection(plan: CashFlowPlan): CashFlowProjectionR
       expenseValues,
       totalExpenses,
       savingsInsurancePremium: savingsInsurance.premium,
-      totalOutflows,
+      totalExpensesWithInsurance,
       annualNet,
       balanceWithoutReturn,
-      balanceWithReturn,
-      interestDifference: balanceWithReturn - balanceWithoutReturn,
-      fundsExpenseCoverageRate: balanceWithoutReturn > 0 ? totalOutflows / balanceWithoutReturn * 100 : null,
-      expenseCoverageRate: balanceWithReturn > 0 ? totalOutflows / balanceWithReturn * 100 : null,
+      fundsExpenseCoverageRate: balanceWithoutReturn > 0 ? totalExpenses / balanceWithoutReturn * 100 : null,
       savingsInsuranceBalance: savingsInsurance.balance,
       savingsInsuranceIrr: savingsInsurance.irr,
-      balanceWithReturnAndInsurance,
-      returnCoverageRateWithInsurance: balanceWithReturnAndInsurance > 0 ? totalOutflows / balanceWithReturnAndInsurance * 100 : null,
+      insuranceScenarioLiquidBalance,
+      balanceWithSavingsInsurance,
+      savingsInsuranceCoverageRate: balanceWithSavingsInsurance > 0 ? totalExpensesWithInsurance / balanceWithSavingsInsurance * 100 : null,
     })
   }
   return rows
@@ -123,6 +119,12 @@ export function fillYearlyAmountsBelow(current: Record<string, number> | undefin
   const next = { ...current }
   const lastYear = baseYear + projectionYears - 1
   for (let year = Math.max(baseYear, sourceYear + 1); year <= lastYear; year += 1) next[String(year)] = value
+  return next
+}
+
+export function fillYearlyAmountsRange(current: Record<string, number> | undefined, sourceYear: number, targetYear: number, value: number) {
+  const next = { ...current }
+  for (let year = sourceYear + 1; year <= targetYear; year += 1) next[String(year)] = value
   return next
 }
 
