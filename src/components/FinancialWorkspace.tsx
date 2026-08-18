@@ -318,7 +318,7 @@ function LegacyCashFlowEditor({ customer, onUpdate }: EditorProps) {
     <SummaryLine items={[['家庭年收入', annualTotal(customer.incomes)], ['家庭年支出', annualTotal(customer.expenses)], ['年度结余', annualTotal(customer.incomes) - annualTotal(customer.expenses)]]} />
     {(['incomes', 'expenses'] as const).map((key) => {
       const isIncome = key === 'incomes'
-      return <EntrySection key={key} title={isIncome ? '收入来源' : '家庭支出'} description={isIncome ? '区分工作、经营、投资及其他收入。' : '必要支出会用于计算个性化应急资金目标。'} action={isIncome ? '添加收入' : '添加支出'} onAdd={() => onUpdate({ [key]: [...customer[key], createCashFlow(isIncome ? 'income' : 'expense')] })}>
+      return <EntrySection key={key} title={isIncome ? '收入来源' : '家庭支出'} description={isIncome ? '区分工作、经营、投资及其他收入。' : '全部家庭支出都会用于计算现金储备月数。'} action={isIncome ? '添加收入' : '添加支出'} onAdd={() => onUpdate({ [key]: [...customer[key], createCashFlow(isIncome ? 'income' : 'expense')] })}>
         {customer[key].length ? customer[key].map((flow) => <article className="entry-card compact-entry" key={flow.id}>
           <EntryHeader name={flow.name || flow.category} onDelete={() => onUpdate({ [key]: customer[key].filter((item) => item.id !== flow.id) })} />
           <div className="form-grid four-columns">

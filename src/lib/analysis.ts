@@ -53,11 +53,8 @@ export function analyzeCustomer(customer: CustomerProfile): FinancialAnalysis {
   const emergencyFunds = customer.assets.filter((item) => item.availableForEmergency && item.liquidity !== 'long_term').reduce((sum, item) => sum + item.currentValue, 0)
   const annualIncome = customer.incomes.reduce((sum, item) => sum + annualize(item), 0)
   const annualExpenses = customer.expenses.reduce((sum, item) => sum + annualize(item), 0)
-  const necessaryAnnualExpenses = customer.expenses
-    .filter((item) => item.necessary || /其他支出|居住与物业|投资储蓄/.test(`${item.category}${item.name}`))
-    .reduce((sum, item) => sum + annualize(item), 0)
   const annualDebtPayments = customer.liabilities.reduce((sum, item) => sum + item.monthlyPayment * 12, 0)
-  const necessaryMonthlyOutflow = necessaryAnnualExpenses / 12 + annualDebtPayments / 12
+  const necessaryMonthlyOutflow = annualExpenses / 12 + annualDebtPayments / 12
   const hasLiabilityData = customer.liabilities.some((item) => item.balance > 0 || item.monthlyPayment > 0 || item.dueWithinOneYear > 0)
   const dueWithinOneYear = customer.liabilities.reduce((sum, item) => sum + estimateOneYearDebt(item), 0)
   const workIncome = customer.incomes.filter((item) => /工作|工资|经营|佣金|奖金/.test(`${item.category}${item.name}`)).reduce((sum, item) => sum + annualize(item), 0)
@@ -170,13 +167,13 @@ function debtServiceMetric(income: number, payments: number, liabilities: number
 }
 
 function emergencyMetric(funds: number, monthly: number, target: number): MetricResult {
-  if (monthly <= 0) return metric('emergency_months', '现金储备月数', null, 'months', 'neutral', '等待必要支出数据', '没有必要支出和月供数据，无法计算储备可维持多久。', '完成必要支出和债务月供录入。', '可用应急资金 / 每月必要支出与月供', `当前家庭建议目标约 ${target} 个月`)
+  if (monthly <= 0) return metric('emergency_months', '现金储备月数', null, 'months', 'neutral', '等待家庭支出数据', '没有家庭支出和月供数据，无法计算储备可维持多久。', '完成家庭支出和债务月供录入。', '可用应急资金 /（家庭每月总支出 + 负债月供）', `当前家庭建议目标约 ${target} 个月`)
   const months = funds / monthly
-  if (months < 1) return metric('emergency_months', '现金储备月数', months, 'months', 'critical', '现金储备严重不足', '现有应急资金不足以覆盖一个月必要支出。', '暂停非必要投资与大额支出，先建立至少1个月缓冲。', '可用应急资金 / 每月必要支出与月供', `当前家庭建议目标约 ${target} 个月`)
-  if (months < target / 2) return metric('emergency_months', '现金储备月数', months, 'months', 'warning', '现金储备偏低', '储备能够应对短期波动，但距离个性化目标仍有明显差距。', `先提高到 ${Math.ceil(target / 2)} 个月，再逐步达到 ${target} 个月。`, '可用应急资金 / 每月必要支出与月供', `当前家庭建议目标约 ${target} 个月`)
-  if (months < target) return metric('emergency_months', '现金储备月数', months, 'months', 'attention', '现金储备接近目标', '家庭已有一定缓冲，但收入结构和家庭责任要求更高储备。', `继续补足到约 ${target} 个月必要支出。`, '可用应急资金 / 每月必要支出与月供', `当前家庭建议目标约 ${target} 个月`)
-  if (months <= 12) return metric('emergency_months', '现金储备月数', months, 'months', 'healthy', '现金储备较充足', '应急资金达到当前家庭建议目标。', '保持资金安全和可随时使用，并定期随支出变化更新。', '可用应急资金 / 每月必要支出与月供', `当前家庭建议目标约 ${target} 个月`)
-  return metric('emergency_months', '现金储备月数', months, 'months', 'attention', '现金储备可能偏多', '现金缓冲很充分，但长期闲置可能降低资金效率。', '在保留目标储备后，再评估中长期目标配置。', '可用应急资金 / 每月必要支出与月供', `当前家庭建议目标约 ${target} 个月`)
+  if (months < 1) return metric('emergency_months', '现金储备月数', months, 'months', 'critical', '现金储备严重不足', '现有应急资金不足以覆盖一个月家庭总支出和月供。', '暂停非必要投资与大额支出，先建立至少1个月缓冲。', '可用应急资金 /（家庭每月总支出 + 负债月供）', `当前家庭建议目标约 ${target} 个月`)
+  if (months < target / 2) return metric('emergency_months', '现金储备月数', months, 'months', 'warning', '现金储备偏低', '储备能够应对短期波动，但距离个性化目标仍有明显差距。', `先提高到 ${Math.ceil(target / 2)} 个月，再逐步达到 ${target} 个月。`, '可用应急资金 /（家庭每月总支出 + 负债月供）', `当前家庭建议目标约 ${target} 个月`)
+  if (months < target) return metric('emergency_months', '现金储备月数', months, 'months', 'attention', '现金储备接近目标', '家庭已有一定缓冲，但收入结构和家庭责任要求更高储备。', `继续补足到约 ${target} 个月家庭总支出与月供。`, '可用应急资金 /（家庭每月总支出 + 负债月供）', `当前家庭建议目标约 ${target} 个月`)
+  if (months <= 12) return metric('emergency_months', '现金储备月数', months, 'months', 'healthy', '现金储备较充足', '应急资金达到当前家庭建议目标。', '保持资金安全和可随时使用，并定期随支出变化更新。', '可用应急资金 /（家庭每月总支出 + 负债月供）', `当前家庭建议目标约 ${target} 个月`)
+  return metric('emergency_months', '现金储备月数', months, 'months', 'attention', '现金储备可能偏多', '现金缓冲很充分，但长期闲置可能降低资金效率。', '在保留目标储备后，再评估中长期目标配置。', '可用应急资金 /（家庭每月总支出 + 负债月供）', `当前家庭建议目标约 ${target} 个月`)
 }
 
 function savingsMetric(income: number, surplus: number): MetricResult {

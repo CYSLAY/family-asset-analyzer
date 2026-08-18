@@ -43,10 +43,13 @@ describe('financial analysis', () => {
     expect(metric?.reference).toContain('10 个月')
   })
 
-  it('includes existing other expenses in emergency reserve months', () => {
-    const customer = createCustomer('其他支出家庭')
+  it('includes all family expenses in emergency reserve months', () => {
+    const customer = createCustomer('家庭总支出')
     customer.assets = [{ ...createAsset(), currentValue: 120_000, availableForEmergency: true }]
-    customer.expenses = [{ ...createCashFlow('expense'), name: '其他支出', category: '其他支出', amount: 120_000, frequency: 'yearly', necessary: false }]
+    customer.expenses = [
+      { ...createCashFlow('expense'), name: '其他支出', category: '其他支出', amount: 60_000, frequency: 'yearly', necessary: false },
+      { ...createCashFlow('expense'), name: '娱乐、旅游', category: '可调整支出', amount: 60_000, frequency: 'yearly', necessary: false },
+    ]
     const result = analyzeCustomer(customer)
     expect(result.totals.necessaryMonthlyOutflow).toBe(10_000)
     expect(result.metrics.find((item) => item.key === 'emergency_months')?.value).toBe(12)
