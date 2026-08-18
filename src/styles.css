@@ -92,7 +92,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .access-mode-card em { margin-top: 10px; color: var(--ink-muted); font-size: 12px; font-style: normal; line-height: 1.6; }
 .access-mode-arrow { margin-top: 14px; color: var(--accent); }
 .access-choice-foot { margin-top: 28px; padding-top: 19px; border-top: 1px solid var(--line); color: var(--ink-muted); display: flex; align-items: center; gap: 8px; font-size: 11px; }
-.access-back-button { margin: -8px 0 26px; padding: 0; border: 0; color: var(--accent); background: transparent; display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.access-back-button { min-height: 38px; margin: -8px 0 26px; padding: 0 4px; border: 0; color: var(--accent); background: transparent; display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; cursor: pointer; }
 .admin-access-card .quiet-label { color: var(--accent); }
 .invite-access-card .quiet-label { color: var(--accent); }
 .invite-brand { margin-bottom: 24px; }
@@ -221,7 +221,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .invitation-usage em { width: max-content; margin-top: 8px; padding: 3px 7px; border-radius: 5px; display: block; color: var(--ink-muted); background: var(--surface-muted); font-size: 10px; font-style: normal; }
 .invitation-usage em.available { color: #2d7851; background: #edf7f1; }
 .invitation-usage em.unavailable { color: var(--danger); background: #fff0f1; }
-.self-service-customer-list { overflow: visible; }
+.self-service-customer-list { overflow: hidden; }
 .self-service-customer-row { min-width: 0; min-height: 104px; padding: 16px 20px; grid-template-columns: minmax(260px,340px) 245px 100px 150px minmax(340px,1fr); align-items: start; gap: 14px; }
 .self-service-customer-row .customer-row-actions { align-self: start; padding-top: 23px; flex-wrap: nowrap; }
 .self-service-save-meta span, .self-service-save-meta strong { display: block; }
@@ -811,12 +811,20 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .report-cashflow-entry h2 { margin: 0; color: var(--ink); font-size: 18px; }
 .report-cashflow-entry p { margin: 6px 0 0; color: var(--ink-muted); font-size: 12px; line-height: 1.55; }
 
+@media (max-width: 1600px) and (min-width: 1281px) {
+  .self-service-customer-row { grid-template-columns: minmax(260px,1fr) 230px 96px 140px; }
+  .self-service-customer-row .customer-row-actions { grid-column: 1 / -1; padding-top: 0; justify-content: flex-end; }
+}
+
 @media (max-width: 1280px) and (min-width: 721px) {
   .cashflow-manager-heading { display: block; }
   .cashflow-customer-select, .cashflow-self-customer { width: 100%; margin-top: 18px; }
   .cashflow-settings-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .self-service-customer-row { grid-template-columns: minmax(240px,1fr) 220px 96px 140px; }
   .self-service-customer-row .customer-row-actions { grid-column: 1 / -1; padding-top: 0; justify-content: flex-end; }
+  .invitation-code-cell > div, .invitation-recipient input, .invitation-code-cell button, .invitation-recipient button { min-height: 42px; }
+  .customer-pagination button, .customer-row-actions button { min-height: 42px; }
+  .cashflow-range-controls > button, .cashflow-range-more summary, .cashflow-range-more div button { min-height: 40px; }
 }
 
 @media (max-width: 1024px) {
@@ -859,9 +867,11 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .report-grid.two-columns, .health-grid, .health-grid.three-up { grid-template-columns: 1fr; }
   .analysis-charts, .metric-grid { grid-template-columns: 1fr; }
   .report-consult-panel { grid-template-columns: minmax(0,1fr) 240px; gap: 28px; }
+  .self-service-customer-row { grid-template-columns: minmax(220px,1fr) minmax(190px,1fr); }
 }
 
 @media (max-width: 720px) {
+  .access-back-button { min-height: 44px; margin-bottom: 20px; }
   .access-page { padding: 16px; }
   .access-card { padding: 30px 22px; }
   .access-choice-card { padding: 28px 20px; }
@@ -922,11 +932,13 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .invitation-generator .primary-action { width: 100%; margin-top: 0; }
   .self-service-customer-row { padding: 17px 18px; grid-template-columns: 1fr; align-items: stretch; gap: 15px; }
   .self-service-customer-row .customer-row-actions { grid-column: auto; padding-top: 0; justify-content: flex-start; padding-left: 0; flex-wrap: wrap; }
-  .invitation-code-cell > div { width: 100%; grid-template-columns: minmax(0,1fr) 86px; }
+  .invitation-code-cell > div { width: 100%; min-height: 44px; grid-template-columns: minmax(0,1fr) 86px; }
   .invitation-code-cell code { min-width: 0; }
+  .invitation-recipient input, .invitation-code-cell button, .invitation-recipient button { height: 44px; min-height: 44px; }
+  .customer-row-actions button, .customer-delete-button { min-height: 44px; }
   .customer-pagination { align-items: flex-start; flex-direction: column; gap: 9px; }
   .customer-pagination > div { width: 100%; }
-  .customer-pagination button { flex: 1; justify-content: center; }
+  .customer-pagination button { min-height: 44px; flex: 1; justify-content: center; }
   .editor-toolbar { align-items: start; }
   .editor-toolbar-actions { display: grid; }
   .record-id { margin-top: 20px; }
@@ -964,9 +976,10 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .education-cost-summary .education-cost-total { grid-column: 1 / -1; padding: 14px 0 0; border-top: 1px solid #e4d6d8; border-left: 0; }
   .education-stage-label { grid-template-columns: minmax(52px, 1fr) 88px; }
   .education-route-options { width: 100%; display: flex; flex-wrap: wrap; gap: 7px; }
-  .route-chip { padding-inline: 8px; }
-  .study-abroad-combo { max-width: 100%; }
-  .education-destination-control { width: 96px; flex-basis: 96px; }
+  .education-duration-control select, .education-destination-control select, .route-chip { height: 44px; min-height: 44px; }
+  .route-chip { padding-inline: 10px; }
+  .study-abroad-combo { max-width: 100%; height: 44px; }
+  .education-destination-control { width: 96px; height: 44px; flex-basis: 96px; }
   .education-funding-heading { display: grid; gap: 5px; }
   .compact-flow-grid { grid-template-columns: 1fr; }
   .compact-flow-field { grid-template-columns: 92px minmax(0, 1fr); }
@@ -1032,6 +1045,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .cashflow-projection-actions .cashflow-range-controls { flex: 1; margin-top: 0; }
   .cashflow-range-controls { width: 100%; margin-top: 14px; }
   .cashflow-range-controls > button { flex: 1; }
+  .cashflow-range-controls > button, .cashflow-range-more summary, .cashflow-range-more div button { min-height: 42px; }
   .cashflow-range-more { flex: 1.4; }
   .cashflow-range-more summary { width: 100%; }
   .cashflow-expand-button { flex: 0 0 auto; }
@@ -1045,6 +1059,9 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .cashflow-expanded-table { padding: 8px 8px 0; }
   .cashflow-table-dialog-footer { padding-inline: 10px; gap: 10px; }
   .cashflow-table-dialog-footer span:last-child { display: none; }
+  .cashflow-fill-handle { display: none; }
+  .cashflow-editable-cell:focus-within input { padding-right: 34px; }
+  .cashflow-editable-cell > .cashflow-apply-down { right: 2px; top: auto; bottom: 4px; min-width: 30px; min-height: 26px; transform: none; }
   .cashflow-coverage-guide ul { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .report-cashflow-entry { grid-template-columns: auto minmax(0,1fr); }
   .report-cashflow-entry .primary-action { grid-column: 1 / -1; width: 100%; margin-top: 2px; justify-content: center; }
@@ -1064,6 +1081,8 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .breakdown-head, .breakdown-row { grid-template-columns: minmax(0,1fr) 92px 48px; padding-inline: 12px; }
   .report-consult-panel { padding-inline: 16px; }
   .customer-row-actions { padding-left: 0; }
+  .cashflow-projection-actions { grid-template-columns: 1fr; display: grid; }
+  .cashflow-expand-button { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

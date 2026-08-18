@@ -144,7 +144,7 @@ function ComparisonPanel({ title, leftLabel, leftValue, rightLabel, rightValue, 
 
 function DistributionPanel({ title, totalLabel, items }: { title: string; totalLabel: string; items: BreakdownItem[] }) {
   const total = items.reduce((sum, item) => sum + item.value, 0)
-  const option: ChartOption = { aria: { enabled: true }, tooltip: { trigger: 'item', formatter: (params: unknown) => sourceTooltip(items, params) }, color: items.map((item) => item.color), series: [{ type: 'pie', radius: ['58%', '79%'], center: ['50%', '48%'], itemStyle: { borderColor: '#fff', borderWidth: 3 }, label: { show: false }, data: items }] }
+  const option: ChartOption = { aria: { enabled: true }, tooltip: { trigger: 'item', confine: true, formatter: (params: unknown) => sourceTooltip(items, params) }, color: items.map((item) => item.color), series: [{ type: 'pie', radius: ['58%', '79%'], center: ['50%', '48%'], itemStyle: { borderColor: '#fff', borderWidth: 3 }, label: { show: false }, data: items }] }
   return <article className="report-panel distribution-panel"><PanelHeader title={title} /><div className="donut-wrap"><EChart option={option} empty={!items.length} /><div className="donut-total"><span>{totalLabel}</span><strong>{items.length ? formatMoney(total) : '—'}</strong></div></div><BreakdownTable items={items} total={total} /></article>
 }
 
