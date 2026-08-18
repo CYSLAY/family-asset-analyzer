@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  ArrowSquareOutIcon,
   CaretLeftIcon,
   CaretRightIcon,
   CheckIcon,
@@ -11,12 +10,11 @@ import {
   TableIcon,
   TrashIcon,
   UserPlusIcon,
-  UsersThreeIcon,
 } from '@phosphor-icons/react'
 import { intakeCompletion, type CustomerProfile } from '../types/domain'
 import { getAccessSession } from '../lib/access'
 import { createClientInvitation, invitationAccessState, listClientInvitations, type ClientInvitation, updateClientInvitationRecipient } from '../lib/clientInvitations'
-import { buildCustomerDirectoryView } from '../lib/customerDirectory'
+import { buildCustomerDirectoryView, buildSelfServiceDirectoryItems, selfServicePreviewSize } from '../lib/customerDirectory'
 import { useCustomerStore } from '../stores/customerStore'
 
 interface CustomerDirectoryProps {
@@ -49,11 +47,9 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
   const [invitationError, setInvitationError] = useState('')
 
   const directoryView = useMemo(() => buildCustomerDirectoryView(customers, search, advisorPage), [advisorPage, customers, search])
-  const { visibleCustomers, searchActive, advisorCustomers, selfServiceCustomers, advisorPageCount, advisorPage: currentAdvisorPage, displayedAdvisorCustomers, displayedSelfServiceCustomers } = directoryView
-  const customerGroups = [
-    { key: 'advisor', title: '顾问录入', description: '由您在管理工作区建立和维护的客户档案', customers: displayedAdvisorCustomers, total: advisorCustomers.length },
-    { key: 'self_service', title: '客户自填', description: '客户通过“家庭财务自测”独立填写并自动提交的档案', customers: displayedSelfServiceCustomers, total: selfServiceCustomers.length },
-  ]
+  const { searchActive, advisorCustomers, advisorPageCount, advisorPage: currentAdvisorPage, displayedAdvisorCustomers } = directoryView
+  const selfServiceEntries = useMemo(() => buildSelfServiceDirectoryItems(invitations, customers, search), [customers, invitations, search])
+  const displayedSelfServiceEntries = searchActive ? selfServiceEntries : selfServiceEntries.slice(0, selfServicePreviewSize)
 
   useEffect(() => {
     const session = getAccessSession()
@@ -86,6 +82,9 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
     setDeleteError('')
     try {
       await deleteCustomer(pendingDelete.id)
+      setInvitations((records) => records.map((record) => record.intakeId === pendingDelete.id
+        ? { ...record, active: false, updatedAt: new Date().toISOString() }
+        : record))
       setPendingDelete(null)
     } catch {
       setDeleteError('删除未完成，请检查网络后重试。客户资料仍然保留。')
@@ -148,37 +147,11 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
         <button className="primary-action" type="button" onClick={() => setCreating(true)}><PlusIcon size={18} /> 新建客户</button>
       </section>
 
-      <section className="invitation-manager" aria-labelledby="invitation-manager-title">
-        <header className="invitation-manager-heading">
-          <div className="invitation-manager-title"><span><KeyIcon size={21} weight="bold" /></span><div><h2 id="invitation-manager-title">客户邀请码</h2><p>每个邀请码最多登录 3 次；客户提交资料后，可从记录直接进入对应报告。</p></div></div>
-          <div className="invitation-generator">
-            <label className="field-block"><span>客户姓名或用途备注</span><input value={invitationRecipient} onChange={(event) => setInvitationRecipient(event.target.value)} maxLength={120} placeholder="例如：陈女士（8 月咨询）" /></label>
-            <button className="primary-action compact" type="button" disabled={creatingInvitation} onClick={() => void handleCreateInvitation()}><KeyIcon size={16} /> {creatingInvitation ? '正在生成' : '生成邀请码'}</button>
-          </div>
-        </header>
-
-        {invitationError ? <p className="invitation-message error" role="alert">{invitationError}</p> : null}
-        {loadingInvitations ? <p className="invitation-empty">正在读取邀请码记录…</p> : invitations.length ? <div className="invitation-list">
-          {invitations.map((invitation) => {
-            const customer = customers.find((record) => record.id === invitation.intakeId && record.source === 'self_service')
-            const status = invitationAccessState(invitation)
-            const recipientDraft = recipientDrafts[invitation.code] ?? invitation.recipientName
-            const recipientChanged = recipientDraft.trim() !== invitation.recipientName
-            return <article className="invitation-row" key={invitation.code}>
-              <div className="invitation-code-cell"><span>邀请码</span><div><code>{invitation.code}</code><button aria-label={`复制邀请码 ${invitation.code}`} type="button" onClick={() => void handleCopyInvitation(invitation.code)}>{copiedInvitation === invitation.code ? <CheckIcon size={16} /> : <CopyIcon size={16} />}{copiedInvitation === invitation.code ? '已复制' : '复制'}</button></div></div>
-              <label className="invitation-recipient"><span>客户姓名 / 备注</span><div><input value={recipientDraft} onChange={(event) => setRecipientDrafts((drafts) => ({ ...drafts, [invitation.code]: event.target.value }))} placeholder="待记录客户" /><button disabled={!recipientChanged || savingInvitation === invitation.code} type="button" onClick={() => void handleSaveInvitation(invitation)}>{savingInvitation === invitation.code ? '保存中' : '保存'}</button></div></label>
-              <div className="invitation-usage"><span>登录次数</span><strong>{invitation.loginCount} / {invitation.maxLogins}</strong><em className={status === '可使用' ? 'available' : 'unavailable'}>{status}</em></div>
-              <div className="invitation-actions"><span>{formatDate(invitation.createdAt)} 创建</span><button className="subtle-button compact-row-button" disabled={!customer} type="button" title={customer ? '打开该客户的分析报告' : '客户提交资料后即可查看报告'} onClick={() => { if (!customer) return; selectCustomer(customer.id); onOpenReport() }}><ArrowSquareOutIcon size={15} /> {customer ? '查看报告' : '等待客户提交'}</button></div>
-            </article>
-          })}
-        </div> : <p className="invitation-empty">还没有邀请码。填写客户姓名或备注后，点击“生成邀请码”。</p>}
-      </section>
-
       <section className="directory-tools customer-directory-tools">
         <div><h2>客户档案</h2><p>顾问录入与客户自填分开管理，同名客户不会互相覆盖。</p></div>
         <label className="search-field">
           <MagnifyingGlassIcon size={18} />
-          <input value={search} onChange={(event) => { setSearch(event.target.value); setAdvisorPage(1) }} placeholder="搜索姓名、家庭名称或城市" aria-label="搜索客户" />
+          <input value={search} onChange={(event) => { setSearch(event.target.value); setAdvisorPage(1) }} placeholder="搜索姓名、城市或邀请码" aria-label="搜索客户或邀请码" />
         </label>
       </section>
 
@@ -193,43 +166,56 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
         </section>
       ) : null}
 
-      {visibleCustomers.length ? (
-        <div className="customer-source-groups">
-          {customerGroups.map((group) => group.customers.length ? <section className="customer-source-section" key={group.key} aria-label={group.title}>
-            <header className="customer-source-heading"><div><span className={`customer-source-mark ${group.key}`} /> <strong>{group.title}</strong><p>{group.description}</p></div><span>{group.total} 份档案</span></header>
-            <div className="customer-list">
-              {group.customers.map((customer) => <article className="customer-row" key={customer.id}>
-                <button className="customer-main" type="button" onClick={() => { selectCustomer(customer.id); onStartIntake() }}>
-                  <span className="customer-avatar">{customer.primaryContactName.slice(0, 1) || '家'}</span>
-                  <span><strong>{customer.householdName}</strong><small>{customer.city || '城市待补充'}　{customer.members.length} 位成员　{intakeCompletion(customer)}% 已填写</small></span>
-                </button>
-                <div className="customer-meta"><span>最近保存</span><strong>{formatDate(customer.updatedAt)}</strong></div>
-                <div className="row-actions customer-row-actions">
-                  <button className="subtle-button compact-row-button" type="button" onClick={() => { selectCustomer(customer.id); onStartIntake() }}>继续录入</button>
-                  <button className="subtle-button compact-row-button" type="button" onClick={() => { selectCustomer(customer.id); onOpenReport() }}>查看报告</button>
-                  <button className="subtle-button compact-row-button" type="button" onClick={() => { selectCustomer(customer.id); onOpenCashFlow() }}><TableIcon size={15} /> 现金流</button>
-                  <button className="customer-delete-button" type="button" onClick={() => { setDeleteError(''); setPendingDelete(customer) }}><TrashIcon size={16} /> 删除</button>
-                </div>
-              </article>)}
+      <div className="customer-source-groups">
+        <section className="customer-source-section" aria-label="顾问录入">
+          <header className="customer-source-heading"><div><span className="customer-source-mark advisor" /> <strong>顾问录入</strong><p>由您在管理工作区建立和维护的客户档案</p></div><span>{advisorCustomers.length} 份档案</span></header>
+          {displayedAdvisorCustomers.length ? <div className="customer-list">
+            {displayedAdvisorCustomers.map((customer) => <article className="customer-row" key={customer.id}>
+              <button className="customer-main" type="button" onClick={() => { selectCustomer(customer.id); onStartIntake() }}>
+                <span className="customer-avatar">{customer.primaryContactName.slice(0, 1) || '家'}</span>
+                <span><strong>{customer.householdName}</strong><small>{customer.city || '城市待补充'}　{customer.members.length} 位成员　{intakeCompletion(customer)}% 已填写</small></span>
+              </button>
+              <div className="customer-meta"><span>最近保存</span><strong>{formatDate(customer.updatedAt)}</strong></div>
+              <CustomerRowActions customer={customer} onSelect={selectCustomer} onStartIntake={onStartIntake} onOpenReport={onOpenReport} onOpenCashFlow={onOpenCashFlow} onDelete={(record) => { setDeleteError(''); setPendingDelete(record) }} />
+            </article>)}
+          </div> : <p className="customer-section-empty">{search ? '没有匹配的顾问录入档案。' : '还没有顾问录入档案，可从上方新建客户。'}</p>}
+          {!searchActive && advisorPageCount > 1 ? <nav className="customer-pagination" aria-label="顾问录入档案分页">
+            <span>第 {currentAdvisorPage} 页，共 {advisorPageCount} 页</span>
+            <div>
+              <button aria-label="上一页" disabled={currentAdvisorPage === 1} type="button" onClick={() => setAdvisorPage((page) => Math.max(1, page - 1))}><CaretLeftIcon size={16} /> 上一页</button>
+              <button aria-label="下一页" disabled={currentAdvisorPage === advisorPageCount} type="button" onClick={() => setAdvisorPage((page) => Math.min(advisorPageCount, page + 1))}>下一页 <CaretRightIcon size={16} /></button>
             </div>
-            {!searchActive && group.key === 'advisor' && advisorPageCount > 1 ? <nav className="customer-pagination" aria-label="顾问录入档案分页">
-              <span>第 {currentAdvisorPage} 页，共 {advisorPageCount} 页</span>
-              <div>
-                <button aria-label="上一页" disabled={currentAdvisorPage === 1} type="button" onClick={() => setAdvisorPage((page) => Math.max(1, page - 1))}><CaretLeftIcon size={16} /> 上一页</button>
-                <button aria-label="下一页" disabled={currentAdvisorPage === advisorPageCount} type="button" onClick={() => setAdvisorPage((page) => Math.min(advisorPageCount, page + 1))}>下一页 <CaretRightIcon size={16} /></button>
-              </div>
-            </nav> : null}
-            {!searchActive && group.key === 'self_service' && group.total > 2 ? <p className="customer-hidden-note">当前显示最近 2 份客户自填档案，其余档案可通过上方搜索查找。</p> : null}
-          </section> : null)}
-        </div>
-      ) : (
-        <section className="empty-state">
-          <UsersThreeIcon size={34} />
-          <h2>{search ? '没有匹配的客户' : '还没有客户档案'}</h2>
-          <p>{search ? '换一个姓名或城市继续搜索。' : '新建客户后，原始资料会自动保存在当前设备。'}</p>
-          {!search ? <button className="primary-action compact" type="button" onClick={() => setCreating(true)}>新建第一位客户</button> : null}
+          </nav> : null}
         </section>
-      )}
+
+        <section className="customer-source-section self-service-directory" aria-label="客户自填">
+          <header className="customer-source-heading"><div><span className="customer-source-mark self_service" /> <strong>客户自填</strong><p>邀请码、登录记录与客户档案统一管理</p></div><span>{selfServiceEntries.length} 条记录</span></header>
+          <div className="self-service-invitation-tools">
+            <div className="self-service-invitation-intro"><span><KeyIcon size={20} weight="bold" /></span><div><strong>生成客户邀请码</strong><p>每个邀请码最多登录 3 次，客户提交后会自动关联档案。</p></div></div>
+            <div className="invitation-generator">
+              <label className="field-block"><span>客户姓名或用途备注</span><input value={invitationRecipient} onChange={(event) => setInvitationRecipient(event.target.value)} maxLength={120} placeholder="例如：陈女士（8 月咨询）" /></label>
+              <button className="primary-action compact" type="button" disabled={creatingInvitation} onClick={() => void handleCreateInvitation()}><KeyIcon size={16} /> {creatingInvitation ? '正在生成' : '生成邀请码'}</button>
+            </div>
+          </div>
+          {invitationError ? <p className="invitation-message error" role="alert">{invitationError}</p> : null}
+          {loadingInvitations ? <p className="customer-section-empty">正在读取邀请码和客户自填记录…</p> : displayedSelfServiceEntries.length ? <div className="customer-list self-service-customer-list">
+            {displayedSelfServiceEntries.map(({ invitation, customer }) => {
+              const status = invitation ? invitationAccessState(invitation) : '历史档案'
+              const recipientDraft = invitation ? (recipientDrafts[invitation.code] ?? invitation.recipientName) : customer?.primaryContactName ?? ''
+              const recipientChanged = invitation ? recipientDraft.trim() !== invitation.recipientName : false
+              const rowKey = invitation?.code ?? customer?.id ?? 'unknown'
+              return <article className="customer-row self-service-customer-row" key={rowKey}>
+                <div className="invitation-code-cell"><span>邀请码</span>{invitation ? <div><code>{invitation.code}</code><button aria-label={`复制邀请码 ${invitation.code}`} type="button" onClick={() => void handleCopyInvitation(invitation.code)}>{copiedInvitation === invitation.code ? <CheckIcon size={16} /> : <CopyIcon size={16} />}{copiedInvitation === invitation.code ? '已复制' : '复制'}</button></div> : <strong className="invitation-legacy-label">未关联</strong>}</div>
+                {invitation ? <label className="invitation-recipient"><span>客户姓名 / 备注</span><div><input value={recipientDraft} onChange={(event) => setRecipientDrafts((drafts) => ({ ...drafts, [invitation.code]: event.target.value }))} placeholder="待记录客户" /><button disabled={!recipientChanged || savingInvitation === invitation.code} type="button" onClick={() => void handleSaveInvitation(invitation)}>{savingInvitation === invitation.code ? '保存中' : '保存'}</button></div>{customer ? <small>{customer.householdName}　{intakeCompletion(customer)}% 已填写</small> : <small>客户尚未提交资料</small>}</label> : <div className="invitation-recipient legacy-recipient"><span>客户姓名 / 备注</span><strong>{customer?.primaryContactName || '待补充'}</strong><small>历史客户自填档案</small></div>}
+                <div className="invitation-usage"><span>登录次数</span><strong>{invitation ? `${invitation.loginCount} / ${invitation.maxLogins}` : '未记录'}</strong><em className={status === '可使用' ? 'available' : status === '历史档案' ? '' : 'unavailable'}>{status}</em></div>
+                <div className="self-service-save-meta"><span>最近保存</span><strong>{customer ? formatDate(customer.updatedAt) : '尚未提交'}</strong></div>
+                <CustomerRowActions customer={customer} onSelect={selectCustomer} onStartIntake={onStartIntake} onOpenReport={onOpenReport} onOpenCashFlow={onOpenCashFlow} onDelete={(record) => { setDeleteError(''); setPendingDelete(record) }} />
+              </article>
+            })}
+          </div> : <p className="customer-section-empty">{search ? '没有匹配的邀请码或客户自填档案。' : '还没有客户自填记录，请先生成邀请码。'}</p>}
+          {!searchActive && selfServiceEntries.length > selfServicePreviewSize ? <p className="customer-hidden-note">当前显示最近 {selfServicePreviewSize} 条客户自填记录，其余记录可通过上方搜索查找。</p> : null}
+        </section>
+      </div>
 
       {pendingDelete ? <div className="modal-backdrop delete-modal-backdrop" role="presentation" onMouseDown={() => !deleting && setPendingDelete(null)}>
         <section className="delete-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-description" onMouseDown={(event) => event.stopPropagation()}>
@@ -246,6 +232,31 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
       </div> : null}
     </div>
   )
+}
+
+interface CustomerRowActionsProps {
+  customer?: CustomerProfile
+  onSelect: (id: string) => void
+  onStartIntake: () => void
+  onOpenReport: () => void
+  onOpenCashFlow: () => void
+  onDelete: (customer: CustomerProfile) => void
+}
+
+function CustomerRowActions({ customer, onSelect, onStartIntake, onOpenReport, onOpenCashFlow, onDelete }: CustomerRowActionsProps) {
+  const open = (next: () => void) => {
+    if (!customer) return
+    onSelect(customer.id)
+    next()
+  }
+  const unavailableTitle = customer ? undefined : '客户提交资料后即可使用'
+
+  return <div className="row-actions customer-row-actions">
+    <button className="subtle-button compact-row-button" disabled={!customer} title={unavailableTitle} type="button" onClick={() => open(onStartIntake)}>继续录入</button>
+    <button className="subtle-button compact-row-button" disabled={!customer} title={unavailableTitle} type="button" onClick={() => open(onOpenReport)}>查看报告</button>
+    <button className="subtle-button compact-row-button" disabled={!customer} title={unavailableTitle} type="button" onClick={() => open(onOpenCashFlow)}><TableIcon size={15} /> 现金流</button>
+    <button className="customer-delete-button" disabled={!customer} title={unavailableTitle} type="button" onClick={() => customer && onDelete(customer)}><TrashIcon size={16} /> 删除</button>
+  </div>
 }
 
 function formatDate(value: string) {

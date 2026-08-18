@@ -1,7 +1,39 @@
 import type { CustomerProfile } from '../types/domain'
+import type { ClientInvitation } from './clientInvitations'
 
 export const advisorPageSize = 5
 export const selfServicePreviewSize = 2
+
+export interface SelfServiceDirectoryItem {
+  invitation?: ClientInvitation
+  customer?: CustomerProfile
+}
+
+export function buildSelfServiceDirectoryItems(invitations: ClientInvitation[], customers: CustomerProfile[], search: string) {
+  const selfServiceCustomers = customers.filter((customer) => customer.source === 'self_service')
+  const customersById = new Map(selfServiceCustomers.map((customer) => [customer.id, customer]))
+  const linkedIds = new Set(invitations.map((invitation) => invitation.intakeId))
+  const entries: SelfServiceDirectoryItem[] = [
+    ...invitations.map((invitation) => ({ invitation, customer: customersById.get(invitation.intakeId) })),
+    ...selfServiceCustomers.filter((customer) => !linkedIds.has(customer.id)).map((customer) => ({ invitation: undefined, customer })),
+  ]
+    .filter((entry) => entry.customer || entry.invitation?.active)
+    .sort((a, b) => {
+      const aTime = a.customer?.updatedAt ?? a.invitation?.updatedAt ?? ''
+      const bTime = b.customer?.updatedAt ?? b.invitation?.updatedAt ?? ''
+      return bTime.localeCompare(aTime)
+    })
+
+  const keyword = search.trim().toLocaleLowerCase('zh-CN')
+  if (!keyword) return entries
+  return entries.filter(({ invitation, customer }) => [
+    invitation?.code,
+    invitation?.recipientName,
+    customer?.primaryContactName,
+    customer?.householdName,
+    customer?.city,
+  ].some((value) => value?.toLocaleLowerCase('zh-CN').includes(keyword)))
+}
 
 export function buildCustomerDirectoryView(customers: CustomerProfile[], search: string, requestedAdvisorPage: number) {
   const keyword = search.trim().toLocaleLowerCase('zh-CN')

@@ -192,36 +192,38 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .customer-source-mark.self_service { background: var(--accent); }
 .customer-source-section .customer-list { margin-top: 0; }
 .customer-management-hero { margin-bottom: 28px; }
-.invitation-manager { margin-bottom: 34px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); overflow: hidden; box-shadow: var(--shadow); }
-.invitation-manager-heading { padding: 22px 24px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(260px,.8fr) minmax(420px,1.2fr); align-items: end; gap: 28px; }
-.invitation-manager-title { align-self: center; display: flex; align-items: flex-start; gap: 13px; }
-.invitation-manager-title > span { width: 42px; height: 42px; flex: 0 0 auto; border-radius: 11px; color: var(--accent); background: var(--accent-soft); display: grid; place-items: center; }
-.invitation-manager-title h2 { margin: 0; color: var(--ink); font-size: 20px; }
-.invitation-manager-title p { margin: 6px 0 0; color: var(--ink-muted); font-size: 11px; line-height: 1.55; }
+.self-service-invitation-tools { margin-bottom: 12px; padding: 18px 20px; border: 1px solid #ecd9db; border-radius: var(--radius-card); background: #fff9f9; display: grid; grid-template-columns: minmax(260px,.7fr) minmax(440px,1.3fr); align-items: end; gap: 24px; }
+.self-service-invitation-intro { align-self: center; display: flex; align-items: flex-start; gap: 12px; }
+.self-service-invitation-intro > span { width: 38px; height: 38px; flex: 0 0 auto; border-radius: 10px; color: var(--accent); background: var(--accent-soft); display: grid; place-items: center; }
+.self-service-invitation-intro strong { color: var(--ink); font-size: 15px; }
+.self-service-invitation-intro p { margin: 5px 0 0; color: var(--ink-muted); font-size: 11px; line-height: 1.5; }
 .invitation-generator { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: end; gap: 10px; }
 .invitation-generator .primary-action { margin: 0; }
-.invitation-message { margin: 0; padding: 11px 24px; border-bottom: 1px solid #f0d4d6; color: var(--accent-strong); background: #fff6f7; font-size: 12px; }
+.invitation-message { margin: 0 0 12px; padding: 11px 14px; border: 1px solid #f0d4d6; border-radius: var(--radius-control); color: var(--accent-strong); background: #fff6f7; font-size: 12px; }
 .invitation-message.error { color: var(--danger); }
-.invitation-empty { margin: 0; padding: 24px; color: var(--ink-muted); font-size: 12px; }
-.invitation-list { display: grid; }
-.invitation-row { min-width: 0; padding: 15px 24px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 190px minmax(240px,1fr) 110px 178px; align-items: end; gap: 18px; }
-.invitation-row:last-child { border-bottom: 0; }
 .invitation-code-cell > span, .invitation-recipient > span, .invitation-usage > span { display: block; margin-bottom: 7px; color: var(--ink-muted); font-size: 10px; }
 .invitation-code-cell > div { display: flex; align-items: center; gap: 8px; }
 .invitation-code-cell code { color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 16px; font-weight: 760; letter-spacing: .035em; }
+.invitation-legacy-label { color: var(--ink-muted); font-size: 13px; font-weight: 650; }
 .invitation-code-cell button, .invitation-recipient button { min-height: 32px; padding: 0 9px; border: 1px solid var(--line); border-radius: 7px; color: var(--accent-strong); background: white; display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-size: 10px; font-weight: 700; cursor: pointer; }
 .invitation-recipient > div { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 7px; }
 .invitation-recipient input { width: 100%; min-width: 0; min-height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: white; font-size: 11px; }
 .invitation-recipient input:focus { border-color: var(--accent); outline: 2px solid rgba(207,31,44,.09); }
 .invitation-recipient button:disabled { color: #999; background: var(--surface-muted); cursor: default; }
+.invitation-recipient small { margin-top: 6px; color: var(--ink-muted); display: block; font-size: 9px; }
+.legacy-recipient > strong { min-height: 36px; color: var(--ink); display: flex; align-items: center; font-size: 12px; }
 .invitation-usage { align-self: center; }
 .invitation-usage strong { color: var(--ink); display: block; font-size: 14px; font-variant-numeric: tabular-nums; }
 .invitation-usage em { margin-top: 5px; display: block; color: var(--ink-muted); font-size: 10px; font-style: normal; }
 .invitation-usage em.available { color: #2d7851; }
 .invitation-usage em.unavailable { color: var(--danger); }
-.invitation-actions { align-self: center; display: grid; justify-items: end; gap: 8px; }
-.invitation-actions > span { color: var(--ink-muted); font-size: 9px; }
-.invitation-actions .subtle-button:disabled { color: #999; background: var(--surface-muted); cursor: not-allowed; }
+.self-service-customer-list { overflow: visible; }
+.self-service-customer-row { min-width: 0; grid-template-columns: 170px minmax(220px,1fr) 90px 130px minmax(330px,auto); align-items: center; }
+.self-service-save-meta span, .self-service-save-meta strong { display: block; }
+.self-service-save-meta span { color: var(--ink-muted); font-size: 10px; }
+.self-service-save-meta strong { margin-top: 7px; color: var(--ink); font-size: 12px; font-weight: 620; }
+.customer-section-empty { margin: 0; min-height: 72px; padding: 22px; border: 1px dashed #d8d0d1; border-radius: var(--radius-card); color: var(--ink-muted); background: #fcfbfb; display: flex; align-items: center; font-size: 12px; }
+.customer-row-actions button:disabled, .customer-delete-button:disabled { color: #a5a5a5; border-color: #dedede; background: #f5f5f5; cursor: not-allowed; }
 .customer-directory-tools { align-items: end; }
 .customer-directory-tools h2 { margin: 0; color: var(--ink); font-size: 24px; letter-spacing: -.025em; }
 .customer-directory-tools p { margin: 7px 0 0; color: var(--ink-muted); font-size: 12px; line-height: 1.55; }
@@ -841,9 +843,9 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .priority-list { grid-template-columns: 1fr; }
   .health-grid.three-up { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .cashflow-settings-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  .invitation-manager-heading { grid-template-columns: 1fr; gap: 18px; }
-  .invitation-row { grid-template-columns: 180px minmax(220px,1fr) 95px; }
-  .invitation-actions { grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-end; }
+  .self-service-invitation-tools { grid-template-columns: 1fr; gap: 16px; }
+  .self-service-customer-row { grid-template-columns: 160px minmax(220px,1fr) 90px 130px; }
+  .self-service-customer-row .customer-row-actions { grid-column: 1 / -1; justify-content: flex-end; }
 }
 
 @media (max-width: 900px) {
@@ -908,12 +910,11 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .customer-row-actions { justify-content: flex-start; padding-left: 60px; }
   .customer-source-heading { align-items: start; }
   .customer-source-heading > span { flex: 0 0 auto; }
-  .invitation-manager-heading { padding: 20px 18px; }
+  .self-service-invitation-tools { padding: 18px; }
   .invitation-generator { grid-template-columns: 1fr; }
   .invitation-generator .primary-action { width: 100%; margin-top: 0; }
-  .invitation-row { padding: 17px 18px; grid-template-columns: 1fr; align-items: stretch; gap: 15px; }
-  .invitation-actions { grid-column: auto; justify-content: space-between; }
-  .invitation-actions .subtle-button { width: auto; margin: 0; }
+  .self-service-customer-row { padding: 17px 18px; grid-template-columns: 1fr; align-items: stretch; gap: 15px; }
+  .self-service-customer-row .customer-row-actions { grid-column: auto; justify-content: flex-start; padding-left: 0; }
   .invitation-code-cell > div { justify-content: space-between; }
   .customer-pagination { align-items: flex-start; flex-direction: column; gap: 9px; }
   .customer-pagination > div { width: 100%; }
