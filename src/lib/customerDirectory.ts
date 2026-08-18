@@ -2,7 +2,7 @@ import type { CustomerProfile } from '../types/domain'
 import type { ClientInvitation } from './clientInvitations'
 
 export const advisorPageSize = 5
-export const selfServicePageSize = 2
+export const selfServicePageSize = 10
 
 export interface SelfServiceDirectoryItem {
   invitation?: ClientInvitation

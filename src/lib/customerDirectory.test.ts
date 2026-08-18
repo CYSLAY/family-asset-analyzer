@@ -18,7 +18,7 @@ function invitation(overrides: Partial<ClientInvitation> = {}): ClientInvitation
 }
 
 describe('customer directory grouping', () => {
-  it('shows five advisor records per page and keeps the two-record self-service page size', () => {
+  it('shows five advisor records per page and keeps the ten-record self-service page size', () => {
     const advisorCustomers = Array.from({ length: 7 }, (_, index) => createCustomer(`顾问客户${index + 1}`))
     const selfServiceCustomers = Array.from({ length: 4 }, (_, index) => createCustomer(`自填客户${index + 1}`, 'self_service'))
     const customers = [...advisorCustomers, ...selfServiceCustomers]
@@ -26,21 +26,21 @@ describe('customer directory grouping', () => {
     const firstPage = buildCustomerDirectoryView(customers, '', 1)
     expect(firstPage.displayedAdvisorCustomers).toHaveLength(5)
     expect(firstPage.advisorPageCount).toBe(2)
-    expect(firstPage.displayedSelfServiceCustomers).toHaveLength(2)
+    expect(firstPage.displayedSelfServiceCustomers).toHaveLength(4)
 
     const secondPage = buildCustomerDirectoryView(customers, '', 2)
     expect(secondPage.displayedAdvisorCustomers).toHaveLength(2)
   })
 
   it('paginates every self-service record and clamps pages after records change', () => {
-    const entries = Array.from({ length: 5 }, (_, index) => ({
+    const entries = Array.from({ length: 21 }, (_, index) => ({
       customer: createCustomer(`自填客户${index + 1}`, 'self_service'),
     }))
 
     expect(paginateSelfServiceDirectoryItems(entries, 1)).toMatchObject({ page: 1, pageCount: 3 })
-    expect(paginateSelfServiceDirectoryItems(entries, 2).displayedItems.map((entry) => entry.customer?.primaryContactName)).toEqual(['自填客户3', '自填客户4'])
-    expect(paginateSelfServiceDirectoryItems(entries, 3).displayedItems.map((entry) => entry.customer?.primaryContactName)).toEqual(['自填客户5'])
-    expect(paginateSelfServiceDirectoryItems(entries.slice(0, 2), 3).page).toBe(1)
+    expect(paginateSelfServiceDirectoryItems(entries, 2).displayedItems.map((entry) => entry.customer?.primaryContactName)).toEqual(Array.from({ length: 10 }, (_, index) => `自填客户${index + 11}`))
+    expect(paginateSelfServiceDirectoryItems(entries, 3).displayedItems.map((entry) => entry.customer?.primaryContactName)).toEqual(['自填客户21'])
+    expect(paginateSelfServiceDirectoryItems(entries.slice(0, 10), 3).page).toBe(1)
   })
 
   it('searches all records, including self-service records hidden from the default preview', () => {
