@@ -15,7 +15,7 @@ import { IntakeWorkspace } from './components/IntakeWorkspace'
 import jojoLogo from '../assets/branding/jojo-personal-logo.png'
 import { clearAccessUser, getAccessSession, getAccessUser } from './lib/access'
 import { putCustomer } from './lib/localDb'
-import { createPublicIntakeSession, fetchPublicIntake, getPublicIntakeSession, pushPublicIntake } from './lib/publicIntake'
+import { clearPublicIntakeSession, fetchPublicIntake, getPublicIntakeSession, pushPublicIntake } from './lib/publicIntake'
 import { synchronizeWorkspace } from './lib/usernameSync'
 import { useCustomerStore } from './stores/customerStore'
 import { canSyncSelfServiceCustomer, createCustomer, type CustomerProfile } from './types/domain'
@@ -70,7 +70,14 @@ export function App() {
     void (async () => {
       let cloudFailed = false
       let cloudFetched = false
-      const session = getPublicIntakeSession() ?? createPublicIntakeSession()
+      const session = getPublicIntakeSession()
+      if (!session) {
+        if (!cancelled) {
+          setWorkspaceMode(null)
+          setPublicReady(false)
+        }
+        return
+      }
       const localCustomer = useCustomerStore.getState().customers.find((item) => item.id === session.id)
       let remoteCustomer: CustomerProfile | null = null
       try {
@@ -112,6 +119,8 @@ export function App() {
       clearAccessUser()
       setAccessUser(null)
       setWorkspaceSync('idle')
+    } else {
+      clearPublicIntakeSession()
     }
     setWorkspaceMode(null)
     setPublicReady(false)

@@ -6,6 +6,13 @@ const SESSION_KEY = 'family-asset-self-service-session'
 
 export interface PublicIntakeSession { id: string; token: string }
 
+interface RedeemedInvitation {
+  intake_id: string
+  access_token: string
+  login_count: number
+  max_logins: number
+}
+
 interface RemoteRecord {
   id: string
   client_updated_at: string
@@ -21,16 +28,23 @@ export function getPublicIntakeSession(): PublicIntakeSession | null {
   } catch { return null }
 }
 
-export function createPublicIntakeSession(): PublicIntakeSession {
-  const bytes = crypto.getRandomValues(new Uint8Array(32))
-  const token = btoa(String.fromCharCode(...bytes)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')
-  const session = { id: crypto.randomUUID(), token }
+export function savePublicIntakeSession(session: PublicIntakeSession) {
   localStorage.setItem(SESSION_KEY, JSON.stringify(session))
-  return session
 }
 
 export function clearPublicIntakeSession() {
   localStorage.removeItem(SESSION_KEY)
+}
+
+export async function redeemClientInvitation(code: string) {
+  if (!supabase) throw new Error('cloud_unavailable')
+  const { data, error } = await supabase.rpc('public_redeem_client_invitation', { p_code: code.trim().toLowerCase() })
+  if (error) throw error
+  const record = ((data ?? []) as RedeemedInvitation[])[0]
+  if (!record?.intake_id || !record.access_token) throw new Error('invite_unavailable')
+  const session = { id: record.intake_id, token: record.access_token }
+  savePublicIntakeSession(session)
+  return { session, loginCount: record.login_count, maxLogins: record.max_logins }
 }
 
 export async function fetchPublicIntake(session: PublicIntakeSession) {

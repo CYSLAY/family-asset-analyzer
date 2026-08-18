@@ -192,6 +192,36 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .customer-source-mark.self_service { background: var(--accent); }
 .customer-source-section .customer-list { margin-top: 0; }
 .customer-management-hero { margin-bottom: 28px; }
+.invitation-manager { margin-bottom: 34px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); overflow: hidden; box-shadow: var(--shadow); }
+.invitation-manager-heading { padding: 22px 24px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(260px,.8fr) minmax(420px,1.2fr); align-items: end; gap: 28px; }
+.invitation-manager-title { align-self: center; display: flex; align-items: flex-start; gap: 13px; }
+.invitation-manager-title > span { width: 42px; height: 42px; flex: 0 0 auto; border-radius: 11px; color: var(--accent); background: var(--accent-soft); display: grid; place-items: center; }
+.invitation-manager-title h2 { margin: 0; color: var(--ink); font-size: 20px; }
+.invitation-manager-title p { margin: 6px 0 0; color: var(--ink-muted); font-size: 11px; line-height: 1.55; }
+.invitation-generator { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: end; gap: 10px; }
+.invitation-generator .primary-action { margin: 0; }
+.invitation-message { margin: 0; padding: 11px 24px; border-bottom: 1px solid #f0d4d6; color: var(--accent-strong); background: #fff6f7; font-size: 12px; }
+.invitation-message.error { color: var(--danger); }
+.invitation-empty { margin: 0; padding: 24px; color: var(--ink-muted); font-size: 12px; }
+.invitation-list { display: grid; }
+.invitation-row { min-width: 0; padding: 15px 24px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 190px minmax(240px,1fr) 110px 178px; align-items: end; gap: 18px; }
+.invitation-row:last-child { border-bottom: 0; }
+.invitation-code-cell > span, .invitation-recipient > span, .invitation-usage > span { display: block; margin-bottom: 7px; color: var(--ink-muted); font-size: 10px; }
+.invitation-code-cell > div { display: flex; align-items: center; gap: 8px; }
+.invitation-code-cell code { color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 16px; font-weight: 760; letter-spacing: .035em; }
+.invitation-code-cell button, .invitation-recipient button { min-height: 32px; padding: 0 9px; border: 1px solid var(--line); border-radius: 7px; color: var(--accent-strong); background: white; display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-size: 10px; font-weight: 700; cursor: pointer; }
+.invitation-recipient > div { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 7px; }
+.invitation-recipient input { width: 100%; min-width: 0; min-height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: white; font-size: 11px; }
+.invitation-recipient input:focus { border-color: var(--accent); outline: 2px solid rgba(207,31,44,.09); }
+.invitation-recipient button:disabled { color: #999; background: var(--surface-muted); cursor: default; }
+.invitation-usage { align-self: center; }
+.invitation-usage strong { color: var(--ink); display: block; font-size: 14px; font-variant-numeric: tabular-nums; }
+.invitation-usage em { margin-top: 5px; display: block; color: var(--ink-muted); font-size: 10px; font-style: normal; }
+.invitation-usage em.available { color: #2d7851; }
+.invitation-usage em.unavailable { color: var(--danger); }
+.invitation-actions { align-self: center; display: grid; justify-items: end; gap: 8px; }
+.invitation-actions > span { color: var(--ink-muted); font-size: 9px; }
+.invitation-actions .subtle-button:disabled { color: #999; background: var(--surface-muted); cursor: not-allowed; }
 .customer-directory-tools { align-items: end; }
 .customer-directory-tools h2 { margin: 0; color: var(--ink); font-size: 24px; letter-spacing: -.025em; }
 .customer-directory-tools p { margin: 7px 0 0; color: var(--ink-muted); font-size: 12px; line-height: 1.55; }
@@ -685,21 +715,21 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .cashflow-expand-button:hover { border-color: var(--accent); background: var(--accent-soft); }
 .cashflow-expand-button:active { transform: translateY(1px); }
 .cashflow-table-scroll { max-height: 620px; overflow: auto; border-top: 1px solid var(--line); overscroll-behavior: contain; }
-.cashflow-projection-table { min-width: max-content; width: 100%; border-collapse: separate; border-spacing: 0; color: var(--ink); font-size: 10px; font-variant-numeric: tabular-nums; }
+.cashflow-projection-table { min-width: max-content; width: 100%; border-collapse: separate; border-spacing: 0; color: var(--ink); font-size: 11px; font-variant-numeric: tabular-nums; }
 .cashflow-projection-table th, .cashflow-projection-table td { width: 86px; min-width: 82px; max-width: 94px; height: 42px; padding: 0 7px; border-right: 1px solid #e8e8e8; border-bottom: 1px solid #e8e8e8; text-align: right; white-space: nowrap; }
-.cashflow-projection-table th { position: sticky; z-index: 3; top: 0; height: 48px; color: #4d4d4d; background: #f0f0f0; font-weight: 740; line-height: 1.25; white-space: normal; overflow-wrap: anywhere; }
+.cashflow-projection-table th { position: sticky; z-index: 3; top: 0; height: 48px; color: #4d4d4d; background: #f0f0f0; font-size: 10px; font-weight: 740; line-height: 1.25; white-space: normal; overflow-wrap: anywhere; }
 .cashflow-projection-table tbody tr:hover td { background: #fff9f9; }
 .cashflow-projection-table th:first-child, .cashflow-projection-table td:first-child { position: sticky; z-index: 2; left: 0; width: 52px; min-width: 52px; max-width: 52px; background: white; text-align: center; }
 .cashflow-projection-table th:nth-child(2), .cashflow-projection-table td:nth-child(2) { position: sticky; z-index: 2; left: 52px; width: 68px; min-width: 68px; max-width: 68px; background: white; text-align: center; box-shadow: 10px 0 18px -18px rgba(30,20,20,.7); }
 .cashflow-projection-table thead th:first-child, .cashflow-projection-table thead th:nth-child(2) { z-index: 5; background: #f0f0f0; }
-.cashflow-projection-table .cashflow-total-column { color: #183c60; background: #eaf1fa; font-weight: 760; }
+.cashflow-projection-table .cashflow-total-column { color: #183c60; background: #eaf1fa; font-size: 12px; font-weight: 760; }
 .cashflow-projection-table .negative-cell { color: var(--danger); background: #fff0f1; font-weight: 720; }
 .cashflow-projection-table .insurance-scenario-column { color: #3f5947; background: #f1f8f2; }
 .cashflow-projection-table th.insurance-scenario-column { color: #31533c; background: #dcebdd; }
 .cashflow-projection-table .insurance-scenario-start { border-left: 3px solid rgba(79,135,91,.55); }
 .cashflow-projection-table tbody tr:hover td.insurance-scenario-column { background: #e6f2e8; }
-.cashflow-projection-table .insurance-expense-cell { color: #91313b; font-weight: 760; }
-.cashflow-projection-table .insurance-assets-cell { color: #315b40; font-weight: 780; }
+.cashflow-projection-table .insurance-expense-cell { color: #91313b; font-size: 12px; font-weight: 760; }
+.cashflow-projection-table .insurance-assets-cell { color: #315b40; font-size: 12px; font-weight: 780; }
 .cashflow-scenario-label { margin-bottom: 3px; color: #2f6b43; display: block; font-size: 7px; font-weight: 820; letter-spacing: .02em; }
 .cashflow-toggle-column-header { padding: 0 !important; }
 .cashflow-toggle-column-header > button { width: 100%; min-height: 48px; padding: 4px 7px; border: 0; color: inherit; background: transparent; font: inherit; font-weight: inherit; line-height: inherit; cursor: pointer; }
@@ -707,7 +737,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .cashflow-toggle-column-header > button[aria-pressed="true"]::after { content: "展开"; margin-top: 2px; color: var(--accent); display: block; font-size: 8px; }
 .cashflow-editable-cell { position: relative; padding: 4px 6px !important; background: #fffdfd; }
 .cashflow-editable-cell:hover, .cashflow-editable-cell:focus-within { z-index: 7; overflow: visible; }
-.cashflow-editable-cell input { width: 100%; min-width: 68px; height: 32px; padding: 0 5px; border: 1px solid transparent; border-radius: 6px; color: var(--ink); background: transparent; text-align: right; font: inherit; font-variant-numeric: tabular-nums; appearance: textfield; -moz-appearance: textfield; }
+.cashflow-editable-cell input { width: 100%; min-width: 68px; height: 32px; padding: 0 5px; border: 1px solid transparent; border-radius: 6px; color: var(--ink); background: transparent; text-align: right; font: inherit; font-size: 11px; font-weight: 620; font-variant-numeric: tabular-nums; appearance: textfield; -moz-appearance: textfield; }
 .cashflow-editable-cell input::-webkit-outer-spin-button, .cashflow-editable-cell input::-webkit-inner-spin-button { margin: 0; appearance: none; -webkit-appearance: none; }
 .cashflow-editable-cell input:hover { border-color: #e8c9cc; background: white; }
 .cashflow-editable-cell input:focus { outline: 3px solid rgba(207,31,44,.1); border-color: var(--accent); background: white; }
@@ -729,6 +759,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .cashflow-coverage-cell { --coverage-fill: 0%; --coverage-light: rgba(140,145,150,.15); --coverage-strong: rgba(120,125,130,.45); position: relative; isolation: isolate; overflow: hidden; font-weight: 760; }
 .cashflow-coverage-cell::before { content: ""; position: absolute; z-index: -1; inset: 5px auto 5px 5px; width: var(--coverage-fill); max-width: calc(100% - 10px); border-radius: 5px; background: linear-gradient(90deg, var(--coverage-light), var(--coverage-strong)); transition: width .2s ease; }
 .cashflow-coverage-cell span { position: relative; z-index: 1; }
+.cashflow-coverage-cell > span { font-size: 12px; font-weight: 780; }
 .coverage-long_term { --coverage-light: rgba(49,145,98,.15); --coverage-strong: rgba(37,132,84,.7); color: #17613d; }
 .coverage-adequate { --coverage-light: rgba(86,156,112,.15); --coverage-strong: rgba(78,148,102,.68); color: #356847; }
 .coverage-medium_term { --coverage-light: rgba(224,177,61,.17); --coverage-strong: rgba(215,158,30,.72); color: #805600; }
@@ -764,6 +795,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .cashflow-table-dialog-close:hover { color: white; border-color: var(--accent); background: var(--accent); }
 .cashflow-expanded-table { flex: 1 1 auto; min-height: 0; padding: 12px 14px 0; background: #f7f6f6; }
 .cashflow-expanded-table .cashflow-table-scroll { width: 100%; height: 100%; max-height: none; border: 1px solid var(--line); border-radius: 10px 10px 0 0; background: white; }
+.cashflow-expanded-table .cashflow-projection-table tbody td, .cashflow-expanded-table .cashflow-editable-cell input { font-size: 12px; }
 .cashflow-table-dialog-footer { flex: 0 0 auto; min-height: 38px; padding: 0 16px; border-top: 1px solid var(--line); color: var(--ink-muted); background: #fafafa; display: flex; align-items: center; gap: 18px; font-size: 9px; }
 .cashflow-table-dialog-footer span:last-child { margin-left: auto; }
 .report-cashflow-entry { margin-top: 20px; padding: 22px 24px; border: 1px solid #e3c4c7; border-radius: var(--radius-card); background: white; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 16px; box-shadow: var(--shadow); }
@@ -809,6 +841,9 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .priority-list { grid-template-columns: 1fr; }
   .health-grid.three-up { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .cashflow-settings-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .invitation-manager-heading { grid-template-columns: 1fr; gap: 18px; }
+  .invitation-row { grid-template-columns: 180px minmax(220px,1fr) 95px; }
+  .invitation-actions { grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-end; }
 }
 
 @media (max-width: 900px) {
@@ -873,6 +908,13 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .customer-row-actions { justify-content: flex-start; padding-left: 60px; }
   .customer-source-heading { align-items: start; }
   .customer-source-heading > span { flex: 0 0 auto; }
+  .invitation-manager-heading { padding: 20px 18px; }
+  .invitation-generator { grid-template-columns: 1fr; }
+  .invitation-generator .primary-action { width: 100%; margin-top: 0; }
+  .invitation-row { padding: 17px 18px; grid-template-columns: 1fr; align-items: stretch; gap: 15px; }
+  .invitation-actions { grid-column: auto; justify-content: space-between; }
+  .invitation-actions .subtle-button { width: auto; margin: 0; }
+  .invitation-code-cell > div { justify-content: space-between; }
   .customer-pagination { align-items: flex-start; flex-direction: column; gap: 9px; }
   .customer-pagination > div { width: 100%; }
   .customer-pagination button { flex: 1; justify-content: center; }

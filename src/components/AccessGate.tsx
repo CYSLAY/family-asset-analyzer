@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { ArrowLeftIcon, ArrowRightIcon, BriefcaseIcon, HouseLineIcon, KeyIcon, ShieldCheckIcon } from '@phosphor-icons/react'
 import jojoLogo from '../../assets/branding/jojo-personal-logo.png'
 import { isUsernameAllowed, normalizeUsername, saveAccessSession } from '../lib/access'
-import { isClientInviteCodeValid } from '../lib/clientInvite'
+import { redeemClientInvitation } from '../lib/publicIntake'
 import { confirmWorkspaceUsername } from '../lib/usernameSync'
 
 interface Props {
@@ -37,14 +37,19 @@ export function AccessGate({ onAdminAllowed, onStartSelfService }: Props) {
     finally { setChecking(false) }
   }
 
-  function submitInvite(event: FormEvent) {
+  async function submitInvite(event: FormEvent) {
     event.preventDefault()
-    if (!isClientInviteCodeValid(inviteCode)) {
-      setError('邀请码不正确，请向顾问确认本年度邀请码')
-      return
-    }
+    setChecking(true)
     setError('')
-    onStartSelfService()
+    try {
+      await redeemClientInvitation(inviteCode)
+      onStartSelfService()
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : ''
+      setError(message.includes('cloud_unavailable') ? '当前无法连接云端，请检查网络后重试' : '邀请码无效或 3 次登录机会已用完，请联系顾问')
+    } finally {
+      setChecking(false)
+    }
   }
 
   if (screen === 'invite') return <main className="access-page">
@@ -55,11 +60,11 @@ export function AccessGate({ onAdminAllowed, onStartSelfService }: Props) {
       <h1>输入客户邀请码</h1>
       <p>请输入顾问提供的本年度邀请码，验证后即可开始填写。</p>
       <form onSubmit={submitInvite}>
-        <label className="field-block"><span>邀请码</span><div className="invite-code-control"><KeyIcon aria-hidden="true" size={19} /><input autoCapitalize="none" autoComplete="off" autoCorrect="off" autoFocus spellCheck={false} value={inviteCode} onChange={(event) => { setInviteCode(event.target.value); setError('') }} placeholder="请输入邀请码" /></div></label>
+        <label className="field-block"><span>邀请码</span><div className="invite-code-control"><KeyIcon aria-hidden="true" size={19} /><input autoCapitalize="none" autoComplete="off" autoCorrect="off" autoFocus maxLength={10} spellCheck={false} value={inviteCode} onChange={(event) => { setInviteCode(event.target.value); setError('') }} placeholder="请输入顾问提供的邀请码" /></div></label>
         {error ? <p className="access-error" role="alert">{error}</p> : null}
-        <button className="primary-action" disabled={!inviteCode.trim()} type="submit">验证并开始填写 <ArrowRightIcon size={18} /></button>
+        <button className="primary-action" disabled={checking || !inviteCode.trim()} type="submit">{checking ? '正在验证' : '验证并开始填写'} <ArrowRightIcon size={18} /></button>
       </form>
-      <div className="access-foot"><ShieldCheckIcon size={17} /><span>邀请码按自然年度更新，客户资料与其他档案隔离保存</span></div>
+      <div className="access-foot"><ShieldCheckIcon size={17} /><span>每个邀请码最多登录 3 次，客户资料与其他档案隔离保存</span></div>
     </section>
   </main>
 

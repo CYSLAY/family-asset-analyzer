@@ -1,7 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
+  ArrowSquareOutIcon,
   CaretLeftIcon,
   CaretRightIcon,
+  CheckIcon,
+  CopyIcon,
+  KeyIcon,
   MagnifyingGlassIcon,
   PlusIcon,
   TableIcon,
@@ -10,6 +14,8 @@ import {
   UsersThreeIcon,
 } from '@phosphor-icons/react'
 import { intakeCompletion, type CustomerProfile } from '../types/domain'
+import { getAccessSession } from '../lib/access'
+import { createClientInvitation, invitationAccessState, listClientInvitations, type ClientInvitation, updateClientInvitationRecipient } from '../lib/clientInvitations'
 import { buildCustomerDirectoryView } from '../lib/customerDirectory'
 import { useCustomerStore } from '../stores/customerStore'
 
@@ -33,6 +39,14 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
   const [pendingDelete, setPendingDelete] = useState<CustomerProfile | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+  const [invitations, setInvitations] = useState<ClientInvitation[]>([])
+  const [invitationRecipient, setInvitationRecipient] = useState('')
+  const [recipientDrafts, setRecipientDrafts] = useState<Record<string, string>>({})
+  const [loadingInvitations, setLoadingInvitations] = useState(true)
+  const [creatingInvitation, setCreatingInvitation] = useState(false)
+  const [savingInvitation, setSavingInvitation] = useState('')
+  const [copiedInvitation, setCopiedInvitation] = useState('')
+  const [invitationError, setInvitationError] = useState('')
 
   const directoryView = useMemo(() => buildCustomerDirectoryView(customers, search, advisorPage), [advisorPage, customers, search])
   const { visibleCustomers, searchActive, advisorCustomers, selfServiceCustomers, advisorPageCount, advisorPage: currentAdvisorPage, displayedAdvisorCustomers, displayedSelfServiceCustomers } = directoryView
@@ -40,6 +54,24 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
     { key: 'advisor', title: '顾问录入', description: '由您在管理工作区建立和维护的客户档案', customers: displayedAdvisorCustomers, total: advisorCustomers.length },
     { key: 'self_service', title: '客户自填', description: '客户通过“家庭财务自测”独立填写并自动提交的档案', customers: displayedSelfServiceCustomers, total: selfServiceCustomers.length },
   ]
+
+  useEffect(() => {
+    const session = getAccessSession()
+    if (!session) {
+      setLoadingInvitations(false)
+      return
+    }
+    let cancelled = false
+    void listClientInvitations(session.username, session.accessCode)
+      .then((records) => {
+        if (cancelled) return
+        setInvitations(records)
+        setRecipientDrafts(Object.fromEntries(records.map((record) => [record.code, record.recipientName])))
+      })
+      .catch(() => !cancelled && setInvitationError('邀请码记录暂时无法读取，请稍后重试。'))
+      .finally(() => !cancelled && setLoadingInvitations(false))
+    return () => { cancelled = true }
+  }, [])
 
   async function handleCreate() {
     if (!newName.trim()) return
@@ -62,6 +94,49 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
     }
   }
 
+  async function handleCreateInvitation() {
+    const session = getAccessSession()
+    if (!session || creatingInvitation) return
+    setCreatingInvitation(true)
+    setInvitationError('')
+    try {
+      const invitation = await createClientInvitation(session.username, session.accessCode, invitationRecipient)
+      setInvitations((records) => [invitation, ...records])
+      setRecipientDrafts((drafts) => ({ ...drafts, [invitation.code]: invitation.recipientName }))
+      setInvitationRecipient('')
+    } catch {
+      setInvitationError('邀请码生成失败，请检查云端连接后重试。')
+    } finally {
+      setCreatingInvitation(false)
+    }
+  }
+
+  async function handleSaveInvitation(invitation: ClientInvitation) {
+    const session = getAccessSession()
+    if (!session || savingInvitation) return
+    const recipientName = (recipientDrafts[invitation.code] ?? '').trim()
+    setSavingInvitation(invitation.code)
+    setInvitationError('')
+    try {
+      await updateClientInvitationRecipient(session.username, session.accessCode, invitation.code, recipientName)
+      setInvitations((records) => records.map((record) => record.code === invitation.code ? { ...record, recipientName } : record))
+    } catch {
+      setInvitationError('客户姓名或备注未保存，请稍后重试。')
+    } finally {
+      setSavingInvitation('')
+    }
+  }
+
+  async function handleCopyInvitation(code: string) {
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopiedInvitation(code)
+      window.setTimeout(() => setCopiedInvitation((current) => current === code ? '' : current), 1600)
+    } catch {
+      setInvitationError('复制失败，请手动选择邀请码。')
+    }
+  }
+
   return (
     <div className="directory-page">
       <section className="intake-start-hero customer-management-hero">
@@ -71,6 +146,32 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
           <p>为您量身定制的家庭资产管理计划</p>
         </div>
         <button className="primary-action" type="button" onClick={() => setCreating(true)}><PlusIcon size={18} /> 新建客户</button>
+      </section>
+
+      <section className="invitation-manager" aria-labelledby="invitation-manager-title">
+        <header className="invitation-manager-heading">
+          <div className="invitation-manager-title"><span><KeyIcon size={21} weight="bold" /></span><div><h2 id="invitation-manager-title">客户邀请码</h2><p>每个邀请码最多登录 3 次；客户提交资料后，可从记录直接进入对应报告。</p></div></div>
+          <div className="invitation-generator">
+            <label className="field-block"><span>客户姓名或用途备注</span><input value={invitationRecipient} onChange={(event) => setInvitationRecipient(event.target.value)} maxLength={120} placeholder="例如：陈女士（8 月咨询）" /></label>
+            <button className="primary-action compact" type="button" disabled={creatingInvitation} onClick={() => void handleCreateInvitation()}><KeyIcon size={16} /> {creatingInvitation ? '正在生成' : '生成邀请码'}</button>
+          </div>
+        </header>
+
+        {invitationError ? <p className="invitation-message error" role="alert">{invitationError}</p> : null}
+        {loadingInvitations ? <p className="invitation-empty">正在读取邀请码记录…</p> : invitations.length ? <div className="invitation-list">
+          {invitations.map((invitation) => {
+            const customer = customers.find((record) => record.id === invitation.intakeId && record.source === 'self_service')
+            const status = invitationAccessState(invitation)
+            const recipientDraft = recipientDrafts[invitation.code] ?? invitation.recipientName
+            const recipientChanged = recipientDraft.trim() !== invitation.recipientName
+            return <article className="invitation-row" key={invitation.code}>
+              <div className="invitation-code-cell"><span>邀请码</span><div><code>{invitation.code}</code><button aria-label={`复制邀请码 ${invitation.code}`} type="button" onClick={() => void handleCopyInvitation(invitation.code)}>{copiedInvitation === invitation.code ? <CheckIcon size={16} /> : <CopyIcon size={16} />}{copiedInvitation === invitation.code ? '已复制' : '复制'}</button></div></div>
+              <label className="invitation-recipient"><span>客户姓名 / 备注</span><div><input value={recipientDraft} onChange={(event) => setRecipientDrafts((drafts) => ({ ...drafts, [invitation.code]: event.target.value }))} placeholder="待记录客户" /><button disabled={!recipientChanged || savingInvitation === invitation.code} type="button" onClick={() => void handleSaveInvitation(invitation)}>{savingInvitation === invitation.code ? '保存中' : '保存'}</button></div></label>
+              <div className="invitation-usage"><span>登录次数</span><strong>{invitation.loginCount} / {invitation.maxLogins}</strong><em className={status === '可使用' ? 'available' : 'unavailable'}>{status}</em></div>
+              <div className="invitation-actions"><span>{formatDate(invitation.createdAt)} 创建</span><button className="subtle-button compact-row-button" disabled={!customer} type="button" title={customer ? '打开该客户的分析报告' : '客户提交资料后即可查看报告'} onClick={() => { if (!customer) return; selectCustomer(customer.id); onOpenReport() }}><ArrowSquareOutIcon size={15} /> {customer ? '查看报告' : '等待客户提交'}</button></div>
+            </article>
+          })}
+        </div> : <p className="invitation-empty">还没有邀请码。填写客户姓名或备注后，点击“生成邀请码”。</p>}
       </section>
 
       <section className="directory-tools customer-directory-tools">

@@ -4,7 +4,8 @@ import { deleteCustomerPermanently, getCustomers, putCustomer } from '../lib/loc
 import { getAccessSession } from '../lib/access'
 import { deleteWorkspaceCustomer, pushWorkspaceCustomer } from '../lib/usernameSync'
 import { migrateCustomerProfile } from '../lib/customerMigrations'
-import { deletePublicIntakeAsAdvisor, getPublicIntakeSession, pushPublicIntake, pushPublicIntakeAsAdvisor } from '../lib/publicIntake'
+import { isDeletedRecordError } from '../lib/customerDeletion'
+import { clearPublicIntakeSession, deletePublicIntakeAsAdvisor, getPublicIntakeSession, pushPublicIntake, pushPublicIntakeAsAdvisor } from '../lib/publicIntake'
 
 interface CustomerStore {
   customers: CustomerProfile[]
@@ -40,7 +41,18 @@ function scheduleSelfServiceSync(customerId: string) {
     useCustomerStore.setState({ syncState: 'syncing' })
     void pushPublicIntake(session, customer)
       .then(() => useCustomerStore.setState({ syncState: 'synced' }))
-      .catch(() => useCustomerStore.setState({ syncState: 'error' }))
+      .catch((error: unknown) => {
+        if (isDeletedRecordError(error)) {
+          clearPublicIntakeSession()
+          void deleteCustomerPermanently(customerId).finally(() => useCustomerStore.setState((state) => ({
+            customers: state.customers.filter((item) => item.id !== customerId),
+            selectedCustomerId: state.selectedCustomerId === customerId ? null : state.selectedCustomerId,
+            syncState: 'error',
+          })))
+          return
+        }
+        useCustomerStore.setState({ syncState: 'error' })
+      })
   }, 850)
 }
 
