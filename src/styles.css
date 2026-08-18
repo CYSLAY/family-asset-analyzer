@@ -203,11 +203,12 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .invitation-message { margin: 0 0 12px; padding: 11px 14px; border: 1px solid #f0d4d6; border-radius: var(--radius-control); color: var(--accent-strong); background: #fff6f7; font-size: 12px; }
 .invitation-message.error { color: var(--danger); }
 .invitation-code-cell > span, .invitation-recipient > span, .invitation-usage > span, .self-service-save-meta > span { display: block; margin-bottom: 8px; color: var(--ink-muted); font-size: 11px; line-height: 1; }
-.invitation-code-cell > div { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 10px; }
-.invitation-code-cell code { color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 16px; font-weight: 760; letter-spacing: .035em; }
+.invitation-code-cell > div { width: max-content; max-width: 100%; min-height: 38px; border: 1px solid var(--line); border-radius: 8px; background: #faf9f9; display: inline-grid; grid-template-columns: auto 76px; align-items: stretch; overflow: hidden; }
+.invitation-code-cell code { min-width: 132px; padding: 0 12px; color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 15px; font-weight: 760; letter-spacing: .035em; display: flex; align-items: center; }
 .invitation-legacy-label { color: var(--ink-muted); font-size: 13px; font-weight: 650; }
 .invitation-code-cell button, .invitation-recipient button { height: 38px; min-height: 38px; padding: 0 11px; border: 1px solid var(--line); border-radius: 7px; color: var(--accent-strong); background: white; display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap; font-size: 10px; font-weight: 700; cursor: pointer; }
-.invitation-code-cell button { min-width: 72px; }
+.invitation-code-cell button { min-width: 76px; height: 100%; border: 0; border-left: 1px solid var(--line); border-radius: 0; background: #fff7f7; }
+.invitation-code-cell button:hover { color: var(--accent); background: #fff0f1; }
 .invitation-recipient > div { display: grid; grid-template-columns: minmax(0,1fr) 68px; align-items: stretch; gap: 8px; }
 .invitation-recipient input { width: 100%; min-width: 0; height: 38px; min-height: 38px; padding: 0 11px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: white; font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
 .invitation-recipient input::placeholder { color: #777; font-weight: 650; }
@@ -216,10 +217,10 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .invitation-recipient small { margin-top: 6px; color: var(--ink-muted); display: block; font-size: 9px; }
 .legacy-recipient > strong { min-height: 38px; color: var(--ink); display: flex; align-items: center; font-size: 14px; font-weight: 700; }
 .invitation-code-cell, .invitation-recipient, .invitation-usage, .self-service-save-meta { align-self: start; }
-.invitation-usage strong { color: var(--ink); display: block; font-size: 14px; font-variant-numeric: tabular-nums; }
-.invitation-usage em { margin-top: 5px; display: block; color: var(--ink-muted); font-size: 10px; font-style: normal; }
-.invitation-usage em.available { color: #2d7851; }
-.invitation-usage em.unavailable { color: var(--danger); }
+.invitation-usage strong { color: var(--ink); display: block; font-size: 16px; font-weight: 730; line-height: 1; font-variant-numeric: tabular-nums; }
+.invitation-usage em { width: max-content; margin-top: 8px; padding: 3px 7px; border-radius: 5px; display: block; color: var(--ink-muted); background: var(--surface-muted); font-size: 10px; font-style: normal; }
+.invitation-usage em.available { color: #2d7851; background: #edf7f1; }
+.invitation-usage em.unavailable { color: var(--danger); background: #fff0f1; }
 .self-service-customer-list { overflow: visible; }
 .self-service-customer-row { min-width: 0; min-height: 104px; padding: 16px 20px; grid-template-columns: minmax(260px,340px) 245px 100px 150px minmax(340px,1fr); align-items: start; gap: 14px; }
 .self-service-customer-row .customer-row-actions { align-self: start; padding-top: 23px; flex-wrap: nowrap; }
@@ -919,7 +920,8 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .invitation-generator .primary-action { width: 100%; margin-top: 0; }
   .self-service-customer-row { padding: 17px 18px; grid-template-columns: 1fr; align-items: stretch; gap: 15px; }
   .self-service-customer-row .customer-row-actions { grid-column: auto; padding-top: 0; justify-content: flex-start; padding-left: 0; flex-wrap: wrap; }
-  .invitation-code-cell > div { justify-content: space-between; }
+  .invitation-code-cell > div { width: 100%; grid-template-columns: minmax(0,1fr) 86px; }
+  .invitation-code-cell code { min-width: 0; }
   .customer-pagination { align-items: flex-start; flex-direction: column; gap: 9px; }
   .customer-pagination > div { width: 100%; }
   .customer-pagination button { flex: 1; justify-content: center; }
