@@ -14,7 +14,7 @@ import {
 import { intakeCompletion, type CustomerProfile } from '../types/domain'
 import { getAccessSession } from '../lib/access'
 import { createClientInvitation, deletePendingClientInvitation, invitationAccessState, listClientInvitations, type ClientInvitation, updateClientInvitationRecipient } from '../lib/clientInvitations'
-import { buildCustomerDirectoryView, buildSelfServiceDirectoryItems, selfServicePreviewSize } from '../lib/customerDirectory'
+import { buildCustomerDirectoryView, buildSelfServiceDirectoryItems, paginateSelfServiceDirectoryItems } from '../lib/customerDirectory'
 import { useCustomerStore } from '../stores/customerStore'
 
 interface CustomerDirectoryProps {
@@ -34,6 +34,7 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
   const [newName, setNewName] = useState('')
   const [creating, setCreating] = useState(false)
   const [advisorPage, setAdvisorPage] = useState(1)
+  const [selfServicePage, setSelfServicePage] = useState(1)
   const [pendingDelete, setPendingDelete] = useState<CustomerProfile | null>(null)
   const [pendingInvitationDelete, setPendingInvitationDelete] = useState<ClientInvitation | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -50,7 +51,12 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
   const directoryView = useMemo(() => buildCustomerDirectoryView(customers, search, advisorPage), [advisorPage, customers, search])
   const { searchActive, advisorCustomers, advisorPageCount, advisorPage: currentAdvisorPage, displayedAdvisorCustomers } = directoryView
   const selfServiceEntries = useMemo(() => buildSelfServiceDirectoryItems(invitations, customers, search), [customers, invitations, search])
-  const displayedSelfServiceEntries = searchActive ? selfServiceEntries : selfServiceEntries.slice(0, selfServicePreviewSize)
+  const selfServiceDirectoryPage = useMemo(() => paginateSelfServiceDirectoryItems(selfServiceEntries, selfServicePage), [selfServiceEntries, selfServicePage])
+  const { displayedItems: displayedSelfServiceEntries, page: currentSelfServicePage, pageCount: selfServicePageCount } = selfServiceDirectoryPage
+
+  useEffect(() => {
+    if (selfServicePage !== currentSelfServicePage) setSelfServicePage(currentSelfServicePage)
+  }, [currentSelfServicePage, selfServicePage])
 
   useEffect(() => {
     const session = getAccessSession()
@@ -161,7 +167,7 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
         <div><h2>客户档案</h2><p>顾问录入与客户自填分开管理，同名客户不会互相覆盖。</p></div>
         <label className="search-field">
           <MagnifyingGlassIcon size={18} />
-          <input value={search} onChange={(event) => { setSearch(event.target.value); setAdvisorPage(1) }} placeholder="搜索姓名、城市或邀请码" aria-label="搜索客户或邀请码" />
+          <input value={search} onChange={(event) => { setSearch(event.target.value); setAdvisorPage(1); setSelfServicePage(1) }} placeholder="搜索姓名、城市或邀请码" aria-label="搜索客户或邀请码" />
         </label>
       </section>
 
@@ -223,7 +229,13 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
               </article>
             })}
           </div> : <p className="customer-section-empty">{search ? '没有匹配的邀请码或客户自填档案。' : '还没有客户自填记录，请先生成邀请码。'}</p>}
-          {!searchActive && selfServiceEntries.length > selfServicePreviewSize ? <p className="customer-hidden-note">当前显示最近 {selfServicePreviewSize} 条客户自填记录，其余记录可通过上方搜索查找。</p> : null}
+          {selfServicePageCount > 1 ? <nav className="customer-pagination" aria-label="客户自填档案分页">
+            <span>第 {currentSelfServicePage} 页，共 {selfServicePageCount} 页</span>
+            <div>
+              <button aria-label="客户自填上一页" disabled={currentSelfServicePage === 1} type="button" onClick={() => setSelfServicePage((page) => Math.max(1, page - 1))}><CaretLeftIcon size={16} /> 上一页</button>
+              <button aria-label="客户自填下一页" disabled={currentSelfServicePage === selfServicePageCount} type="button" onClick={() => setSelfServicePage((page) => Math.min(selfServicePageCount, page + 1))}>下一页 <CaretRightIcon size={16} /></button>
+            </div>
+          </nav> : null}
         </section>
       </div>
 

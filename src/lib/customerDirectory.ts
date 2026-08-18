@@ -2,11 +2,21 @@ import type { CustomerProfile } from '../types/domain'
 import type { ClientInvitation } from './clientInvitations'
 
 export const advisorPageSize = 5
-export const selfServicePreviewSize = 2
+export const selfServicePageSize = 2
 
 export interface SelfServiceDirectoryItem {
   invitation?: ClientInvitation
   customer?: CustomerProfile
+}
+
+export function paginateSelfServiceDirectoryItems(items: SelfServiceDirectoryItem[], requestedPage: number) {
+  const pageCount = Math.max(1, Math.ceil(items.length / selfServicePageSize))
+  const page = Math.min(Math.max(1, requestedPage), pageCount)
+  return {
+    page,
+    pageCount,
+    displayedItems: items.slice((page - 1) * selfServicePageSize, page * selfServicePageSize),
+  }
 }
 
 export function buildSelfServiceDirectoryItems(invitations: ClientInvitation[], customers: CustomerProfile[], search: string) {
@@ -60,6 +70,6 @@ export function buildCustomerDirectoryView(customers: CustomerProfile[], search:
       : advisorCustomers.slice((advisorPage - 1) * advisorPageSize, advisorPage * advisorPageSize),
     displayedSelfServiceCustomers: searchActive
       ? selfServiceCustomers
-      : selfServiceCustomers.slice(0, selfServicePreviewSize),
+      : selfServiceCustomers.slice(0, selfServicePageSize),
   }
 }
