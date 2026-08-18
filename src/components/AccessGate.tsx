@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react'
-import { ArrowLeftIcon, ArrowRightIcon, BriefcaseIcon, HouseLineIcon, ShieldCheckIcon } from '@phosphor-icons/react'
+import { ArrowLeftIcon, ArrowRightIcon, BriefcaseIcon, HouseLineIcon, KeyIcon, ShieldCheckIcon } from '@phosphor-icons/react'
 import jojoLogo from '../../assets/branding/jojo-personal-logo.png'
 import { isUsernameAllowed, normalizeUsername, saveAccessSession } from '../lib/access'
+import { isClientInviteCodeValid } from '../lib/clientInvite'
 import { confirmWorkspaceUsername } from '../lib/usernameSync'
 
 interface Props {
@@ -10,9 +11,10 @@ interface Props {
 }
 
 export function AccessGate({ onAdminAllowed, onStartSelfService }: Props) {
-  const [screen, setScreen] = useState<'choice' | 'admin'>('choice')
+  const [screen, setScreen] = useState<'choice' | 'invite' | 'admin'>('choice')
   const [username, setUsername] = useState('')
   const [accessCode, setAccessCode] = useState('')
+  const [inviteCode, setInviteCode] = useState('')
   const [error, setError] = useState('')
   const [checking, setChecking] = useState(false)
 
@@ -34,6 +36,32 @@ export function AccessGate({ onAdminAllowed, onStartSelfService }: Props) {
     } catch { setError('暂时无法验证，请检查网络后重试') }
     finally { setChecking(false) }
   }
+
+  function submitInvite(event: FormEvent) {
+    event.preventDefault()
+    if (!isClientInviteCodeValid(inviteCode)) {
+      setError('邀请码不正确，请向顾问确认本年度邀请码')
+      return
+    }
+    setError('')
+    onStartSelfService()
+  }
+
+  if (screen === 'invite') return <main className="access-page">
+    <section className="access-card invite-access-card">
+      <button className="access-back-button" type="button" onClick={() => { setScreen('choice'); setInviteCode(''); setError('') }}><ArrowLeftIcon size={17} /> 返回模式选择</button>
+      <div className="access-brand invite-brand"><img src={jojoLogo} alt="Jojo" /></div>
+      <span className="quiet-label">家庭财务自测</span>
+      <h1>输入客户邀请码</h1>
+      <p>请输入顾问提供的本年度邀请码，验证后即可开始填写。</p>
+      <form onSubmit={submitInvite}>
+        <label className="field-block"><span>邀请码</span><div className="invite-code-control"><KeyIcon aria-hidden="true" size={19} /><input autoCapitalize="none" autoComplete="off" autoCorrect="off" autoFocus spellCheck={false} value={inviteCode} onChange={(event) => { setInviteCode(event.target.value); setError('') }} placeholder="请输入邀请码" /></div></label>
+        {error ? <p className="access-error" role="alert">{error}</p> : null}
+        <button className="primary-action" disabled={!inviteCode.trim()} type="submit">验证并开始填写 <ArrowRightIcon size={18} /></button>
+      </form>
+      <div className="access-foot"><ShieldCheckIcon size={17} /><span>邀请码按自然年度更新，客户资料与其他档案隔离保存</span></div>
+    </section>
+  </main>
 
   if (screen === 'admin') return <main className="access-page">
     <section className="access-card admin-access-card">
@@ -64,9 +92,9 @@ export function AccessGate({ onAdminAllowed, onStartSelfService }: Props) {
         <p>您可以自行梳理家庭资料并查看初步报告，也可以进入顾问管理工作区。</p>
       </div>
       <div className="access-mode-grid">
-        <button className="access-mode-card self-service-mode" type="button" onClick={onStartSelfService}>
+        <button className="access-mode-card self-service-mode" type="button" onClick={() => { setScreen('invite'); setError('') }}>
           <span className="access-mode-icon"><HouseLineIcon size={26} /></span>
-          <span><small>无需账号</small><strong>家庭财务自测</strong><em>按自己的节奏填写资料，完成后即可查看专属分析报告。</em></span>
+          <span><small>客户邀请码</small><strong>家庭财务自测</strong><em>验证顾问提供的邀请码后，按自己的节奏填写并查看专属报告。</em></span>
           <ArrowRightIcon className="access-mode-arrow" size={20} />
         </button>
         <button className="access-mode-card" type="button" onClick={() => setScreen('admin')}>
