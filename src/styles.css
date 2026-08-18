@@ -202,23 +202,25 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .invitation-message { margin: 0 0 12px; padding: 11px 14px; border: 1px solid #f0d4d6; border-radius: var(--radius-control); color: var(--accent-strong); background: #fff6f7; font-size: 12px; }
 .invitation-message.error { color: var(--danger); }
 .invitation-code-cell > span, .invitation-recipient > span, .invitation-usage > span { display: block; margin-bottom: 7px; color: var(--ink-muted); font-size: 10px; }
-.invitation-code-cell > div { display: flex; align-items: center; gap: 8px; }
+.invitation-code-cell > div { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 10px; }
 .invitation-code-cell code { color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 16px; font-weight: 760; letter-spacing: .035em; }
 .invitation-legacy-label { color: var(--ink-muted); font-size: 13px; font-weight: 650; }
-.invitation-code-cell button, .invitation-recipient button { min-height: 32px; padding: 0 9px; border: 1px solid var(--line); border-radius: 7px; color: var(--accent-strong); background: white; display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-size: 10px; font-weight: 700; cursor: pointer; }
-.invitation-recipient > div { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 7px; }
-.invitation-recipient input { width: 100%; min-width: 0; min-height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: white; font-size: 11px; }
+.invitation-code-cell button, .invitation-recipient button { height: 38px; min-height: 38px; padding: 0 11px; border: 1px solid var(--line); border-radius: 7px; color: var(--accent-strong); background: white; display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap; font-size: 10px; font-weight: 700; cursor: pointer; }
+.invitation-code-cell button { min-width: 72px; }
+.invitation-recipient > div { display: grid; grid-template-columns: minmax(0,1fr) 68px; align-items: stretch; gap: 8px; }
+.invitation-recipient input { width: 100%; min-width: 0; height: 38px; min-height: 38px; padding: 0 11px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: white; font-size: 11px; }
 .invitation-recipient input:focus { border-color: var(--accent); outline: 2px solid rgba(207,31,44,.09); }
 .invitation-recipient button:disabled { color: #999; background: var(--surface-muted); cursor: default; }
 .invitation-recipient small { margin-top: 6px; color: var(--ink-muted); display: block; font-size: 9px; }
 .legacy-recipient > strong { min-height: 36px; color: var(--ink); display: flex; align-items: center; font-size: 12px; }
-.invitation-usage { align-self: center; }
+.invitation-code-cell, .invitation-recipient, .invitation-usage, .self-service-save-meta { align-self: start; }
 .invitation-usage strong { color: var(--ink); display: block; font-size: 14px; font-variant-numeric: tabular-nums; }
 .invitation-usage em { margin-top: 5px; display: block; color: var(--ink-muted); font-size: 10px; font-style: normal; }
 .invitation-usage em.available { color: #2d7851; }
 .invitation-usage em.unavailable { color: var(--danger); }
 .self-service-customer-list { overflow: visible; }
-.self-service-customer-row { min-width: 0; grid-template-columns: 170px minmax(220px,1fr) 90px 130px minmax(330px,auto); align-items: center; }
+.self-service-customer-row { min-width: 0; grid-template-columns: 230px minmax(240px,360px) 96px 130px minmax(330px,1fr); align-items: start; }
+.self-service-customer-row .customer-row-actions { align-self: center; }
 .self-service-save-meta span, .self-service-save-meta strong { display: block; }
 .self-service-save-meta span { color: var(--ink-muted); font-size: 10px; }
 .self-service-save-meta strong { margin-top: 7px; color: var(--ink); font-size: 12px; font-weight: 620; }
@@ -844,7 +846,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .health-grid.three-up { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .cashflow-settings-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .self-service-invitation-tools { grid-template-columns: 1fr; gap: 16px; }
-  .self-service-customer-row { grid-template-columns: 160px minmax(220px,1fr) 90px 130px; }
+  .self-service-customer-row { grid-template-columns: 220px minmax(220px,320px) 90px 130px; }
   .self-service-customer-row .customer-row-actions { grid-column: 1 / -1; justify-content: flex-end; }
 }
 
