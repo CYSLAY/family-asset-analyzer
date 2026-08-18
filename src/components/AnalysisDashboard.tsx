@@ -56,14 +56,14 @@ export function AnalysisDashboard({ onChooseCustomer, onOpenCashFlow }: Props) {
     <nav className="report-section-nav" aria-label="报告章节"><a href="#balance-report">资产负债</a><a href="#cashflow-report">收支储蓄</a><a href="#education-report">教育目标</a></nav>
 
     <ReportSection id="balance-report" index="01" title="资产负债分析" description="先看家庭净资产，再检查资产配置、债务结构和短期偿债能力。">
-      <div className="report-grid two-columns">
-        <ComparisonPanel title="净资产" leftLabel="总资产" leftValue={analysis.totals.assets} rightLabel="总负债" rightValue={analysis.totals.liabilities} resultLabel="净资产" resultValue={analysis.totals.netWorth} resultPercent={analysis.totals.assets > 0 ? analysis.totals.netWorth / analysis.totals.assets * 100 : null} metric={metric('net_worth')} />
-        <ComparisonPanel title="流动资产 VS 负债" leftLabel="流动资产" leftValue={analysis.totals.liquidAssets} rightLabel="总负债" rightValue={analysis.totals.liabilities} resultLabel="差值" resultValue={analysis.totals.liquidAssets - analysis.totals.liabilities} resultPercent={analysis.totals.liquidAssets > 0 ? (analysis.totals.liquidAssets - analysis.totals.liabilities) / analysis.totals.liquidAssets * 100 : null} metric={flowDebt} />
-      </div>
-
-      <div className="report-grid two-columns report-distributions">
+      <div className="report-grid two-columns report-distributions report-distributions-first">
         <DistributionPanel title="资产分布图" totalLabel="总资产" items={assetBreakdown} />
         <DistributionPanel title="负债分布图" totalLabel="总负债" items={liabilityBreakdown} />
+      </div>
+
+      <div className="report-grid two-columns report-comparisons">
+        <ComparisonPanel title="净资产" leftLabel="总资产" leftValue={analysis.totals.assets} rightLabel="总负债" rightValue={analysis.totals.liabilities} resultLabel="净资产" resultValue={analysis.totals.netWorth} resultPercent={analysis.totals.assets > 0 ? analysis.totals.netWorth / analysis.totals.assets * 100 : null} metric={metric('net_worth')} />
+        <ComparisonPanel title="流动资产 VS 负债" leftLabel="流动资产" leftValue={analysis.totals.liquidAssets} rightLabel="总负债" rightValue={analysis.totals.liabilities} resultLabel="差值" resultValue={analysis.totals.liquidAssets - analysis.totals.liabilities} resultPercent={analysis.totals.liquidAssets > 0 ? (analysis.totals.liquidAssets - analysis.totals.liabilities) / analysis.totals.liquidAssets * 100 : null} metric={flowDebt} />
       </div>
 
       <div className="health-grid">
