@@ -870,6 +870,36 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .self-service-customer-row { grid-template-columns: minmax(220px,1fr) minmax(190px,1fr); }
 }
 
+@media (min-width: 901px) and (max-width: 1024px) {
+  .self-service-customer-row { min-height: 76px; padding: 11px 12px; grid-template-columns: minmax(170px,1fr) 155px 64px 105px 220px; align-items: start; gap: 8px; }
+  .self-service-customer-row .customer-row-actions { grid-column: auto; padding-top: 19px; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 4px; }
+  .self-service-customer-row .customer-row-actions button { width: 100%; min-width: 0; padding-inline: 3px; font-size: 9px; white-space: nowrap; }
+  .self-service-customer-row .invitation-recipient > div { grid-template-columns: minmax(0,1fr) 48px; gap: 5px; }
+  .self-service-customer-row .invitation-code-cell > div { width: 100%; grid-template-columns: minmax(0,1fr) 48px; }
+  .self-service-customer-row .invitation-code-cell code { min-width: 0; padding-inline: 6px; font-size: 12px; letter-spacing: .01em; }
+  .self-service-customer-row .invitation-code-cell button, .self-service-customer-row .invitation-recipient button { min-width: 0; padding-inline: 4px; gap: 2px; font-size: 9px; }
+  .self-service-customer-row .invitation-code-cell button svg { display: none; }
+  .self-service-customer-row .invitation-recipient small { display: none; }
+  .self-service-customer-row .invitation-usage strong { font-size: 14px; }
+  .self-service-customer-row .invitation-usage em { margin-top: 5px; padding: 2px 4px; font-size: 8px; }
+  .self-service-customer-row .self-service-save-meta strong { font-size: 10px; }
+}
+
+@media (min-width: 768px) and (max-width: 900px) {
+  .self-service-customer-row { min-height: 76px; padding: 11px 12px; grid-template-columns: minmax(155px,1fr) 142px 60px 210px; align-items: start; gap: 8px; }
+  .self-service-customer-row .self-service-save-meta { display: none; }
+  .self-service-customer-row .customer-row-actions { grid-column: auto; padding-top: 19px; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 4px; }
+  .self-service-customer-row .customer-row-actions button { width: 100%; min-width: 0; padding-inline: 2px; font-size: 9px; white-space: nowrap; }
+  .self-service-customer-row .invitation-recipient > div { grid-template-columns: minmax(0,1fr) 46px; gap: 5px; }
+  .self-service-customer-row .invitation-code-cell > div { width: 100%; grid-template-columns: minmax(0,1fr) 46px; }
+  .self-service-customer-row .invitation-code-cell code { min-width: 0; padding-inline: 6px; font-size: 12px; letter-spacing: 0; }
+  .self-service-customer-row .invitation-code-cell button, .self-service-customer-row .invitation-recipient button { min-width: 0; padding-inline: 3px; gap: 2px; font-size: 9px; }
+  .self-service-customer-row .invitation-code-cell button svg { display: none; }
+  .self-service-customer-row .invitation-recipient small { display: none; }
+  .self-service-customer-row .invitation-usage strong { font-size: 13px; }
+  .self-service-customer-row .invitation-usage em { margin-top: 5px; padding: 2px 3px; font-size: 8px; }
+}
+
 @media (max-width: 720px) {
   .access-back-button { min-height: 44px; margin-bottom: 20px; }
   .access-page { padding: 16px; }
