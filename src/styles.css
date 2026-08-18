@@ -852,7 +852,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .cashflow-sheet.income-sheet .sheet-row { min-width: 680px; }
   .compact-flow-grid { column-gap: 18px; }
   .compact-flow-field { grid-template-columns: 96px minmax(0, 1fr); gap: 10px; }
-  .education-stage-row { grid-template-columns: 168px minmax(245px, 1fr) 150px; }
+  .education-stage-row { grid-template-columns: 160px minmax(220px, 1fr) 120px; gap: 10px; }
   .education-stage-label { grid-template-columns: minmax(58px, 1fr) 88px; gap: 8px; }
   .create-customer-panel { grid-template-columns: 1fr 1.4fr; }
   .create-customer-panel .form-actions { grid-column: 1 / -1; }
@@ -1001,12 +1001,12 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .score-block { min-height: 120px; }
   .analysis-charts, .metric-grid { grid-template-columns: 1fr; }
   .report-section-nav { top: 66px; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); }
-  .report-section-nav a { min-width: 0; padding-inline: 6px; justify-content: center; text-align: center; font-size: 11px; }
+  .report-section-nav a { min-width: 0; min-height: 44px; padding-inline: 6px; justify-content: center; text-align: center; font-size: 11px; }
   .report-grid.two-columns, .health-grid, .health-grid.three-up { grid-template-columns: 1fr; }
   .report-section-heading { grid-template-columns: 40px minmax(0,1fr); gap: 12px; }
   .report-section-heading > span { width: 36px; height: 36px; }
   .report-section-heading h2 { font-size: 25px; line-height: 1.16; }
-  .report-section-toggle { grid-column: 2; width: fit-content; }
+  .report-section-toggle { grid-column: 2; width: fit-content; min-height: 44px; }
   .panel-heading { padding-inline: 16px; }
   .comparison-legend { padding-inline: 16px; }
   .breakdown-head, .breakdown-row { padding-inline: 16px; grid-template-columns: minmax(0,1fr) 105px 58px; gap: 8px; }
