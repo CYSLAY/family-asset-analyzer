@@ -13,7 +13,7 @@ import {
 } from '@phosphor-icons/react'
 import { intakeCompletion, type CustomerProfile } from '../types/domain'
 import { getAccessSession } from '../lib/access'
-import { createClientInvitation, invitationAccessState, listClientInvitations, type ClientInvitation, updateClientInvitationRecipient } from '../lib/clientInvitations'
+import { createClientInvitation, deletePendingClientInvitation, invitationAccessState, listClientInvitations, type ClientInvitation, updateClientInvitationRecipient } from '../lib/clientInvitations'
 import { buildCustomerDirectoryView, buildSelfServiceDirectoryItems, selfServicePreviewSize } from '../lib/customerDirectory'
 import { useCustomerStore } from '../stores/customerStore'
 
@@ -35,6 +35,7 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
   const [creating, setCreating] = useState(false)
   const [advisorPage, setAdvisorPage] = useState(1)
   const [pendingDelete, setPendingDelete] = useState<CustomerProfile | null>(null)
+  const [pendingInvitationDelete, setPendingInvitationDelete] = useState<ClientInvitation | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
   const [invitations, setInvitations] = useState<ClientInvitation[]>([])
@@ -77,10 +78,19 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
   }
 
   async function handleDelete() {
-    if (!pendingDelete || deleting) return
+    if ((!pendingDelete && !pendingInvitationDelete) || deleting) return
     setDeleting(true)
     setDeleteError('')
     try {
+      if (pendingInvitationDelete) {
+        const session = getAccessSession()
+        if (!session) throw new Error('access_required')
+        await deletePendingClientInvitation(session.username, session.accessCode, pendingInvitationDelete.code)
+        setInvitations((records) => records.filter((record) => record.code !== pendingInvitationDelete.code))
+        setPendingInvitationDelete(null)
+        return
+      }
+      if (!pendingDelete) return
       await deleteCustomer(pendingDelete.id)
       setInvitations((records) => records.map((record) => record.intakeId === pendingDelete.id
         ? { ...record, active: false, updatedAt: new Date().toISOString() }
@@ -170,7 +180,7 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
         <section className="customer-source-section" aria-label="顾问录入">
           <header className="customer-source-heading"><div><span className="customer-source-mark advisor" /> <strong>顾问录入</strong><p>由您在管理工作区建立和维护的客户档案</p></div><span>{advisorCustomers.length} 份档案</span></header>
           {displayedAdvisorCustomers.length ? <div className="customer-list">
-            {displayedAdvisorCustomers.map((customer) => <article className="customer-row" key={customer.id}>
+            {displayedAdvisorCustomers.map((customer) => <article className="customer-row advisor-customer-row" key={customer.id}>
               <button className="customer-main" type="button" onClick={() => { selectCustomer(customer.id); onStartIntake() }}>
                 <span className="customer-avatar">{customer.primaryContactName.slice(0, 1) || '家'}</span>
                 <span><strong>{customer.householdName}</strong><small>{customer.city || '城市待补充'}　{customer.members.length} 位成员　{intakeCompletion(customer)}% 已填写</small></span>
@@ -206,10 +216,10 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
               const rowKey = invitation?.code ?? customer?.id ?? 'unknown'
               return <article className="customer-row self-service-customer-row" key={rowKey}>
                 <div className="invitation-code-cell"><span>邀请码</span>{invitation ? <div><code>{invitation.code}</code><button aria-label={`复制邀请码 ${invitation.code}`} type="button" onClick={() => void handleCopyInvitation(invitation.code)}>{copiedInvitation === invitation.code ? <CheckIcon size={16} /> : <CopyIcon size={16} />}{copiedInvitation === invitation.code ? '已复制' : '复制'}</button></div> : <strong className="invitation-legacy-label">未关联</strong>}</div>
-                {invitation ? <label className="invitation-recipient"><span>客户姓名 / 备注</span><div><input value={recipientDraft} onChange={(event) => setRecipientDrafts((drafts) => ({ ...drafts, [invitation.code]: event.target.value }))} placeholder="待记录客户" /><button disabled={!recipientChanged || savingInvitation === invitation.code} type="button" onClick={() => void handleSaveInvitation(invitation)}>{savingInvitation === invitation.code ? '保存中' : '保存'}</button></div>{customer ? <small>{customer.householdName}　{intakeCompletion(customer)}% 已填写</small> : <small>客户尚未提交资料</small>}</label> : <div className="invitation-recipient legacy-recipient"><span>客户姓名 / 备注</span><strong>{customer?.primaryContactName || '待补充'}</strong><small>历史客户自填档案</small></div>}
+                {invitation ? <label className="invitation-recipient"><span>客户姓名 / 备注</span><div><input value={recipientDraft} onChange={(event) => setRecipientDrafts((drafts) => ({ ...drafts, [invitation.code]: event.target.value }))} placeholder="待记录客户" /><button disabled={!recipientChanged || savingInvitation === invitation.code} type="button" onClick={() => void handleSaveInvitation(invitation)}>{savingInvitation === invitation.code ? '保存中' : '保存'}</button></div>{customer ? <small>{customer.householdName}　{intakeCompletion(customer)}% 已填写</small> : null}</label> : <div className="invitation-recipient legacy-recipient"><span>客户姓名 / 备注</span><strong>{customer?.primaryContactName || '待补充'}</strong><small>历史客户自填档案</small></div>}
                 <div className="invitation-usage"><span>登录次数</span><strong>{invitation ? `${invitation.loginCount} / ${invitation.maxLogins}` : '未记录'}</strong><em className={status === '可使用' ? 'available' : status === '历史档案' ? '' : 'unavailable'}>{status}</em></div>
                 <div className="self-service-save-meta"><span>最近保存</span><strong>{customer ? formatDate(customer.updatedAt) : '尚未提交'}</strong></div>
-                <CustomerRowActions customer={customer} onSelect={selectCustomer} onStartIntake={onStartIntake} onOpenReport={onOpenReport} onOpenCashFlow={onOpenCashFlow} onDelete={(record) => { setDeleteError(''); setPendingDelete(record) }} />
+                <CustomerRowActions customer={customer} onSelect={selectCustomer} onStartIntake={onStartIntake} onOpenReport={onOpenReport} onOpenCashFlow={onOpenCashFlow} onDelete={(record) => { setDeleteError(''); setPendingDelete(record) }} onDeleteInvitation={!customer && invitation ? () => { setDeleteError(''); setPendingInvitationDelete(invitation) } : undefined} />
               </article>
             })}
           </div> : <p className="customer-section-empty">{search ? '没有匹配的邀请码或客户自填档案。' : '还没有客户自填记录，请先生成邀请码。'}</p>}
@@ -217,15 +227,15 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
         </section>
       </div>
 
-      {pendingDelete ? <div className="modal-backdrop delete-modal-backdrop" role="presentation" onMouseDown={() => !deleting && setPendingDelete(null)}>
+      {pendingDelete || pendingInvitationDelete ? <div className="modal-backdrop delete-modal-backdrop" role="presentation" onMouseDown={() => { if (!deleting) { setPendingDelete(null); setPendingInvitationDelete(null) } }}>
         <section className="delete-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-description" onMouseDown={(event) => event.stopPropagation()}>
           <span className="delete-dialog-icon"><TrashIcon size={24} weight="bold" /></span>
-          <span className="section-kicker">删除客户档案</span>
-          <h2 id="delete-dialog-title">确定删除“{pendingDelete.householdName}”吗？</h2>
-          <p id="delete-dialog-description">确认后，这位客户的家庭成员、资产、负债、收支和分析资料都会从本机与云端删除，且无法恢复。</p>
+          <span className="section-kicker">{pendingInvitationDelete ? '删除邀请码' : '删除客户档案'}</span>
+          <h2 id="delete-dialog-title">{pendingInvitationDelete ? `确定删除“${pendingInvitationDelete.code}”吗？` : `确定删除“${pendingDelete?.householdName}”吗？`}</h2>
+          <p id="delete-dialog-description">{pendingInvitationDelete ? '确认后，这个邀请码会立即失效并从列表移除，客户将无法再使用它进入系统。' : '确认后，这位客户的家庭成员、资产、负债、收支和分析资料都会从本机与云端删除，且无法恢复。'}</p>
           {deleteError ? <p className="delete-dialog-error" role="alert">{deleteError}</p> : null}
           <div className="delete-dialog-actions">
-            <button className="subtle-button" type="button" disabled={deleting} onClick={() => setPendingDelete(null)}>取消</button>
+            <button className="subtle-button" type="button" disabled={deleting} onClick={() => { setPendingDelete(null); setPendingInvitationDelete(null) }}>取消</button>
             <button className="danger-confirm-button" type="button" disabled={deleting} onClick={() => void handleDelete()}><TrashIcon size={17} /> {deleting ? '正在删除' : '确认永久删除'}</button>
           </div>
         </section>
@@ -241,9 +251,10 @@ interface CustomerRowActionsProps {
   onOpenReport: () => void
   onOpenCashFlow: () => void
   onDelete: (customer: CustomerProfile) => void
+  onDeleteInvitation?: () => void
 }
 
-function CustomerRowActions({ customer, onSelect, onStartIntake, onOpenReport, onOpenCashFlow, onDelete }: CustomerRowActionsProps) {
+function CustomerRowActions({ customer, onSelect, onStartIntake, onOpenReport, onOpenCashFlow, onDelete, onDeleteInvitation }: CustomerRowActionsProps) {
   const open = (next: () => void) => {
     if (!customer) return
     onSelect(customer.id)
@@ -255,7 +266,7 @@ function CustomerRowActions({ customer, onSelect, onStartIntake, onOpenReport, o
     <button className="subtle-button compact-row-button" disabled={!customer} title={unavailableTitle} type="button" onClick={() => open(onStartIntake)}>继续录入</button>
     <button className="subtle-button compact-row-button" disabled={!customer} title={unavailableTitle} type="button" onClick={() => open(onOpenReport)}>查看报告</button>
     <button className="subtle-button compact-row-button" disabled={!customer} title={unavailableTitle} type="button" onClick={() => open(onOpenCashFlow)}><TableIcon size={15} /> 现金流</button>
-    <button className="customer-delete-button" disabled={!customer} title={unavailableTitle} type="button" onClick={() => customer && onDelete(customer)}><TrashIcon size={16} /> 删除</button>
+    <button className="customer-delete-button" disabled={!customer && !onDeleteInvitation} title={customer ? undefined : onDeleteInvitation ? '删除未提交的邀请码' : unavailableTitle} type="button" onClick={() => customer ? onDelete(customer) : onDeleteInvitation?.()}><TrashIcon size={16} /> 删除</button>
   </div>
 }
 

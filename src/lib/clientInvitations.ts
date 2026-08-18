@@ -66,6 +66,16 @@ export async function updateClientInvitationRecipient(username: string, accessCo
   if (error) throw error
 }
 
+export async function deletePendingClientInvitation(username: string, accessCode: string, code: string) {
+  if (!supabase) throw new Error('cloud_unavailable')
+  const { error } = await supabase.rpc('workspace_delete_client_invitation', {
+    p_username: username,
+    p_access_code: accessCode,
+    p_code: code,
+  })
+  if (error) throw error
+}
+
 export function invitationAccessState(invitation: Pick<ClientInvitation, 'active' | 'loginCount' | 'maxLogins'>) {
   if (!invitation.active) return '已停用'
   if (invitation.loginCount >= invitation.maxLogins) return '次数已用完'
