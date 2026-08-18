@@ -74,7 +74,7 @@ const expensePresets: FlowPreset[] = [
   { name: '学习、爱好', category: '教育支出', frequency: 'yearly', necessary: false, aliases: ['子女教育'] },
   { name: '保险', category: '保险保障', frequency: 'yearly', necessary: false, aliases: ['人情往来', '保险保障'] },
   { name: '医疗保健', category: '医疗支出', frequency: 'yearly', necessary: true },
-  { name: '其他支出', category: '其他支出', frequency: 'yearly', necessary: false, aliases: ['居住与物业', '投资储蓄'] },
+  { name: '其他支出', category: '其他支出', frequency: 'yearly', necessary: true, aliases: ['居住与物业', '投资储蓄'] },
 ]
 const educationRoutes = ['公立', '私立', '留学']
 const popularDestinations = ['香港', '英国', '美国']

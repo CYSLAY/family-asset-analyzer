@@ -53,7 +53,9 @@ export function analyzeCustomer(customer: CustomerProfile): FinancialAnalysis {
   const emergencyFunds = customer.assets.filter((item) => item.availableForEmergency && item.liquidity !== 'long_term').reduce((sum, item) => sum + item.currentValue, 0)
   const annualIncome = customer.incomes.reduce((sum, item) => sum + annualize(item), 0)
   const annualExpenses = customer.expenses.reduce((sum, item) => sum + annualize(item), 0)
-  const necessaryAnnualExpenses = customer.expenses.filter((item) => item.necessary).reduce((sum, item) => sum + annualize(item), 0)
+  const necessaryAnnualExpenses = customer.expenses
+    .filter((item) => item.necessary || /其他支出|居住与物业|投资储蓄/.test(`${item.category}${item.name}`))
+    .reduce((sum, item) => sum + annualize(item), 0)
   const annualDebtPayments = customer.liabilities.reduce((sum, item) => sum + item.monthlyPayment * 12, 0)
   const necessaryMonthlyOutflow = necessaryAnnualExpenses / 12 + annualDebtPayments / 12
   const hasLiabilityData = customer.liabilities.some((item) => item.balance > 0 || item.monthlyPayment > 0 || item.dueWithinOneYear > 0)
