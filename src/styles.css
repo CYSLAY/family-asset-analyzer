@@ -209,18 +209,19 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .invitation-code-cell button, .invitation-recipient button { height: 38px; min-height: 38px; padding: 0 11px; border: 1px solid var(--line); border-radius: 7px; color: var(--accent-strong); background: white; display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap; font-size: 10px; font-weight: 700; cursor: pointer; }
 .invitation-code-cell button { min-width: 72px; }
 .invitation-recipient > div { display: grid; grid-template-columns: minmax(0,1fr) 68px; align-items: stretch; gap: 8px; }
-.invitation-recipient input { width: 100%; min-width: 0; height: 38px; min-height: 38px; padding: 0 11px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: white; font-size: 11px; }
+.invitation-recipient input { width: 100%; min-width: 0; height: 38px; min-height: 38px; padding: 0 11px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: white; font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+.invitation-recipient input::placeholder { color: #777; font-weight: 650; }
 .invitation-recipient input:focus { border-color: var(--accent); outline: 2px solid rgba(207,31,44,.09); }
 .invitation-recipient button:disabled { color: #999; background: var(--surface-muted); cursor: default; }
 .invitation-recipient small { margin-top: 6px; color: var(--ink-muted); display: block; font-size: 9px; }
-.legacy-recipient > strong { min-height: 36px; color: var(--ink); display: flex; align-items: center; font-size: 12px; }
+.legacy-recipient > strong { min-height: 38px; color: var(--ink); display: flex; align-items: center; font-size: 14px; font-weight: 700; }
 .invitation-code-cell, .invitation-recipient, .invitation-usage, .self-service-save-meta { align-self: start; }
 .invitation-usage strong { color: var(--ink); display: block; font-size: 14px; font-variant-numeric: tabular-nums; }
 .invitation-usage em { margin-top: 5px; display: block; color: var(--ink-muted); font-size: 10px; font-style: normal; }
 .invitation-usage em.available { color: #2d7851; }
 .invitation-usage em.unavailable { color: var(--danger); }
 .self-service-customer-list { overflow: visible; }
-.self-service-customer-row { min-width: 0; min-height: 104px; padding: 16px 20px; grid-template-columns: 245px minmax(250px,360px) 100px 150px minmax(340px,1fr); align-items: start; gap: 14px; }
+.self-service-customer-row { min-width: 0; min-height: 104px; padding: 16px 20px; grid-template-columns: minmax(260px,340px) 245px 100px 150px minmax(340px,1fr); align-items: start; gap: 14px; }
 .self-service-customer-row .customer-row-actions { align-self: start; padding-top: 23px; flex-wrap: nowrap; }
 .self-service-save-meta span, .self-service-save-meta strong { display: block; }
 .self-service-save-meta strong { color: var(--ink); font-size: 12px; font-weight: 620; line-height: 1.35; }
@@ -811,7 +812,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .cashflow-manager-heading { display: block; }
   .cashflow-customer-select, .cashflow-self-customer { width: 100%; margin-top: 18px; }
   .cashflow-settings-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  .self-service-customer-row { grid-template-columns: 220px minmax(220px,1fr) 96px 140px; }
+  .self-service-customer-row { grid-template-columns: minmax(240px,1fr) 220px 96px 140px; }
   .self-service-customer-row .customer-row-actions { grid-column: 1 / -1; padding-top: 0; justify-content: flex-end; }
 }
 
@@ -848,7 +849,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .health-grid.three-up { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .cashflow-settings-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .self-service-invitation-tools { grid-template-columns: 1fr; gap: 16px; }
-  .self-service-customer-row { grid-template-columns: 210px minmax(220px,1fr) 90px 130px; }
+  .self-service-customer-row { grid-template-columns: minmax(220px,1fr) 210px 90px 130px; }
 }
 
 @media (max-width: 900px) {
