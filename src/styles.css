@@ -107,6 +107,15 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .public-sync-warning { margin-bottom: 18px; padding: 11px 14px; border-left: 2px solid var(--accent); color: #7a4a4e; background: #fff3f4; font-size: 12px; }
 @keyframes public-loading-pulse { to { opacity: .45; transform: scale(.92); } }
 .topbar-actions { display: flex; align-items: center; gap: 12px; }
+.privacy-toggle { min-height: 38px; padding: 0 13px; border: 1px solid var(--line); border-radius: var(--radius-control); color: var(--ink-muted); background: var(--surface); display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 720; white-space: nowrap; cursor: pointer; }
+.privacy-toggle:hover { border-color: #c9a4a7; color: var(--accent-strong); background: #fffafa; }
+.privacy-toggle.is-active { border-color: #dbaeb2; color: var(--accent-strong); background: var(--accent-soft); }
+.privacy-toggle:active { transform: translateY(1px); }
+.privacy-control { min-width: 0; position: relative; display: block; }
+.search-field .privacy-control { flex: 1 1 auto; }
+.privacy-mask-control { cursor: default !important; user-select: none; }
+.sheet-select-wrap .privacy-mask-control { width: 100%; height: 100%; min-height: 36px; padding: 0 9px; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 11px; font-weight: 680; }
+.add-income-member .privacy-mask-control { min-width: 126px; height: 38px; padding: 0 2px; border: 0; outline: 0; color: var(--accent-strong); background: transparent; font-size: 11px; font-weight: 700; }
 .cloud-status-button { min-height: 38px; padding: 0 13px; border: 1px solid var(--line); border-radius: var(--radius-control); color: var(--accent-strong); background: var(--surface); display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; cursor: pointer; }
 .cloud-status-button:hover { border-color: var(--accent); background: var(--accent-soft); }
 .save-cloud-button { min-height: 38px; padding: 0 14px; border: 1px solid var(--accent); border-radius: var(--radius-control); color: white; background: var(--accent); font-size: 12px; font-weight: 750; cursor: pointer; }
@@ -926,6 +935,8 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .topbar-customer { font-size: 10px; }
   .save-status { font-size: 0; }
   .topbar-actions { gap: 8px; }
+  .privacy-toggle { min-width: 40px; min-height: 40px; padding: 0 10px; justify-content: center; }
+  .privacy-toggle span { display: none; }
   .cloud-status-button { min-height: 40px; padding-inline: 11px; }
   .cloud-status-button span { display: none; }
   .save-cloud-button { min-height: 40px; padding-inline: 10px; }

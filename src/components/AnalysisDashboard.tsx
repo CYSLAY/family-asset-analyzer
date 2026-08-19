@@ -12,6 +12,7 @@ import qrLogoBadge from '../../assets/branding/jojo-qr-logo-badge-inverted.png'
 import { analyzeCustomer, annualize, type HealthLevel, type MetricResult } from '../lib/analysis'
 import { useCustomerStore } from '../stores/customerStore'
 import type { CustomerProfile } from '../types/domain'
+import { PrivateText, PRIVACY_MASK, usePrivacyMode } from '../lib/privacy'
 
 interface Props { onChooseCustomer: () => void; onOpenCashFlow?: () => void }
 interface BreakdownSource { label: string; amount: number; frequency?: 'monthly' | 'quarterly' | 'yearly' }
@@ -47,7 +48,7 @@ export function AnalysisDashboard({ onChooseCustomer, onOpenCashFlow }: Props) {
   return <div className="analysis-page detailed-report">
     <section className="analysis-hero">
       <div>
-        <span className="quiet-label">{customer.householdName}的财务分析报告</span>
+        <span className="quiet-label"><PrivateText>{customer.householdName}</PrivateText>的财务分析报告</span>
         <h1>资产结构与现金流诊断</h1>
         <p>所有图表根据当前已录入资料实时计算；缺少数据的板块会明确标示，不使用固定结论代替判断。</p>
       </div>
@@ -93,7 +94,7 @@ export function AnalysisDashboard({ onChooseCustomer, onOpenCashFlow }: Props) {
 
     {onOpenCashFlow ? <section className="report-cashflow-entry" aria-labelledby="report-cashflow-entry-title">
       <div className="report-cashflow-entry-icon"><TableIcon size={25} /></div>
-      <div><h2 id="report-cashflow-entry-title">继续梳理长期现金流</h2><p>已自动关联 {customer.householdName}，可直接查看年度收支、资金结余和储蓄险假设场景。</p></div>
+      <div><h2 id="report-cashflow-entry-title">继续梳理长期现金流</h2><p>已自动关联 <PrivateText>{customer.householdName}</PrivateText>，可直接查看年度收支、资金结余和储蓄险假设场景。</p></div>
       <button className="primary-action compact" type="button" onClick={onOpenCashFlow}>进入现金流梳理 <ArrowRightIcon size={17} /></button>
     </section> : null}
 
@@ -143,8 +144,9 @@ function ComparisonPanel({ title, leftLabel, leftValue, rightLabel, rightValue, 
 }
 
 function DistributionPanel({ title, totalLabel, items }: { title: string; totalLabel: string; items: BreakdownItem[] }) {
+  const privacyMode = usePrivacyMode()
   const total = items.reduce((sum, item) => sum + item.value, 0)
-  const option: ChartOption = { aria: { enabled: true }, tooltip: { trigger: 'item', confine: true, formatter: (params: unknown) => sourceTooltip(items, params) }, color: items.map((item) => item.color), series: [{ type: 'pie', radius: ['58%', '79%'], center: ['50%', '48%'], itemStyle: { borderColor: '#fff', borderWidth: 3 }, label: { show: false }, data: items }] }
+  const option: ChartOption = { aria: { enabled: true }, tooltip: { trigger: 'item', confine: true, formatter: (params: unknown) => sourceTooltip(items, params, privacyMode) }, color: items.map((item) => item.color), series: [{ type: 'pie', radius: ['58%', '79%'], center: ['50%', '48%'], itemStyle: { borderColor: '#fff', borderWidth: 3 }, label: { show: false }, data: items }] }
   return <article className="report-panel distribution-panel"><PanelHeader title={title} /><div className="donut-wrap"><EChart option={option} empty={!items.length} /><div className="donut-total"><span>{totalLabel}</span><strong>{items.length ? formatMoney(total) : '—'}</strong></div></div><BreakdownTable items={items} total={total} /></article>
 }
 
@@ -208,11 +210,11 @@ function ownerSourceLabel(customer: CustomerProfile, memberId: string | null, la
   return member?.name ? `${member.name} · ${label}` : label
 }
 
-function sourceTooltip(items: BreakdownItem[], params: unknown) {
+function sourceTooltip(items: BreakdownItem[], params: unknown, privacyMode: boolean) {
   const dataIndex = typeof params === 'object' && params && 'dataIndex' in params ? Number((params as { dataIndex: unknown }).dataIndex) : -1
   const item = items[dataIndex]
   if (!item) return ''
-  const sources = item.sources.map((source) => `<div class="chart-source-row"><span>${escapeHtml(source.label)}</span><strong>${escapeHtml(formatSourceAmount(source))}</strong></div>`).join('')
+  const sources = item.sources.map((source) => `<div class="chart-source-row"><span>${escapeHtml(privacyMode && / · /.test(source.label) ? `${PRIVACY_MASK} · ${source.label.split(' · ').slice(1).join(' · ')}` : source.label)}</span><strong>${escapeHtml(formatSourceAmount(source))}</strong></div>`).join('')
   return `<div class="chart-source-tooltip"><div class="chart-source-total"><span><i style="background:${item.color}"></i>${escapeHtml(item.name)}</span><strong>${escapeHtml(formatMoney(item.value))}</strong></div><div class="chart-source-divider"></div><div class="chart-source-caption">原始数据来源</div>${sources}</div>`
 }
 

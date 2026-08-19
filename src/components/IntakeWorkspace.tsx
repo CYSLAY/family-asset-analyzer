@@ -15,6 +15,7 @@ import {
 } from '@phosphor-icons/react'
 import { FinancialWorkspace } from './FinancialWorkspace'
 import { useCustomerStore } from '../stores/customerStore'
+import { PrivateControl, PrivateText } from '../lib/privacy'
 import {
   createMember,
   hasIntakeStepData,
@@ -113,7 +114,7 @@ export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = f
       </section>
 
       {creating ? <section className="new-intake-panel">
-        <label className="field-block"><span>主要联系人姓名</span><input autoFocus value={newName} onChange={(event) => setNewName(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && void createAndStart()} placeholder="例如：陈雅雯" /></label>
+          <label className="field-block"><span>主要联系人姓名</span><PrivateControl><input autoFocus value={newName} onChange={(event) => setNewName(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && void createAndStart()} placeholder="例如：陈雅雯" /></PrivateControl></label>
         <button className="primary-action compact" type="button" disabled={!newName.trim()} onClick={() => void createAndStart()}>建立并开始</button>
         <button className="text-button" type="button" onClick={() => setCreating(false)}>取消</button>
       </section> : null}
@@ -122,8 +123,8 @@ export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = f
         <div className="content-heading"><div><h2>继续录入</h2><p>选择客户后，可自由进入任何资料模块。</p></div><button className="text-button" type="button" onClick={onOpenCustomers}>查看全部档案</button></div>
         {recentCustomers.length ? <div className="intake-customer-list">
           {recentCustomers.map((item) => <button className="intake-customer-row" type="button" key={item.id} onClick={() => { selectCustomer(item.id); setView('overview') }}>
-            <span className="customer-avatar">{item.primaryContactName.slice(0, 1)}</span>
-            <span><strong>{item.householdName}</strong><small>{intakeCompletion(item)}% 已填写</small></span>
+            <span className="customer-avatar"><PrivateText mask="***">{item.primaryContactName.slice(0, 1)}</PrivateText></span>
+            <span><strong><PrivateText>{item.householdName}</PrivateText></strong><small>{intakeCompletion(item)}% 已填写</small></span>
             <ArrowRightIcon size={18} />
           </button>)}
         </div> : <div className="inline-empty">还没有客户资料。新建客户后即可开始录入。</div>}
@@ -157,7 +158,7 @@ export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = f
     <header className="intake-header">
       <div>
         {!selfService ? <button className="back-button" type="button" onClick={onOpenCustomers}><ArrowLeftIcon size={17} /> 返回客户管理</button> : null}
-        <h1>{selfService ? customer.primaryContactName ? `${customer.primaryContactName}的家庭资料` : '我的家庭资料' : customer.householdName}</h1>
+        <h1>{selfService ? customer.primaryContactName ? `${customer.primaryContactName}的家庭资料` : '我的家庭资料' : <PrivateText>{customer.householdName}</PrivateText>}</h1>
         <p>{selfService ? selfServiceLocked ? '请先填写主要联系人姓名，之后即可进入其他资料模块。' : '可按任意顺序填写，完成度超过 10% 后会自动同步至云端。' : '可自由选择任意模块录入，系统会根据已有内容自动更新填写状态。'}</p>
       </div>
       <div className="intake-progress-number"><strong>{intakeCompletion(customer)}%</strong><span>模块已有资料</span></div>
@@ -220,7 +221,7 @@ function ProfileForm({ customer, requireName, onUpdate }: { customer: CustomerPr
   return <section className="form-section module-form">
     {requireName && !customer.primaryContactName.trim() ? <p className="profile-required-note" role="status">请填写联系人姓名，否则无法填写其他内容</p> : null}
     <div className="form-grid two-columns">
-      <Field label={requireName ? '主要联系人姓名（必填）' : '主要联系人姓名'}><input required={requireName} aria-required={requireName} value={customer.primaryContactName} placeholder="请输入姓名" onChange={(event) => {
+      <Field privateValue label={requireName ? '主要联系人姓名（必填）' : '主要联系人姓名'}><input required={requireName} aria-required={requireName} value={customer.primaryContactName} placeholder="请输入姓名" onChange={(event) => {
         const name = event.target.value
         onUpdate({
           primaryContactName: name,
@@ -228,13 +229,13 @@ function ProfileForm({ customer, requireName, onUpdate }: { customer: CustomerPr
           members: customer.members.map((member, index) => index === 0 && member.relation === '本人' ? { ...member, name } : member),
         })
       }} /></Field>
-      <Field label="所在城市"><select value={customer.city} onChange={(event) => onUpdate({ city: event.target.value })}>
+      <Field privateValue label="所在城市"><select value={customer.city} onChange={(event) => onUpdate({ city: event.target.value })}>
         <option value="">请选择城市或地区</option>
         {hasLegacyCity ? <option value={customer.city}>{customer.city}（原有资料）</option> : null}
         <optgroup label="热门城市">{popularCities.map((city) => <option value={city} key={city}>{city}</option>)}</optgroup>
         <optgroup label="其他城市和地区">{otherCities.map((city) => <option value={city} key={city}>{city}</option>)}</optgroup>
       </select></Field>
-      <Field label="家庭情况备注" wide><textarea value={customer.notes} onChange={(event) => onUpdate({ notes: event.target.value })} placeholder="记录重要家庭责任、沟通偏好或需要持续关注的事项" /></Field>
+      <Field privateValue label="家庭情况备注" wide><textarea value={customer.notes} onChange={(event) => onUpdate({ notes: event.target.value })} placeholder="记录重要家庭责任、沟通偏好或需要持续关注的事项" /></Field>
     </div>
   </section>
 }
@@ -251,24 +252,24 @@ function MemberForm({ customer }: { customer: CustomerProfile }) {
 
 function MemberCard({ customer, member, index, onUpdate, onRemove }: { customer: CustomerProfile; member: FamilyMember; index: number; onUpdate: (patch: Partial<FamilyMember>) => void; onRemove: () => void }) {
   return <article className="member-card">
-    <div className="member-card-heading"><div><span>家庭成员 {index + 1}</span><strong>{member.name || '姓名待补充'}</strong></div>{customer.members.length > 1 ? <button className="icon-button danger" title="移除成员" type="button" onClick={onRemove}><TrashIcon size={18} /></button> : null}</div>
+    <div className="member-card-heading"><div><span>家庭成员 {index + 1}</span><strong><PrivateText>{member.name || '姓名待补充'}</PrivateText></strong></div>{customer.members.length > 1 ? <button className="icon-button danger" title="移除成员" type="button" onClick={onRemove}><TrashIcon size={18} /></button> : null}</div>
     <div className="form-grid three-columns">
-      <Field label="姓名"><input value={member.name} onChange={(event) => onUpdate({ name: event.target.value })} /></Field>
-      <Field label="家庭关系"><select value={member.relation} onChange={(event) => onUpdate({ relation: event.target.value })}><option>本人</option><option>配偶</option><option>子女</option><option>父母</option><option>其他</option></select></Field>
-      <Field label="出生日期"><input type="date" value={member.birthDate} onChange={(event) => onUpdate({ birthDate: event.target.value })} /></Field>
-      <Field label="工作性质"><input value={member.jobType} onChange={(event) => onUpdate({ jobType: event.target.value })} placeholder="例如：企业职员" /></Field>
-      <Field label="收入稳定性"><select value={member.incomeStability} onChange={(event) => onUpdate({ incomeStability: event.target.value as IncomeStability })}>{Object.entries(stabilityLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></Field>
-      <Field label="联系电话（可选）"><input inputMode="tel" value={member.phone} onChange={(event) => onUpdate({ phone: event.target.value })} /></Field>
-      <Field label="身高（厘米）"><input type="number" min="0" value={member.heightCm ?? ''} onChange={(event) => onUpdate({ heightCm: toNullableNumber(event.target.value) })} /></Field>
-      <Field label="体重（公斤）"><input type="number" min="0" value={member.weightKg ?? ''} onChange={(event) => onUpdate({ weightKg: toNullableNumber(event.target.value) })} /></Field>
+      <Field privateValue label="姓名"><input value={member.name} onChange={(event) => onUpdate({ name: event.target.value })} /></Field>
+      <Field privateValue label="家庭关系"><select value={member.relation} onChange={(event) => onUpdate({ relation: event.target.value })}><option>本人</option><option>配偶</option><option>子女</option><option>父母</option><option>其他</option></select></Field>
+      <Field privateValue label="出生日期"><input type="date" value={member.birthDate} onChange={(event) => onUpdate({ birthDate: event.target.value })} /></Field>
+      <Field privateValue label="工作性质"><input value={member.jobType} onChange={(event) => onUpdate({ jobType: event.target.value })} placeholder="例如：企业职员" /></Field>
+      <Field privateValue label="收入稳定性"><select value={member.incomeStability} onChange={(event) => onUpdate({ incomeStability: event.target.value as IncomeStability })}>{Object.entries(stabilityLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></Field>
+      <Field privateValue label="联系电话（可选）"><input inputMode="tel" value={member.phone} onChange={(event) => onUpdate({ phone: event.target.value })} /></Field>
+      <Field privateValue label="身高（厘米）"><input type="number" min="0" value={member.heightCm ?? ''} onChange={(event) => onUpdate({ heightCm: toNullableNumber(event.target.value) })} /></Field>
+      <Field privateValue label="体重（公斤）"><input type="number" min="0" value={member.weightKg ?? ''} onChange={(event) => onUpdate({ weightKg: toNullableNumber(event.target.value) })} /></Field>
       <label className="checkbox-field"><input type="checkbox" checked={member.isPrimaryIncomeProvider} onChange={(event) => onUpdate({ isPrimaryIncomeProvider: event.target.checked })} /><span><strong>主要收入贡献者</strong><small>用于判断收入集中风险</small></span></label>
-      <Field label="健康状况备注" wide><textarea value={member.healthNotes} onChange={(event) => onUpdate({ healthNotes: event.target.value })} placeholder="如有需要持续关注的健康情况，可在此记录" /></Field>
+      <Field privateValue label="健康状况备注" wide><textarea value={member.healthNotes} onChange={(event) => onUpdate({ healthNotes: event.target.value })} placeholder="如有需要持续关注的健康情况，可在此记录" /></Field>
     </div>
   </article>
 }
 
-function Field({ label, wide = false, children }: { label: string; wide?: boolean; children: React.ReactNode }) {
-  return <label className={wide ? 'field-block is-wide' : 'field-block'}><span>{label}</span>{children}</label>
+function Field({ label, wide = false, privateValue = false, children }: { label: string; wide?: boolean; privateValue?: boolean; children: React.ReactNode }) {
+  return <label className={wide ? 'field-block is-wide' : 'field-block'}><span>{label}</span>{privateValue ? <PrivateControl>{children}</PrivateControl> : children}</label>
 }
 
 function toNullableNumber(value: string) {

@@ -4,6 +4,8 @@ import {
   ChartLineUpIcon,
   CheckCircleIcon,
   ClipboardTextIcon,
+  EyeIcon,
+  EyeSlashIcon,
   SignOutIcon,
   UserCircleIcon,
   UsersThreeIcon,
@@ -15,6 +17,7 @@ import { IntakeWorkspace } from './components/IntakeWorkspace'
 import jojoLogo from '../assets/branding/jojo-personal-logo.png'
 import { clearAccessUser, getAccessSession, getAccessUser } from './lib/access'
 import { putCustomer } from './lib/localDb'
+import { PrivateText, PrivacyModeProvider } from './lib/privacy'
 import { clearPublicIntakeSession, fetchPublicIntake, getPublicIntakeSession, pushPublicIntake } from './lib/publicIntake'
 import { synchronizeWorkspace } from './lib/usernameSync'
 import { useCustomerStore } from './stores/customerStore'
@@ -36,9 +39,12 @@ const selfServiceNavigation = [
   { view: 'analysis' as const, label: '我的报告', icon: ChartDonutIcon },
 ]
 
+const localPreview = import.meta.env.DEV && new URLSearchParams(location.search).has('preview')
+
 export function App() {
-  const [accessUser, setAccessUser] = useState<string | null>(() => import.meta.env.DEV && new URLSearchParams(location.search).has('preview') ? '本地预览' : getAccessUser())
-  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode | null>(() => getAccessUser() ? 'admin' : null)
+  const [accessUser, setAccessUser] = useState<string | null>(() => localPreview ? '本地预览' : getAccessUser())
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode | null>(() => localPreview || getAccessUser() ? 'admin' : null)
+  const [privacyMode, setPrivacyMode] = useState(true)
   const [workspaceSync, setWorkspaceSync] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle')
   const [publicReady, setPublicReady] = useState(false)
   const [view, setView] = useState<AppView>('customers')
@@ -101,7 +107,7 @@ export function App() {
     return () => { cancelled = true }
   }, [initialized, publicReady, workspaceMode])
 
-  if (!workspaceMode) return <AccessGate onAdminAllowed={(username) => { setAccessUser(username); setWorkspaceMode('admin'); setWorkspaceSync('idle'); setView('customers') }} onStartSelfService={() => { setWorkspaceMode('self_service'); setPublicReady(false); setView('intake') }} />
+  if (!workspaceMode) return <AccessGate onAdminAllowed={(username) => { setAccessUser(username); setPrivacyMode(true); setWorkspaceMode('admin'); setWorkspaceSync('idle'); setView('customers') }} onStartSelfService={() => { setWorkspaceMode('self_service'); setPublicReady(false); setView('intake') }} />
   if (selfService && !publicReady) return <main className="public-loading"><span /><strong>正在准备您的家庭财务档案</strong><p>资料只会显示在您的当前填写空间中。</p></main>
 
   function openMainView(next: AppView) {
@@ -136,7 +142,7 @@ export function App() {
     ? !selfServiceCloudEligible ? '填写姓名后自动同步' : syncState === 'dirty' ? '等待自动同步' : syncState === 'syncing' ? '正在自动同步' : syncState === 'error' ? '云端同步待重试' : '资料已自动同步'
     : workspaceSync === 'synced' ? '云端工作区已连接' : workspaceSync === 'syncing' ? '正在连接云端' : workspaceSync === 'error' ? '云端连接失败' : '退出当前工作区'
 
-  return <div className={selfService ? 'app-shell self-service-shell' : 'app-shell'}>
+  return <PrivacyModeProvider enabled={!selfService && privacyMode}><div className={`${selfService ? 'app-shell self-service-shell' : 'app-shell'}${!selfService && privacyMode ? ' privacy-mode' : ''}`}>
     <aside className="sidebar" aria-label="主导航">
       <div className="brand-block">
         <div className="brand-logo-frame"><img src={jojoLogo} alt="Jojo 标志" /></div>
@@ -157,10 +163,11 @@ export function App() {
 
     <main className="main-content">
       <header className="topbar">
-        <div><span className="topbar-title">{view === 'intake' ? selfService ? '资料填写' : '客户管理' : view === 'customers' ? '客户管理' : view === 'cashflow' ? '现金流管理' : selfService ? '我的分析报告' : '财务分析报告'}</span>{selectedCustomer ? <span className="topbar-customer">{selectedCustomer.householdName}</span> : null}</div>
+        <div><span className="topbar-title">{view === 'intake' ? selfService ? '资料填写' : '客户管理' : view === 'customers' ? '客户管理' : view === 'cashflow' ? '现金流管理' : selfService ? '我的分析报告' : '财务分析报告'}</span>{selectedCustomer ? <PrivateText className="topbar-customer">{selectedCustomer.householdName}</PrivateText> : null}</div>
         <div className="topbar-actions">
           <div className={saveState === 'error' ? 'save-status has-error' : 'save-status'}><CheckCircleIcon size={18} weight="fill" /> {saveState === 'saving' ? '正在预保存' : saveState === 'error' ? '本地保存失败' : selfService ? syncLabel : '已预存在本机'}</div>
           {!selfService && selectedCustomer ? <button className="save-cloud-button" disabled={saveState === 'saving' || syncState === 'syncing'} type="button" onClick={() => void syncCustomer(selectedCustomer.id)}>{syncState === 'syncing' ? '正在同步' : syncState === 'synced' ? '云端已保存' : syncState === 'error' ? '重试同步' : '保存并同步'}</button> : null}
+          {!selfService ? <button aria-label={privacyMode ? '关闭隐私模式并显示客户资料' : '开启隐私模式并隐藏客户资料'} aria-pressed={privacyMode} className={privacyMode ? 'privacy-toggle is-active' : 'privacy-toggle'} title={privacyMode ? '关闭隐私模式' : '开启隐私模式'} type="button" onClick={() => setPrivacyMode((enabled) => !enabled)}>{privacyMode ? <EyeSlashIcon size={18} /> : <EyeIcon size={18} />}<span>{privacyMode ? '隐私模式' : '显示资料'}</span></button> : null}
           <button aria-label={selfService ? '返回入口' : '退出管理工作区'} className="cloud-status-button" type="button" onClick={exitWorkspace}><SignOutIcon size={18} /><span>{selfService ? '返回入口' : '退出'}</span></button>
         </div>
       </header>
@@ -182,5 +189,5 @@ export function App() {
         return <button aria-label={locked ? `${item.label}，请先填写姓名` : item.label} className={active ? 'is-active' : ''} disabled={locked} key={item.view} type="button" onClick={() => openMainView(item.view)}><Icon size={21} /><span>{item.label}</span></button>
       })}
     </nav>
-  </div>
+  </div></PrivacyModeProvider>
 }

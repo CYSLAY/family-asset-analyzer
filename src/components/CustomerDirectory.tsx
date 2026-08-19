@@ -16,6 +16,7 @@ import { getAccessSession } from '../lib/access'
 import { createClientInvitation, deletePendingClientInvitation, invitationAccessState, listClientInvitations, type ClientInvitation, updateClientInvitationRecipient } from '../lib/clientInvitations'
 import { buildCustomerDirectoryView, buildSelfServiceDirectoryItems, paginateSelfServiceDirectoryItems } from '../lib/customerDirectory'
 import { useCustomerStore } from '../stores/customerStore'
+import { PrivateControl, PrivateText } from '../lib/privacy'
 
 interface CustomerDirectoryProps {
   onStartIntake: () => void
@@ -167,14 +168,14 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
         <div><h2>客户档案</h2><p>顾问录入与客户自填分开管理，同名客户不会互相覆盖。</p></div>
         <label className="search-field">
           <MagnifyingGlassIcon size={18} />
-          <input value={search} onChange={(event) => { setSearch(event.target.value); setAdvisorPage(1); setSelfServicePage(1) }} placeholder="搜索姓名、城市或邀请码" aria-label="搜索客户或邀请码" />
+          <PrivateControl><input value={search} onChange={(event) => { setSearch(event.target.value); setAdvisorPage(1); setSelfServicePage(1) }} placeholder="搜索姓名、城市或邀请码" aria-label="搜索客户或邀请码" /></PrivateControl>
         </label>
       </section>
 
       {creating ? (
         <section className="create-customer-panel" aria-label="新建客户">
           <div><UserPlusIcon size={24} /><strong>建立一份独立客户档案</strong></div>
-          <label className="field-block"><span>主要联系人姓名</span><input autoFocus value={newName} onChange={(event) => setNewName(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && handleCreate()} placeholder="例如：周明" /></label>
+          <label className="field-block"><span>主要联系人姓名</span><PrivateControl><input autoFocus value={newName} onChange={(event) => setNewName(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && handleCreate()} placeholder="例如：周明" /></PrivateControl></label>
           <div className="form-actions">
             <button className="subtle-button" type="button" onClick={() => setCreating(false)}>取消</button>
             <button className="primary-action compact" type="button" disabled={!newName.trim()} onClick={handleCreate}>创建档案</button>
@@ -188,8 +189,8 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
           {displayedAdvisorCustomers.length ? <div className="customer-list">
             {displayedAdvisorCustomers.map((customer) => <article className="customer-row advisor-customer-row" key={customer.id}>
               <button className="customer-main" type="button" onClick={() => { selectCustomer(customer.id); onStartIntake() }}>
-                <span className="customer-avatar">{customer.primaryContactName.slice(0, 1) || '家'}</span>
-                <span><strong>{customer.householdName}</strong><small>{customer.city || '城市待补充'}　{customer.members.length} 位成员　{intakeCompletion(customer)}% 已填写</small></span>
+                <span className="customer-avatar"><PrivateText mask="***">{customer.primaryContactName.slice(0, 1) || '家'}</PrivateText></span>
+                <span><strong><PrivateText>{customer.householdName}</PrivateText></strong><small><PrivateText>{customer.city || '城市待补充'}</PrivateText>　{customer.members.length} 位成员　{intakeCompletion(customer)}% 已填写</small></span>
               </button>
               <div className="customer-meta"><span>最近保存</span><strong>{formatDate(customer.updatedAt)}</strong></div>
               <CustomerRowActions customer={customer} onSelect={selectCustomer} onStartIntake={onStartIntake} onOpenReport={onOpenReport} onOpenCashFlow={onOpenCashFlow} onDelete={(record) => { setDeleteError(''); setPendingDelete(record) }} />
@@ -209,7 +210,7 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
           <div className="self-service-invitation-tools">
             <div className="self-service-invitation-intro"><span><KeyIcon size={20} weight="bold" /></span><div><strong>生成客户邀请码</strong><p>每个邀请码最多登录 3 次，客户提交后会自动关联档案。</p></div></div>
             <div className="invitation-generator">
-              <label className="field-block"><span>客户姓名或用途备注</span><input value={invitationRecipient} onChange={(event) => setInvitationRecipient(event.target.value)} maxLength={120} placeholder="例如：陈女士（8 月咨询）" /></label>
+              <label className="field-block"><span>客户姓名或用途备注</span><PrivateControl><input value={invitationRecipient} onChange={(event) => setInvitationRecipient(event.target.value)} maxLength={120} placeholder="例如：陈女士（8 月咨询）" /></PrivateControl></label>
               <button className="primary-action compact" type="button" disabled={creatingInvitation} onClick={() => void handleCreateInvitation()}><KeyIcon size={16} /> {creatingInvitation ? '正在生成' : '生成邀请码'}</button>
             </div>
           </div>
@@ -221,7 +222,7 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
               const recipientChanged = invitation ? recipientDraft.trim() !== invitation.recipientName : false
               const rowKey = invitation?.code ?? customer?.id ?? 'unknown'
               return <article className="customer-row self-service-customer-row" key={rowKey}>
-                {invitation ? <label className="invitation-recipient"><span>客户姓名 / 备注</span><div><input value={recipientDraft} onChange={(event) => setRecipientDrafts((drafts) => ({ ...drafts, [invitation.code]: event.target.value }))} placeholder="待记录客户" /><button disabled={!recipientChanged || savingInvitation === invitation.code} type="button" onClick={() => void handleSaveInvitation(invitation)}>{savingInvitation === invitation.code ? '保存中' : '保存'}</button></div>{customer ? <small>{intakeCompletion(customer)}% 已填写</small> : null}</label> : <div className="invitation-recipient legacy-recipient"><span>客户姓名 / 备注</span><strong>{customer?.primaryContactName || '待补充'}</strong><small>历史客户自填档案</small></div>}
+                {invitation ? <label className="invitation-recipient"><span>客户姓名 / 备注</span><div><PrivateControl><input value={recipientDraft} onChange={(event) => setRecipientDrafts((drafts) => ({ ...drafts, [invitation.code]: event.target.value }))} placeholder="待记录客户" /></PrivateControl><button disabled={!recipientChanged || savingInvitation === invitation.code} type="button" onClick={() => void handleSaveInvitation(invitation)}>{savingInvitation === invitation.code ? '保存中' : '保存'}</button></div>{customer ? <small>{intakeCompletion(customer)}% 已填写</small> : null}</label> : <div className="invitation-recipient legacy-recipient"><span>客户姓名 / 备注</span><strong><PrivateText>{customer?.primaryContactName || '待补充'}</PrivateText></strong><small>历史客户自填档案</small></div>}
                 <div className="invitation-code-cell"><span>邀请码</span>{invitation ? <div><code>{invitation.code}</code><button aria-label={`复制邀请码 ${invitation.code}`} type="button" onClick={() => void handleCopyInvitation(invitation.code)}>{copiedInvitation === invitation.code ? <CheckIcon size={16} /> : <CopyIcon size={16} />}{copiedInvitation === invitation.code ? '已复制' : '复制'}</button></div> : <strong className="invitation-legacy-label">未关联</strong>}</div>
                 <div className="invitation-usage"><span>登录次数</span><strong>{invitation ? `${invitation.loginCount} / ${invitation.maxLogins}` : '未记录'}</strong><em className={status === '可使用' ? 'available' : status === '历史档案' ? '' : 'unavailable'}>{status}</em></div>
                 <div className="self-service-save-meta"><span>最近保存</span><strong>{customer ? formatDate(customer.updatedAt) : '尚未提交'}</strong></div>
@@ -243,7 +244,7 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
         <section className="delete-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-description" onMouseDown={(event) => event.stopPropagation()}>
           <span className="delete-dialog-icon"><TrashIcon size={24} weight="bold" /></span>
           <span className="section-kicker">{pendingInvitationDelete ? '删除邀请码' : '删除客户档案'}</span>
-          <h2 id="delete-dialog-title">{pendingInvitationDelete ? `确定删除“${pendingInvitationDelete.code}”吗？` : `确定删除“${pendingDelete?.householdName}”吗？`}</h2>
+          <h2 id="delete-dialog-title">{pendingInvitationDelete ? `确定删除“${pendingInvitationDelete.code}”吗？` : <>确定删除“<PrivateText>{pendingDelete?.householdName}</PrivateText>”吗？</>}</h2>
           <p id="delete-dialog-description">{pendingInvitationDelete ? '确认后，这个邀请码会立即失效并从列表移除，客户将无法再使用它进入系统。' : '确认后，这位客户的家庭成员、资产、负债、收支和分析资料都会从本机与云端删除，且无法恢复。'}</p>
           {deleteError ? <p className="delete-dialog-error" role="alert">{deleteError}</p> : null}
           <div className="delete-dialog-actions">

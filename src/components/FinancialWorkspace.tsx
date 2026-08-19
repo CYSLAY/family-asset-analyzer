@@ -16,6 +16,7 @@ import {
 } from '../types/domain'
 import { useCustomerStore } from '../stores/customerStore'
 import { estimateEducationGoalCash, estimateEducationStage } from '../lib/educationCosts'
+import { PrivateControl, PrivateText } from '../lib/privacy'
 
 export type FinancialSection = 'fixed' | 'liquid' | 'cashflow' | 'goals'
 
@@ -209,7 +210,7 @@ function LegacyBalanceEditor({ customer, onUpdate, mode }: EditorProps & { mode:
           <Field label="资产名称"><input value={asset.name} onChange={(e) => updateAsset(asset.id, { name: e.target.value })} placeholder="例如：自住房" /></Field>
           <Field label="资产类型"><select value={asset.category} onChange={(e) => updateAsset(asset.id, { category: e.target.value as AssetEntry['category'] })}>{options(mode === 'fixed' ? fixedAssetLabels : liquidAssetLabels)}</select></Field>
           <MoneyField label="当前价值" value={asset.currentValue} onChange={(value) => updateAsset(asset.id, { currentValue: value })} />
-          <Field label="所属成员"><select value={asset.ownerMemberId ?? ''} onChange={(e) => updateAsset(asset.id, { ownerMemberId: e.target.value || null })}><option value="">家庭共有</option>{memberOptions(customer)}</select></Field>
+          <Field privateValue label="所属成员"><select value={asset.ownerMemberId ?? ''} onChange={(e) => updateAsset(asset.id, { ownerMemberId: e.target.value || null })}><option value="">家庭共有</option>{memberOptions(customer)}</select></Field>
           <Field label="变现速度"><select value={asset.liquidity} onChange={(e) => updateAsset(asset.id, { liquidity: e.target.value as AssetEntry['liquidity'] })}><option value="immediate">随时可用</option><option value="within_month">一个月内</option><option value="long_term">长期资产</option></select></Field>
           <Field label="年收益率（可选）"><input type="number" value={asset.annualReturnRate ?? ''} onChange={(e) => updateAsset(asset.id, { annualReturnRate: nullableNumber(e.target.value) })} /><span className="input-suffix">%</span></Field>
           <label className="checkbox-field span-two"><input type="checkbox" checked={asset.availableForEmergency} onChange={(e) => updateAsset(asset.id, { availableForEmergency: e.target.checked })} /><span><strong>可作为应急资金</strong><small>将计入现金储备充足度</small></span></label>
@@ -293,14 +294,14 @@ function CashFlowEditor({ customer, onUpdate, showSummary }: EditorProps & { sho
           const member = customer.members.find((item) => item.id === memberKey)
           const { rows, extras, memberId } = incomeRows(memberKey)
           return <section className="income-member-block" key={memberKey}>
-            <div className="income-member-heading"><div>{member ? <label><span className="sr-only">收入成员姓名</span><input aria-label="收入成员姓名" value={member.name} onChange={(event) => updateIncomeMemberName(member.id, event.target.value)} placeholder="填写成员姓名" /></label> : <strong>{memberKey === 'household' ? '家庭共有收入' : '未命名成员'}</strong>}<span>{member?.relation || '家庭'}</span></div>{memberKey !== primaryMember?.id && !extras.length && !rows.some((item) => item.entry) ? <button type="button" onClick={() => setVisibleIncomeMembers((ids) => ids.filter((id) => id !== memberKey))}>移除</button> : null}</div>
+            <div className="income-member-heading"><div>{member ? <label><span className="sr-only">收入成员姓名</span><PrivateControl><input aria-label="收入成员姓名" value={member.name} onChange={(event) => updateIncomeMemberName(member.id, event.target.value)} placeholder="填写成员姓名" /></PrivateControl></label> : <strong>{memberKey === 'household' ? '家庭共有收入' : '未命名成员'}</strong>}<span>{member ? <PrivateText>{member.relation}</PrivateText> : '家庭'}</span></div>{memberKey !== primaryMember?.id && !extras.length && !rows.some((item) => item.entry) ? <button type="button" onClick={() => setVisibleIncomeMembers((ids) => ids.filter((id) => id !== memberKey))}>移除</button> : null}</div>
             <div className="compact-flow-grid income-flow-grid">
               {rows.map(({ preset, entry }) => <CompactFlowField key={preset.name} label={preset.name} entry={entry} frequency={entry?.frequency ?? preset.frequency} onChange={(amount) => saveFlow('incomes', preset, entry, { amount }, memberId)} />)}
               {extras.map((entry) => <CompactFlowField key={entry.id} label={entry.name || entry.category} entry={entry} frequency={entry.frequency} onChange={(amount) => saveFlow('incomes', { name: entry.name, category: entry.category, frequency: entry.frequency, necessary: entry.necessary }, entry, { amount }, memberId)} onDelete={() => onUpdate({ incomes: customer.incomes.filter((item) => item.id !== entry.id) })} />)}
             </div>
           </section>
         })}
-        <label className="add-income-member"><PlusIcon size={17} /><span className="sr-only">添加其他收入成员</span><select value="" onChange={(event) => addIncomeMember(event.target.value)}><option value="">添加其他成员</option>{availableIncomeMembers.map((member) => <option value={member.id} key={member.id}>{member.name || member.relation}</option>)}<option value="new">新建家庭成员</option></select></label>
+        <label className="add-income-member"><PlusIcon size={17} /><span className="sr-only">添加其他收入成员</span><PrivateControl><select value="" onChange={(event) => addIncomeMember(event.target.value)}><option value="">添加其他成员</option>{availableIncomeMembers.map((member) => <option value={member.id} key={member.id}>{member.name || member.relation}</option>)}<option value="new">新建家庭成员</option></select></PrivateControl></label>
       </div>
     </SheetSection>
     <SheetSection title="家庭支出" description="按家庭整体填写，常见项目采用参考图中的月度或年度口径。">
@@ -326,7 +327,7 @@ function LegacyCashFlowEditor({ customer, onUpdate }: EditorProps) {
             <Field label="类别"><input value={flow.category} onChange={(e) => updateFlow(key, flow.id, { category: e.target.value })} /></Field>
             <MoneyField label="每期金额" value={flow.amount} onChange={(value) => updateFlow(key, flow.id, { amount: value })} />
             <Field label="发生频率"><select value={flow.frequency} onChange={(e) => updateFlow(key, flow.id, { frequency: e.target.value as CashFlowEntry['frequency'] })}>{options(frequencyLabels)}</select></Field>
-            <Field label="归属成员"><select value={flow.memberId ?? ''} onChange={(e) => updateFlow(key, flow.id, { memberId: e.target.value || null })}><option value="">整个家庭</option>{memberOptions(customer)}</select></Field>
+            <Field privateValue label="归属成员"><select value={flow.memberId ?? ''} onChange={(e) => updateFlow(key, flow.id, { memberId: e.target.value || null })}><option value="">整个家庭</option>{memberOptions(customer)}</select></Field>
             {!isIncome ? <label className="checkbox-field span-two"><input type="checkbox" checked={flow.necessary} onChange={(e) => updateFlow(key, flow.id, { necessary: e.target.checked })} /><span><strong>必要支出</strong><small>生活、住房、医疗、教育和强制偿债等</small></span></label> : null}
           </div>
         </article>) : <InlineEmpty text={isIncome ? '还没有收入记录。' : '还没有支出记录。'} />}
@@ -373,9 +374,9 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
         const educationPlans = plansFor(goal)
         const educationCash = estimateEducationGoalCash({ ...goal, stagePlans: educationPlans })
         return <article className="entry-card education-card" key={goal.id}>
-        <EntryHeader name={childName ? `${childName}的教育规划` : '子女教育规划'} onDelete={() => onUpdate({ educationGoals: customer.educationGoals.filter((item) => item.id !== goal.id) })} />
+        <EntryHeader privateName={Boolean(childName)} name={childName ? `${childName}的教育规划` : '子女教育规划'} onDelete={() => onUpdate({ educationGoals: customer.educationGoals.filter((item) => item.id !== goal.id) })} />
         <div className="form-grid three-columns education-basics">
-          <Field label="对应子女"><select value={goal.childMemberId ?? ''} onChange={(e) => updateGoal(goal.id, { childMemberId: e.target.value || null })}><option value="">暂未指定</option>{customer.members.filter((m) => m.relation === '子女').map((m) => <option value={m.id} key={m.id}>{m.name || '未命名子女'}</option>)}</select></Field>
+          <Field privateValue label="对应子女"><select value={goal.childMemberId ?? ''} onChange={(e) => updateGoal(goal.id, { childMemberId: e.target.value || null })}><option value="">暂未指定</option>{customer.members.filter((m) => m.relation === '子女').map((m) => <option value={m.id} key={m.id}>{m.name || '未命名子女'}</option>)}</select></Field>
           <Field label="当前教育阶段"><select value={goal.currentStage} onChange={(e) => updateGoal(goal.id, { currentStage: e.target.value })}><option>未开始</option><option>早教</option><option>幼儿园</option><option>小学</option><option>初中</option><option>高中</option><option>本科</option><option>研究生</option><option>已完成</option></select></Field>
           <MoneyField label="其他培训费用／年" value={goal.extraTrainingCostAnnual ?? 0} onChange={(value) => updateGoal(goal.id, { extraTrainingCostAnnual: value })} />
         </div>
@@ -450,7 +451,7 @@ function AssetSheetRow({ preset, entry, customer, showEmergency, onChange, onDel
     <div className="sheet-item-label"><strong>{displayName}</strong><small>{assetLabels[entry?.category ?? preset.category]}</small>{onDelete ? <button type="button" aria-label={`删除${displayName}`} onClick={onDelete}><TrashIcon size={14} /></button> : null}</div>
     <SheetMoneyInput label={`${preset.name}当前价值`} mobileLabel="当前价值" value={value} onChange={(currentValue) => onChange({ currentValue })} />
     <SheetMoneyInput label={`${preset.name}年收益率`} mobileLabel="年收益率" suffix="%" value={entry?.annualReturnRate ?? 0} onChange={(annualReturnRate) => onChange({ annualReturnRate })} />
-    <label className="sheet-select-wrap" data-mobile-label="所属成员"><span className="sr-only">{preset.name}所属成员</span><select aria-label={`${preset.name}所属成员`} value={entry?.ownerMemberId ?? ''} onChange={(event) => onChange({ ownerMemberId: event.target.value || null })}><option value="">家庭共有</option>{memberOptions(customer)}</select></label>
+    <label className="sheet-select-wrap" data-mobile-label="所属成员"><span className="sr-only">{preset.name}所属成员</span><PrivateControl><select aria-label={`${preset.name}所属成员`} value={entry?.ownerMemberId ?? ''} onChange={(event) => onChange({ ownerMemberId: event.target.value || null })}><option value="">家庭共有</option>{memberOptions(customer)}</select></PrivateControl></label>
     <label className="sheet-select-wrap" data-mobile-label="变现速度"><span className="sr-only">{preset.name}变现速度</span><select aria-label={`${preset.name}变现速度`} value={entry?.liquidity ?? preset.liquidity} onChange={(event) => onChange({ liquidity: event.target.value as AssetEntry['liquidity'] })}>{options(liquidityLabels)}</select></label>
     {showEmergency ? <label className="sheet-check" data-mobile-label="应急资金"><input type="checkbox" checked={entry?.availableForEmergency ?? preset.availableForEmergency} onChange={(event) => onChange({ availableForEmergency: event.target.checked })} /><span>计入</span></label> : null}
   </div>
@@ -481,13 +482,13 @@ function CashFlowSheetRow({ preset, entry, customer, showNecessary, onChange, on
     <div className="sheet-item-label"><strong>{onDelete ? entry?.name || preset.name : preset.name}</strong><small>{entry?.category || preset.category}</small>{onDelete ? <button type="button" aria-label={`删除${entry?.name || preset.name}`} onClick={onDelete}><TrashIcon size={14} /></button> : null}</div>
     <SheetMoneyInput label={`${preset.name}每期金额`} value={entry?.amount ?? 0} onChange={(amount) => onChange({ amount })} />
     <label className="sheet-select-wrap"><span className="sr-only">{preset.name}频率</span><select aria-label={`${preset.name}频率`} value={entry?.frequency ?? preset.frequency} onChange={(event) => onChange({ frequency: event.target.value as CashFlowEntry['frequency'] })}>{options(frequencyLabels)}</select></label>
-    <label className="sheet-select-wrap"><span className="sr-only">{preset.name}归属成员</span><select aria-label={`${preset.name}归属成员`} value={entry?.memberId ?? ''} onChange={(event) => onChange({ memberId: event.target.value || null })}><option value="">整个家庭</option>{memberOptions(customer)}</select></label>
+    <label className="sheet-select-wrap"><span className="sr-only">{preset.name}归属成员</span><PrivateControl><select aria-label={`${preset.name}归属成员`} value={entry?.memberId ?? ''} onChange={(event) => onChange({ memberId: event.target.value || null })}><option value="">整个家庭</option>{memberOptions(customer)}</select></PrivateControl></label>
     {showNecessary ? <label className="sheet-check"><input type="checkbox" checked={entry?.necessary ?? preset.necessary} onChange={(event) => onChange({ necessary: event.target.checked })} /><span>必要</span></label> : null}
   </div>
 }
 function EntrySection({ title, description, action, onAdd, children }: { title: string; description: string; action: string; onAdd: () => void; children: React.ReactNode }) { return <section className="form-section entry-section"><div className="form-section-heading member-heading"><div><h2>{title}</h2><p>{description}</p></div><button className="subtle-button" type="button" onClick={onAdd}><PlusIcon size={18} /> {action}</button></div><div className="member-stack">{children}</div></section> }
-function EntryHeader({ name, onDelete }: { name: string; onDelete: () => void }) { return <div className="member-card-heading"><div><span>原始记录</span><strong>{name}</strong></div><button className="icon-button danger" title="删除记录" type="button" onClick={onDelete}><TrashIcon size={18} /></button></div> }
-function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="field-block"><span>{label}</span><div className="input-wrap">{children}</div></label> }
+function EntryHeader({ name, privateName = false, onDelete }: { name: string; privateName?: boolean; onDelete: () => void }) { return <div className="member-card-heading"><div><span>原始记录</span><strong>{privateName ? <PrivateText>{name}</PrivateText> : name}</strong></div><button className="icon-button danger" title="删除记录" type="button" onClick={onDelete}><TrashIcon size={18} /></button></div> }
+function Field({ label, privateValue = false, children }: { label: string; privateValue?: boolean; children: React.ReactNode }) { return <label className="field-block"><span>{label}</span><div className="input-wrap">{privateValue ? <PrivateControl>{children}</PrivateControl> : children}</div></label> }
 function MoneyField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) { return <Field label={label}><input type="number" min="0" inputMode="decimal" value={value || ''} onChange={(e) => onChange(numberValue(e.target.value))} /><span className="input-suffix">元</span></Field> }
 function InlineEmpty({ text }: { text: string }) { return <div className="inline-empty">{text}</div> }
 function SummaryLine({ items }: { items: Array<[string, number]> }) { return <section className={`metric-strip financial-summary summary-items-${items.length}`}>{items.map(([label, value]) => <article key={label}><span>{label}</span><strong className={value < 0 ? 'negative-value' : ''}>{formatMoney(value)}</strong></article>)}</section> }
