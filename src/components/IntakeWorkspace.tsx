@@ -15,7 +15,7 @@ import {
 } from '@phosphor-icons/react'
 import { FinancialWorkspace } from './FinancialWorkspace'
 import { useCustomerStore } from '../stores/customerStore'
-import { PrivateControl, PrivateText } from '../lib/privacy'
+import { customerAvatarInitial, PrivateControl, PrivateText } from '../lib/privacy'
 import {
   createMember,
   hasIntakeStepData,
@@ -123,7 +123,7 @@ export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = f
         <div className="content-heading"><div><h2>继续录入</h2><p>选择客户后，可自由进入任何资料模块。</p></div><button className="text-button" type="button" onClick={onOpenCustomers}>查看全部档案</button></div>
         {recentCustomers.length ? <div className="intake-customer-list">
           {recentCustomers.map((item) => <button className="intake-customer-row" type="button" key={item.id} onClick={() => { selectCustomer(item.id); setView('overview') }}>
-            <span className="customer-avatar"><PrivateText mask="***">{item.primaryContactName.slice(0, 1)}</PrivateText></span>
+            <span className="customer-avatar" aria-label="客户姓名首字">{customerAvatarInitial(item.primaryContactName, item.householdName)}</span>
             <span><strong><PrivateText>{item.householdName}</PrivateText></strong><small>{intakeCompletion(item)}% 已填写</small></span>
             <ArrowRightIcon size={18} />
           </button>)}

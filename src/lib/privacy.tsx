@@ -4,6 +4,11 @@ const PrivacyModeContext = createContext(false)
 
 export const PRIVACY_MASK = '******'
 
+export function customerAvatarInitial(primaryContactName: string, householdName = '') {
+  const source = primaryContactName.trim() || householdName.trim()
+  return Array.from(source)[0] || '家'
+}
+
 export function PrivacyModeProvider({ enabled, children }: { enabled: boolean; children: ReactNode }) {
   return <PrivacyModeContext.Provider value={enabled}>{children}</PrivacyModeContext.Provider>
 }

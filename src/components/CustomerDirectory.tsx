@@ -16,7 +16,7 @@ import { getAccessSession } from '../lib/access'
 import { createClientInvitation, deletePendingClientInvitation, invitationAccessState, listClientInvitations, type ClientInvitation, updateClientInvitationRecipient } from '../lib/clientInvitations'
 import { buildCustomerDirectoryView, buildSelfServiceDirectoryItems, paginateSelfServiceDirectoryItems } from '../lib/customerDirectory'
 import { useCustomerStore } from '../stores/customerStore'
-import { PrivateControl, PrivateText } from '../lib/privacy'
+import { customerAvatarInitial, PrivateControl, PrivateText } from '../lib/privacy'
 
 interface CustomerDirectoryProps {
   onStartIntake: () => void
@@ -189,7 +189,7 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
           {displayedAdvisorCustomers.length ? <div className="customer-list">
             {displayedAdvisorCustomers.map((customer) => <article className="customer-row advisor-customer-row" key={customer.id}>
               <button className="customer-main" type="button" onClick={() => { selectCustomer(customer.id); onStartIntake() }}>
-                <span className="customer-avatar"><PrivateText mask="***">{customer.primaryContactName.slice(0, 1) || '家'}</PrivateText></span>
+                <span className="customer-avatar" aria-label="客户姓名首字">{customerAvatarInitial(customer.primaryContactName, customer.householdName)}</span>
                 <span><strong><PrivateText>{customer.householdName}</PrivateText></strong><small><PrivateText>{customer.city || '城市待补充'}</PrivateText>　{customer.members.length} 位成员　{intakeCompletion(customer)}% 已填写</small></span>
               </button>
               <div className="customer-meta"><span>最近保存</span><strong>{formatDate(customer.updatedAt)}</strong></div>

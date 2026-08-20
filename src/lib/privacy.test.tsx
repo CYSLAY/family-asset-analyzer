@@ -2,9 +2,15 @@
 import '@testing-library/jest-dom/vitest'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { PrivateControl, PrivateText, PrivacyModeProvider } from './privacy'
+import { customerAvatarInitial, PrivateControl, PrivateText, PrivacyModeProvider } from './privacy'
 
 describe('privacy mode', () => {
+  it('keeps only the customer initial available for avatar display', () => {
+    expect(customerAvatarInitial(' 陈俊明 ', '陈女士家庭')).toBe('陈')
+    expect(customerAvatarInitial('', '王楠家庭')).toBe('王')
+    expect(customerAvatarInitial('', '')).toBe('家')
+  })
+
   it('replaces private text without changing the original value', () => {
     const customerName = '陈女士家庭'
     const { rerender } = render(<PrivacyModeProvider enabled><PrivateText>{customerName}</PrivateText></PrivacyModeProvider>)
