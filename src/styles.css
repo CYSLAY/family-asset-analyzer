@@ -468,9 +468,6 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 @keyframes skeleton-shift { to { background-position-x: -140%; } }
 
 .detailed-report { --report-line: #eadfe0; --report-soft: #fff8f8; }
-.report-section-nav { position: sticky; z-index: 8; top: 72px; margin-top: 24px; padding: 6px; border: 1px solid var(--report-line); border-radius: 10px; background: rgba(255,255,255,.94); backdrop-filter: blur(12px); display: flex; gap: 4px; box-shadow: 0 8px 28px rgba(90,20,26,.06); }
-.report-section-nav a { min-height: 38px; padding: 0 16px; border-radius: 7px; color: var(--ink-muted); display: inline-flex; align-items: center; font-size: 13px; font-weight: 700; text-decoration: none; }
-.report-section-nav a:hover { color: var(--accent-strong); background: var(--accent-soft); }
 .report-section { margin-top: 36px; scroll-margin-top: 132px; }
 .report-section-heading { margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--report-line); display: grid; grid-template-columns: 46px minmax(0,1fr) auto; gap: 16px; align-items: start; }
 .report-section-heading > span { width: 40px; height: 40px; border-radius: 10px; color: white; background: var(--accent); display: grid; place-items: center; font-size: 12px; font-weight: 800; }
@@ -1048,8 +1045,6 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .analysis-hero { padding: 24px 20px; grid-template-columns: 1fr; }
   .score-block { min-height: 120px; }
   .analysis-charts, .metric-grid { grid-template-columns: 1fr; }
-  .report-section-nav { top: 66px; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); }
-  .report-section-nav a { min-width: 0; min-height: 44px; padding-inline: 6px; justify-content: center; text-align: center; font-size: 11px; }
   .report-grid.two-columns, .health-grid, .health-grid.three-up { grid-template-columns: 1fr; }
   .report-section-heading { grid-template-columns: 40px minmax(0,1fr); gap: 12px; }
   .report-section-heading > span { width: 36px; height: 36px; }
@@ -1150,7 +1145,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 @media print {
   @page { size: A4; margin: 13mm; }
   body { padding: 0; background: white; }
-  .sidebar, .topbar, .mobile-nav, .report-print-button, .topic-tabs, .report-section-nav { display: none !important; }
+  .sidebar, .topbar, .mobile-nav, .report-print-button, .topic-tabs, .intake-quick-nav { display: none !important; }
   .app-shell { display: block; }
   .main-content, .page-wrap { width: 100%; padding: 0; overflow: visible; }
   .analysis-hero { break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }

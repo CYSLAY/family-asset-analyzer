@@ -2,18 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
-  BuildingsIcon,
-  ClipboardTextIcon,
-  CurrencyCircleDollarIcon,
   FileTextIcon,
   PlusIcon,
-  TrendUpIcon,
   TrashIcon,
   UserPlusIcon,
   UsersThreeIcon,
-  WalletIcon,
 } from '@phosphor-icons/react'
 import { FinancialWorkspace } from './FinancialWorkspace'
+import { IntakeQuickNav, intakeStepMeta, type IntakeView } from './IntakeQuickNav'
 import { useCustomerStore } from '../stores/customerStore'
 import { customerAvatarInitial, PrivateControl, PrivateText } from '../lib/privacy'
 import {
@@ -30,18 +26,8 @@ interface Props {
   onOpenReport: () => void
   onOpenCustomers: () => void
   selfService?: boolean
+  initialView?: IntakeView
 }
-
-type IntakeView = 'overview' | IntakeStepKey
-
-const stepMeta: Array<{ key: IntakeStepKey; title: string; description: string; icon: typeof UsersThreeIcon }> = [
-  { key: 'profile', title: '客户资料', description: '联系人、所在城市与备注', icon: ClipboardTextIcon },
-  { key: 'members', title: '家庭成员', description: '成员关系、年龄、工作及健康情况', icon: UsersThreeIcon },
-  { key: 'fixed_assets', title: '固定资产', description: '房产、车辆及其他长期资产', icon: BuildingsIcon },
-  { key: 'liquid_assets', title: '流动资产与负债', description: '现金、金融资产、贷款与月供', icon: WalletIcon },
-  { key: 'cashflow', title: '生活收支', description: '按成员收入与家庭整体支出', icon: TrendUpIcon },
-  { key: 'education', title: '教育期望', description: '教育路线、时间与资金准备', icon: CurrencyCircleDollarIcon },
-]
 
 const stabilityLabels: Record<IncomeStability, string> = {
   stable: '固定收入',
@@ -70,9 +56,9 @@ function persistRevealedSummary(customerId: string, step: IntakeStepKey) {
 }
 function isSummaryStep(view: IntakeView): view is IntakeStepKey { return view !== 'overview' && summarySteps.includes(view) }
 
-export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = false }: Props) {
+export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = false, initialView }: Props) {
   const { customers, selectedCustomerId, selectCustomer, addCustomer, updateCustomer } = useCustomerStore()
-  const [view, setView] = useState<IntakeView>(selfService ? 'profile' : 'overview')
+  const [view, setView] = useState<IntakeView>(initialView ?? (selfService ? 'profile' : 'overview'))
   const [newName, setNewName] = useState('')
   const [creating, setCreating] = useState(false)
   const [revealedSummaries, setRevealedSummaries] = useState(() => readRevealedSummaries(selectedCustomerId))
@@ -132,8 +118,8 @@ export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = f
     </div>
   }
 
-  const filled = new Set(stepMeta.filter((item) => hasIntakeStepData(customer, item.key)).map((item) => item.key))
-  const activeMeta = stepMeta.find((item) => item.key === view)
+  const filled = new Set(intakeStepMeta.filter((item) => hasIntakeStepData(customer, item.key)).map((item) => item.key))
+  const activeMeta = intakeStepMeta.find((item) => item.key === view)
   const financialView = view === 'fixed_assets' || view === 'liquid_assets' || view === 'cashflow' || view === 'education'
   const nameEntered = Boolean(customer.primaryContactName.trim())
   const selfServiceLocked = selfService && !nameEntered
@@ -164,15 +150,7 @@ export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = f
       <div className="intake-progress-number"><strong>{intakeCompletion(customer)}%</strong><span>模块已有资料</span></div>
     </header>
 
-    <nav className="intake-quick-nav" aria-label="录入模块快速切换">
-      <button className={view === 'overview' ? 'quick-nav-item is-active' : 'quick-nav-item'} disabled={selfServiceLocked} type="button" onClick={() => switchView('overview')}><FileTextIcon size={17} /><span>录入总览</span></button>
-      {stepMeta.map((item) => {
-        const Icon = item.icon
-        const locked = selfServiceLocked && item.key !== 'profile'
-        return <button aria-label={locked ? `${item.title}，请先填写姓名` : item.title} className={view === item.key ? 'quick-nav-item is-active' : 'quick-nav-item'} disabled={locked} type="button" key={item.key} onClick={() => switchView(item.key)}><Icon size={17} /><span>{item.title}</span>{filled.has(item.key) ? <i aria-label="已填写" /> : null}</button>
-      })}
-      <button aria-label={selfServiceLocked ? '分析报告，请先填写姓名' : '分析报告'} className="quick-nav-item report" disabled={selfServiceLocked} type="button" onClick={openReportAfterLeavingTab}><FileTextIcon size={17} /><span>分析报告</span></button>
-    </nav>
+    <IntakeQuickNav activeView={view} filled={filled} locked={selfServiceLocked} onSelect={(target) => target === 'report' ? openReportAfterLeavingTab() : switchView(target)} />
 
     <div className="intake-layout">
       <main className="intake-content">
@@ -198,7 +176,7 @@ function IntakeOverview({ filled, onOpen, onOpenReport }: { filled: Set<IntakeSt
       <p>录入没有固定顺序。填写任意有效内容后，模块会自动标记为已填写。</p>
     </section>
     <section className="module-grid">
-      {stepMeta.map((item) => {
+      {intakeStepMeta.map((item) => {
         const Icon = item.icon
         const done = filled.has(item.key)
         return <button className={done ? 'module-card is-done' : 'module-card'} type="button" key={item.key} onClick={() => onOpen(item.key)}>

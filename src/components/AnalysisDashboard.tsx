@@ -11,10 +11,11 @@ import wechatQr from '../../assets/branding/jojo-wechat-qr-original.jpg'
 import qrLogoBadge from '../../assets/branding/jojo-qr-logo-badge-inverted.png'
 import { analyzeCustomer, annualize, type HealthLevel, type MetricResult } from '../lib/analysis'
 import { useCustomerStore } from '../stores/customerStore'
-import type { CustomerProfile } from '../types/domain'
+import { hasIntakeStepData, type CustomerProfile, type IntakeStepKey } from '../types/domain'
 import { PrivateText, PRIVACY_MASK, usePrivacyMode } from '../lib/privacy'
+import { IntakeQuickNav, intakeStepMeta, type IntakeView } from './IntakeQuickNav'
 
-interface Props { onChooseCustomer: () => void; onOpenCashFlow?: () => void }
+interface Props { onChooseCustomer: () => void; onOpenCashFlow?: () => void; onOpenIntake: (view: IntakeView) => void }
 interface BreakdownSource { label: string; amount: number; frequency?: 'monthly' | 'quarterly' | 'yearly' }
 interface BreakdownEntry { name: string; value: number; source: BreakdownSource }
 interface BreakdownItem { name: string; value: number; color: string; sources: BreakdownSource[] }
@@ -26,7 +27,7 @@ const palette = ['#c91d2a', '#e56a73', '#ef9ea5', '#f2c4c8', '#8d1720', '#b9a1a3
 echarts.use([GaugeChart, PieChart, AriaComponent, TooltipComponent, SVGRenderer])
 type ChartOption = ComposeOption<GaugeSeriesOption | PieSeriesOption | TooltipComponentOption>
 
-export function AnalysisDashboard({ onChooseCustomer, onOpenCashFlow }: Props) {
+export function AnalysisDashboard({ onChooseCustomer, onOpenCashFlow, onOpenIntake }: Props) {
   const { customers, selectedCustomerId } = useCustomerStore()
   const customer = customers.find((item) => item.id === selectedCustomerId) ?? null
   const analysis = useMemo(() => customer ? analyzeCustomer(customer) : null, [customer])
@@ -44,6 +45,7 @@ export function AnalysisDashboard({ onChooseCustomer, onOpenCashFlow }: Props) {
   })
   const expenseBreakdown = groupEntries(expenseRows)
   const flowDebt = flowVsDebtMetric(analysis.totals.liquidAssets, analysis.totals.liabilities)
+  const filled = new Set<IntakeStepKey>(intakeStepMeta.filter((item) => hasIntakeStepData(customer, item.key)).map((item) => item.key))
 
   return <div className="analysis-page detailed-report">
     <section className="analysis-hero">
@@ -54,7 +56,7 @@ export function AnalysisDashboard({ onChooseCustomer, onOpenCashFlow }: Props) {
       </div>
     </section>
 
-    <nav className="report-section-nav" aria-label="报告章节"><a href="#balance-report">资产负债</a><a href="#cashflow-report">收支储蓄</a><a href="#education-report">教育目标</a></nav>
+    <IntakeQuickNav activeView="report" filled={filled} onSelect={(target) => target !== 'report' && onOpenIntake(target)} />
 
     <ReportSection id="balance-report" index="01" title="资产负债分析" description="先看家庭净资产，再检查资产配置、债务结构和短期偿债能力。">
       <div className="report-grid two-columns report-distributions report-distributions-first">

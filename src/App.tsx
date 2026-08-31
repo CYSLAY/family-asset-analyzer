@@ -14,6 +14,7 @@ import { AccessGate } from './components/AccessGate'
 import { CustomerDirectory } from './components/CustomerDirectory'
 import { CashFlowManager } from './components/CashFlowManager'
 import { IntakeWorkspace } from './components/IntakeWorkspace'
+import type { IntakeView } from './components/IntakeQuickNav'
 import jojoLogo from '../assets/branding/jojo-personal-logo.png'
 import { clearAccessUser, getAccessSession, getAccessUser } from './lib/access'
 import { putCustomer } from './lib/localDb'
@@ -48,6 +49,7 @@ export function App() {
   const [workspaceSync, setWorkspaceSync] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle')
   const [publicReady, setPublicReady] = useState(false)
   const [view, setView] = useState<AppView>('customers')
+  const [intakeStartView, setIntakeStartView] = useState<IntakeView>('overview')
   const { customers, selectedCustomerId, initialized, saveState, syncState, initialize, selectCustomer, syncCustomer } = useCustomerStore()
   const selectedCustomer = useMemo(() => customers.find((item) => item.id === selectedCustomerId) ?? null, [customers, selectedCustomerId])
   const selfService = workspaceMode === 'self_service'
@@ -107,12 +109,13 @@ export function App() {
     return () => { cancelled = true }
   }, [initialized, publicReady, workspaceMode])
 
-  if (!workspaceMode) return <AccessGate onAdminAllowed={(username) => { setAccessUser(username); setPrivacyMode(true); setWorkspaceMode('admin'); setWorkspaceSync('idle'); setView('customers') }} onStartSelfService={() => { setWorkspaceMode('self_service'); setPublicReady(false); setView('intake') }} />
+  if (!workspaceMode) return <AccessGate onAdminAllowed={(username) => { setAccessUser(username); setPrivacyMode(true); setWorkspaceMode('admin'); setWorkspaceSync('idle'); setView('customers') }} onStartSelfService={() => { setWorkspaceMode('self_service'); setPublicReady(false); setIntakeStartView('profile'); setView('intake') }} />
   if (selfService && !publicReady) return <main className="public-loading"><span /><strong>正在准备您的家庭财务档案</strong><p>资料只会显示在您的当前填写空间中。</p></main>
 
   function openMainView(next: AppView) {
     if (next === 'customers' && !selfService) selectCustomer('')
     if ((next === 'analysis' || next === 'cashflow') && selfService && (!selectedCustomer || !selectedCustomer.primaryContactName.trim())) return
+    if (next === 'intake') setIntakeStartView(selfService ? 'profile' : 'overview')
     setView(next)
   }
 
@@ -174,10 +177,10 @@ export function App() {
 
       <div className="page-wrap">
         {syncState === 'error' && selfService && selfServiceCloudEligible ? <div className="public-sync-warning" role="status">当前资料已保存在本机，云端连接恢复后会继续自动同步。</div> : null}
-        {view === 'intake' ? <IntakeWorkspace selfService={selfService} onOpenReport={openReport} onOpenCustomers={() => { if (!selfService) { selectCustomer(''); setView('customers') } }} /> : null}
-        {view === 'customers' && !selfService ? <CustomerDirectory onStartIntake={() => setView('intake')} onOpenReport={() => setView('analysis')} onOpenCashFlow={() => setView('cashflow')} /> : null}
+        {view === 'intake' ? <IntakeWorkspace initialView={intakeStartView} selfService={selfService} onOpenReport={openReport} onOpenCustomers={() => { if (!selfService) { selectCustomer(''); setView('customers') } }} /> : null}
+        {view === 'customers' && !selfService ? <CustomerDirectory onStartIntake={() => { setIntakeStartView('overview'); setView('intake') }} onOpenReport={() => setView('analysis')} onOpenCashFlow={() => setView('cashflow')} /> : null}
         {view === 'cashflow' ? <CashFlowManager selfService={selfService} onOpenCustomer={() => setView(selfService ? 'intake' : 'customers')} /> : null}
-        {view === 'analysis' ? <Suspense fallback={<div className="report-skeleton" aria-label="正在生成分析报告"><span /><span /><span /></div>}><AnalysisDashboard onChooseCustomer={() => { if (selfService) setView('intake'); else { selectCustomer(''); setView('customers') } }} onOpenCashFlow={() => setView('cashflow')} /></Suspense> : null}
+        {view === 'analysis' ? <Suspense fallback={<div className="report-skeleton" aria-label="正在生成分析报告"><span /><span /><span /></div>}><AnalysisDashboard onChooseCustomer={() => { if (selfService) { setIntakeStartView('overview'); setView('intake') } else { selectCustomer(''); setView('customers') } }} onOpenIntake={(target) => { setIntakeStartView(target); setView('intake') }} onOpenCashFlow={() => setView('cashflow')} /></Suspense> : null}
       </div>
     </main>
 
