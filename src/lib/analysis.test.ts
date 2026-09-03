@@ -107,6 +107,7 @@ describe('financial analysis', () => {
     expect(analyzeCustomer(none).metrics.find((item) => item.key === 'insurance_expense_ratio')).toMatchObject({ value: 0, level: 'neutral' })
     expect(analyzeCustomer(moderate).metrics.find((item) => item.key === 'insurance_expense_ratio')).toMatchObject({ value: 10, level: 'attention' })
     expect(analyzeCustomer(high).metrics.find((item) => item.key === 'insurance_expense_ratio')).toMatchObject({ value: 21, level: 'warning' })
+    expect(analyzeCustomer(high).metrics.find((item) => item.key === 'insurance_expense_ratio')?.reference).toBe('1. 0%：无保险投入\n2. 低于10%：有一定投入\n3. 10%–20%：较合理区间\n4. 高于20%：需确保现金流健康')
   })
 
   it.each([[9.99, 'healthy'], [10, 'attention'], [20, 'attention'], [20.01, 'warning']])('classifies insurance ratio %s at the correct boundary', (ratio, level) => {

@@ -197,7 +197,7 @@ function incomeConcentrationMetric(income: number, workIncome: number): MetricRe
 
 function insuranceExpenseRatioMetric(income: number, insuranceExpenses: number): MetricResult {
   const formula = '年度保险支出 / 家庭年收入'
-  const reference = '0%不作好坏判断；高于0%且低于10%负担相对温和，10%-20%需结合现金流检查，超过20%重点关注长期缴费压力；占比不代表保障是否充足'
+  const reference = '1. 0%：无保险投入\n2. 低于10%：有一定投入\n3. 10%–20%：较合理区间\n4. 高于20%：需确保现金流健康'
   if (income <= 0) return metric('insurance_expense_ratio', '保险支出占比', null, 'percent', 'neutral', '等待收入数据', '没有家庭年收入，暂时无法评估保费负担。', '补充家庭收入后自动计算保险支出占比。', formula, reference)
   const rate = insuranceExpenses / income * 100
   if (rate === 0) return metric('insurance_expense_ratio', '保险支出占比', rate, 'percent', 'neutral', '未录入保险支出', '现有家庭支出中没有识别到保险或保费项目，不据此判断保障不足。', '如家庭已有保单，请补充年度保费；保障充足度需结合保额与家庭责任另行评估。', formula, reference)

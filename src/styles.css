@@ -540,7 +540,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .metric-narrative dl.single-column { grid-template-columns: 1fr; }
 .metric-narrative dl > div { min-width: 0; }
 .metric-narrative dt { color: var(--ink-muted); font-size: 10px; }
-.metric-narrative dd { margin: 4px 0 0; color: var(--ink); font-size: 11px; line-height: 1.5; }
+.metric-narrative dd { margin: 4px 0 0; color: var(--ink); font-size: 11px; line-height: 1.6; white-space: pre-line; }
 .metric-narrative > .metric-source-note { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--report-line); color: var(--ink-muted); font-size: 10px; line-height: 1.7; }
 .metric-source-note a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .modal-backdrop { position: fixed; z-index: 60; inset: 0; padding: 22px; background: rgba(9,25,23,.54); display: grid; place-items: center; }
