@@ -6,6 +6,7 @@ import {
   CaretDownIcon,
   CheckIcon,
   MagnifyingGlassIcon,
+  ArrowLeftIcon,
   UsersThreeIcon,
   XIcon,
 } from '@phosphor-icons/react'
@@ -118,7 +119,7 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
 
   if (!customer || !plan) {
     return <div className="cashflow-manager-page">
-      <ManagerHeading customers={availableCustomers} selectedCustomerId="" onSelect={selectCustomer} selfService={selfService} />
+      <ManagerHeading customers={availableCustomers} selectedCustomerId="" onSelect={selectCustomer} onOpenCustomer={onOpenCustomer} selfService={selfService} />
       <section className="empty-state cashflow-manager-empty">
         <UsersThreeIcon size={34} />
         <h2>{selfService ? '请先完成联系人姓名' : '选择客户后开始梳理'}</h2>
@@ -132,7 +133,7 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
   const lastRow = rows[Math.min(displayYears, rows.length) - 1]
 
   return <div className="cashflow-manager-page">
-    <ManagerHeading customers={availableCustomers} selectedCustomerId={customer.id} onSelect={selectCustomer} selfService={selfService} />
+    <ManagerHeading customers={availableCustomers} selectedCustomerId={customer.id} onSelect={selectCustomer} onOpenCustomer={onOpenCustomer} selfService={selfService} />
 
     <section className="cashflow-plan-summary" aria-label="现金流梳理摘要">
       <article><span>当前可用资金</span><strong>{formatMoney(plan.initialFunds)}</strong><small>默认读取非房产、非车辆资产</small></article>
@@ -202,11 +203,14 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
 
 type CashFlowCustomerOption = { id: string; householdName: string; primaryContactName: string; source?: 'advisor' | 'self_service' }
 
-function ManagerHeading({ customers, selectedCustomerId, onSelect, selfService }: { customers: CashFlowCustomerOption[]; selectedCustomerId: string; onSelect: (id: string) => void; selfService: boolean }) {
+function ManagerHeading({ customers, selectedCustomerId, onSelect, onOpenCustomer, selfService }: { customers: CashFlowCustomerOption[]; selectedCustomerId: string; onSelect: (id: string) => void; onOpenCustomer: () => void; selfService: boolean }) {
   const selected = customers.find((customer) => customer.id === selectedCustomerId) ?? null
   return <header className="cashflow-manager-heading">
     <div><span className="section-kicker">{selfService ? '家庭财务自测' : '顾问工具'}</span><h1>现金流管理</h1><p>{selfService ? '根据已填写的家庭资料，建立可持续更新的长期现金流预测。' : '选择客户，读取已有档案并建立可持续更新的家庭现金流预测。'}</p></div>
-    {selfService ? <div className="cashflow-self-customer"><span>当前档案</span><strong>{selected?.primaryContactName || selected?.householdName || '我的家庭'}</strong><small>仅显示您的家庭资料</small></div> : <CustomerSearchSelect customers={customers} selectedCustomerId={selectedCustomerId} onSelect={onSelect} />}
+    <div className="cashflow-manager-context">
+      {selfService ? <div className="cashflow-self-customer"><span>当前档案</span><strong>{selected?.primaryContactName || selected?.householdName || '我的家庭'}</strong><small>仅显示您的家庭资料</small></div> : <CustomerSearchSelect customers={customers} selectedCustomerId={selectedCustomerId} onSelect={onSelect} />}
+      {selected ? <button className="cashflow-return-customer" type="button" onClick={onOpenCustomer}><ArrowLeftIcon size={17} /> {selfService ? '返回我的资料' : '返回客户档案'}</button> : null}
+    </div>
   </header>
 }
 

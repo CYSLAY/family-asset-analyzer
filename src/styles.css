@@ -467,7 +467,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .report-skeleton span:first-child { grid-column: 1 / -1; min-height: 190px; }
 @keyframes skeleton-shift { to { background-position-x: -140%; } }
 
-.detailed-report { --report-line: #eadfe0; --report-soft: #fff8f8; }
+.detailed-report { --report-line: #eadfe0; --report-soft: #fff8f8; --report-block-gap: 24px; }
 .report-section { margin-top: 36px; scroll-margin-top: 132px; }
 .report-section-heading { margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--report-line); display: grid; grid-template-columns: 46px minmax(0,1fr) auto; gap: 16px; align-items: start; }
 .report-section-heading > span { width: 40px; height: 40px; border-radius: 10px; color: white; background: var(--accent); display: grid; place-items: center; font-size: 12px; font-weight: 800; }
@@ -478,11 +478,10 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .report-section-toggle svg { transition: transform .18s ease; }
 .report-section-toggle svg.is-open { transform: rotate(180deg); }
 .report-section.is-collapsed .report-section-heading { margin-bottom: 0; }
-.report-grid { display: grid; gap: 18px; }
+/* One spacing owner for every report block, including standalone panels. */
+.report-section-content { display: grid; grid-template-columns: minmax(0,1fr); gap: var(--report-block-gap); }
+.report-grid { display: grid; gap: var(--report-block-gap); }
 .report-grid.two-columns { grid-template-columns: repeat(2,minmax(0,1fr)); }
-.report-distributions { margin-top: 18px; }
-.report-distributions-first { margin-top: 0; }
-.report-comparisons { margin-top: 18px; }
 .report-panel { min-width: 0; border: 1px solid var(--report-line); border-radius: var(--radius-card); background: var(--surface); overflow: hidden; box-shadow: 0 10px 30px rgba(82,22,27,.045); }
 .panel-heading { min-height: 62px; padding: 18px 20px; border-bottom: 1px solid var(--report-line); display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .panel-heading h3 { margin: 0; color: var(--ink); font-size: 17px; }
@@ -512,7 +511,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .breakdown-row strong { min-width: 0; color: var(--ink); font-size: 12px; font-variant-numeric: tabular-nums; }
 .breakdown-row > span:last-child { color: var(--ink-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .breakdown-empty { min-height: 90px; padding: 20px; border-top: 1px solid var(--report-line); color: var(--ink-muted); display: grid; place-items: center; font-size: 12px; }
-.health-grid { margin-top: 18px; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; }
+.health-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--report-block-gap); }
 .health-grid.three-up { grid-template-columns: repeat(3,minmax(0,1fr)); }
 .health-grid.one-up { grid-template-columns: minmax(0,720px); }
 .health-panel .chart-canvas.compact, .health-panel .chart-empty.compact { height: 280px; margin: 4px 0 0; }
@@ -663,6 +662,9 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 .cashflow-manager-heading { display: flex; align-items: end; justify-content: space-between; gap: 28px; }
 .cashflow-manager-heading h1 { margin: 8px 0 0; color: var(--ink); font-size: clamp(32px,4vw,48px); letter-spacing: -.04em; }
 .cashflow-manager-heading p { max-width: 680px; margin: 11px 0 0; color: var(--ink-muted); line-height: 1.65; }
+.cashflow-manager-context { width: min(380px,100%); flex: 0 0 auto; display: grid; justify-items: stretch; gap: 9px; }
+.cashflow-return-customer { min-height: 40px; padding: 0 13px; border: 1px solid var(--line); border-radius: var(--radius-control); color: var(--accent-strong); background: white; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-size: 11px; font-weight: 720; cursor: pointer; }
+.cashflow-return-customer:hover { border-color: #e4b8bc; background: var(--accent-soft); }
 .cashflow-customer-select { width: min(380px, 100%); flex: 0 0 auto; position: relative; display: grid; gap: 7px; }
 .cashflow-customer-select > span { color: var(--ink-muted); font-size: 11px; font-weight: 700; }
 .cashflow-self-customer { width: min(300px, 100%); flex: 0 0 auto; padding: 13px 15px; border: 1px solid var(--line); border-radius: var(--radius-control); background: white; display: grid; gap: 4px; box-shadow: 0 8px 24px rgba(60,20,24,.035); }
@@ -912,6 +914,7 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
 }
 
 @media (max-width: 720px) {
+  .detailed-report { --report-block-gap: 16px; }
   .access-back-button { min-height: 44px; margin-bottom: 20px; }
   .access-page { padding: 16px; }
   .access-card { padding: 30px 22px; }
@@ -938,6 +941,8 @@ button:focus-visible { outline: 3px solid rgba(207, 31, 44, 0.24); outline-offse
   .cloud-status-button span { display: none; }
   .save-cloud-button { min-height: 40px; padding-inline: 10px; }
   .page-wrap { padding: 30px 18px 48px; }
+  .cashflow-manager-context { width: 100%; }
+  .cashflow-return-customer { min-height: 44px; }
   .intro-row { display: block; }
   .intro-row h1 { font-size: 34px; }
   .intro-row p { font-size: 14px; }

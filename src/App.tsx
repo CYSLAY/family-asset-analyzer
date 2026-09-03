@@ -179,7 +179,7 @@ export function App() {
         {syncState === 'error' && selfService && selfServiceCloudEligible ? <div className="public-sync-warning" role="status">当前资料已保存在本机，云端连接恢复后会继续自动同步。</div> : null}
         {view === 'intake' ? <IntakeWorkspace initialView={intakeStartView} selfService={selfService} onOpenReport={openReport} onOpenCustomers={() => { if (!selfService) { selectCustomer(''); setView('customers') } }} /> : null}
         {view === 'customers' && !selfService ? <CustomerDirectory onStartIntake={() => { setIntakeStartView('overview'); setView('intake') }} onOpenReport={() => setView('analysis')} onOpenCashFlow={() => setView('cashflow')} /> : null}
-        {view === 'cashflow' ? <CashFlowManager selfService={selfService} onOpenCustomer={() => setView(selfService ? 'intake' : 'customers')} /> : null}
+        {view === 'cashflow' ? <CashFlowManager selfService={selfService} onOpenCustomer={() => { setIntakeStartView('overview'); setView('intake') }} /> : null}
         {view === 'analysis' ? <Suspense fallback={<div className="report-skeleton" aria-label="正在生成分析报告"><span /><span /><span /></div>}><AnalysisDashboard onChooseCustomer={() => { if (selfService) { setIntakeStartView('overview'); setView('intake') } else { selectCustomer(''); setView('customers') } }} onOpenIntake={(target) => { setIntakeStartView(target); setView('intake') }} onOpenCashFlow={() => setView('cashflow')} /></Suspense> : null}
       </div>
     </main>
