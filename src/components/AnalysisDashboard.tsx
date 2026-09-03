@@ -77,7 +77,7 @@ export function AnalysisDashboard({ onChooseCustomer, onOpenCashFlow, onOpenInta
       </div>
     </ReportSection>
 
-    <ReportSection id="cashflow-report" index="02" title="收支储蓄分析" description="查看收入来源、支出去向、年度结余以及长期投入能力。">
+    <ReportSection id="cashflow-report" index="02" title="收支储蓄分析" description="查看收入来源、支出去向、年度结余以及保险支出负担。">
       <div className="report-grid two-columns report-distributions">
         <DistributionPanel title="家庭年收入" totalLabel="年收入" items={incomeBreakdown} />
         <DistributionPanel title="家庭年支出" totalLabel="年支出" items={expenseBreakdown} />
@@ -88,7 +88,7 @@ export function AnalysisDashboard({ onChooseCustomer, onOpenCashFlow, onOpenInta
       <div className="health-grid three-up">
         <HealthPanel metric={metric('income_concentration')} max={100} healthyRange="工作收入越接近100%，家庭越依赖持续工作能力" />
         <HealthPanel metric={metric('savings_rate')} max={100} healthyRange="30%以上较合理，50%以上表示积累能力较强" />
-        <HealthPanel metric={metric('investment_rate')} max={100} healthyRange="长期投入达到年收入30%以上较强，但应先确保现金流为正" />
+        <HealthPanel metric={metric('insurance_expense_ratio')} max={100} healthyRange="保费占比不是越高越好，需结合持续缴费能力与保障需求判断" />
       </div>
     </ReportSection>
 
@@ -160,11 +160,16 @@ function HealthPanel({ metric, max, healthyRange }: { metric: MetricResult; max:
   return <article className={`report-panel health-panel level-${metric.level}`}><PanelHeader title={metric.label} metric={metric} /><EChart option={option} empty={value === null} compact /><div className="health-result"><strong>{metric.title}</strong><span>{rangeCopy}</span></div><MetricNarrative metric={metric} /></article>
 }
 
-function PanelHeader({ title, metric }: { title: string; metric?: MetricResult }) { return <header className="panel-heading"><h3>{title}</h3>{metric ? <span className="level-badge">{levelLabels[metric.level]}</span> : null}</header> }
+function PanelHeader({ title, metric }: { title: string; metric?: MetricResult }) {
+  const badge = metric?.key === 'insurance_expense_ratio'
+    ? metric.value === null ? '待补充' : metric.value === 0 ? '未录入' : metric.level === 'healthy' ? '负担温和' : metric.level === 'attention' ? '需关注' : '重点关注'
+    : metric ? levelLabels[metric.level] : ''
+  return <header className="panel-heading"><h3>{title}</h3>{metric ? <span className="level-badge">{badge}</span> : null}</header>
+}
 
 function MetricNarrative({ metric }: { metric: MetricResult }) {
   const showReference = hasMeaningfulReference(metric.reference)
-  return <div className="metric-narrative"><p>{metric.explanation}</p><dl className={showReference ? '' : 'single-column'}><div><dt>公式</dt><dd>{metric.formula}</dd></div>{showReference ? <div><dt>参考区间</dt><dd>{metric.reference}</dd></div> : null}</dl></div>
+  return <div className="metric-narrative"><p>{metric.explanation}</p><dl className={showReference ? '' : 'single-column'}><div><dt>公式</dt><dd>{metric.formula}</dd></div>{showReference ? <div><dt>参考区间</dt><dd>{metric.reference}</dd></div> : null}</dl>{metric.key === 'insurance_expense_ratio' ? <p className="metric-source-note">分档为本工具的现金流提示线，不参与综合评分。20%法规参照仅涉及利益不确定的人身保险销售情形，不是所有保费合计或香港保单的统一标准。参考：<a href="https://www.moj.gov.cn/pub/sfbgw/flfggz/flfggzbmgz/202510/t20251021_526569.html" target="_blank" rel="noopener noreferrer">《金融机构产品适当性管理办法》第39条</a>、<a href="https://education.ia.org.hk/sc/faq.html" target="_blank" rel="noopener noreferrer">保监局投保指引</a>。</p> : null}</div>
 }
 
 function BreakdownTable({ items, total }: { items: BreakdownItem[]; total: number }) {
@@ -231,7 +236,7 @@ function escapeHtml(value: string) {
 
 function classifyAsset(category: string) { if (category === 'cash') return '现金'; if (category === 'property' || category === 'vehicle') return '固定资产'; if (['bank', 'fund', 'stock', 'bond', 'pension'].includes(category)) return '金融资产'; return '其他资产' }
 function classifyIncome(value: string) { if (/工作|工资|经营|佣金|奖金/.test(value)) return '工作收入'; if (/投资|理财|利息|股息|分红/.test(value)) return '理财收入'; return '其他资产收入' }
-function classifyExpense(value: string) { if (/投资|储蓄|保险|基金|股票|定投|理财/.test(value)) return '投资支出'; return '生活支出' }
+function classifyExpense(value: string) { if (/保险|保费/.test(value)) return '保险支出'; if (/投资|储蓄|基金|股票|定投|理财/.test(value)) return '投资／储蓄投入'; return '生活支出' }
 
 function flowVsDebtMetric(liquid: number, liabilities: number): MetricResult {
   const difference = liquid - liabilities

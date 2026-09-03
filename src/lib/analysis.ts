@@ -31,7 +31,7 @@ export interface FinancialAnalysis {
     dueWithinOneYear: number
     necessaryMonthlyOutflow: number
     workIncome: number
-    investmentExpenses: number
+    insuranceExpenses: number
     educationFutureCost: number
     educationGap: number
   }
@@ -58,7 +58,7 @@ export function analyzeCustomer(customer: CustomerProfile): FinancialAnalysis {
   const hasLiabilityData = customer.liabilities.some((item) => item.balance > 0 || item.monthlyPayment > 0 || item.dueWithinOneYear > 0)
   const dueWithinOneYear = customer.liabilities.reduce((sum, item) => sum + estimateOneYearDebt(item), 0)
   const workIncome = customer.incomes.filter((item) => /工作|工资|经营|佣金|奖金/.test(`${item.category}${item.name}`)).reduce((sum, item) => sum + annualize(item), 0)
-  const investmentExpenses = customer.expenses.filter((item) => /投资|储蓄|保险|基金|股票|定投|理财/.test(`${item.category}${item.name}`)).reduce((sum, item) => sum + annualize(item), 0)
+  const insuranceExpenses = customer.expenses.filter((item) => /保险|保费/.test(`${item.category}${item.name}`)).reduce((sum, item) => sum + annualize(item), 0)
   const annualSurplus = annualIncome - annualExpenses - annualDebtPayments
   const emergencyTarget = getEmergencyTarget(customer)
   const educationFutureCost = customer.educationGoals.reduce((sum, goal) => {
@@ -78,11 +78,11 @@ export function analyzeCustomer(customer: CustomerProfile): FinancialAnalysis {
     emergencyMetric(emergencyFunds, necessaryMonthlyOutflow, emergencyTarget),
     savingsMetric(annualIncome, annualSurplus),
     incomeConcentrationMetric(annualIncome, workIncome),
-    investmentExpenseMetric(annualIncome, investmentExpenses),
+    insuranceExpenseRatioMetric(annualIncome, insuranceExpenses),
     educationMetric(educationFutureCost, educationPrepared, customer.educationGoals.length),
   ]
 
-  const scored = metrics.filter((metric) => metric.value !== null && !metric.displayValue && metric.key !== 'income_concentration')
+  const scored = metrics.filter((metric) => metric.value !== null && !metric.displayValue && metric.key !== 'income_concentration' && metric.key !== 'insurance_expense_ratio')
   const rawScore = scored.length ? Math.round(scored.reduce((sum, metric) => sum + levelScore(metric.level), 0) / scored.length) : null
   const hasCritical = metrics.some((metric) => metric.level === 'critical')
   const score = rawScore === null ? null : hasCritical ? Math.min(rawScore, 49) : rawScore
@@ -93,7 +93,7 @@ export function analyzeCustomer(customer: CustomerProfile): FinancialAnalysis {
     .map((metric) => metric.key)
 
   return {
-    totals: { assets, liabilities, netWorth: assets - liabilities, annualIncome, annualExpenses: annualExpenses + annualDebtPayments, annualSurplus, emergencyFunds, liquidAssets, fixedAssets, dueWithinOneYear, necessaryMonthlyOutflow, workIncome, investmentExpenses, educationFutureCost, educationGap: Math.max(0, educationFutureCost - educationPrepared) },
+    totals: { assets, liabilities, netWorth: assets - liabilities, annualIncome, annualExpenses: annualExpenses + annualDebtPayments, annualSurplus, emergencyFunds, liquidAssets, fixedAssets, dueWithinOneYear, necessaryMonthlyOutflow, workIncome, insuranceExpenses, educationFutureCost, educationGap: Math.max(0, educationFutureCost - educationPrepared) },
     metrics,
     score,
     overallLevel: score === null ? 'neutral' : score < 40 ? 'critical' : score < 60 ? 'warning' : score < 75 ? 'attention' : score < 90 ? 'healthy' : 'strong',
@@ -195,16 +195,15 @@ function incomeConcentrationMetric(income: number, workIncome: number): MetricRe
   return metric('income_concentration', '工作收入集中度', ratio, 'percent', 'neutral', '非工作收入占比较高', '收入来源较分散，但需要判断租金、投资或养老金是否稳定。', '逐项评估其他收入的波动和持续时间。', '工作及经营收入 / 家庭年收入', '这是集中度指标，不是越低越健康')
 }
 
-function investmentExpenseMetric(income: number, investment: number): MetricResult {
-  const formula = '年度投资、储蓄及保障类支出 / 家庭年收入'
-  const reference = '低于10%偏弱，10%-20%起步，20%-30%较合理，30%以上较强；需先保证现金流为正'
-  if (income <= 0) return metric('investment_rate', '投资支出健康度', null, 'percent', 'neutral', '等待收入数据', '没有家庭年收入，无法判断投资支出的可持续性。', '先补充收入与投资、储蓄或保障类支出。', formula, reference)
-  const rate = investment / income * 100
-  if (rate === 0) return metric('investment_rate', '投资支出健康度', rate, 'percent', 'critical', '尚未形成长期投入', '现有支出中没有识别到投资、储蓄或保障类项目。', '在现金流允许的情况下，建立持续且可负担的长期投入。', formula, reference)
-  if (rate < 10) return metric('investment_rate', '投资支出健康度', rate, 'percent', 'warning', '长期投入偏少', '用于长期目标的资金占收入比例较低。', '先逐步提高到收入的10%，并保留足够应急资金。', formula, reference)
-  if (rate < 20) return metric('investment_rate', '投资支出健康度', rate, 'percent', 'attention', '长期投入已经起步', '家庭已开始为长期目标持续投入，但积累速度仍有限。', '结合年度结余逐步提高投入比例。', formula, reference)
-  if (rate < 30) return metric('investment_rate', '投资支出健康度', rate, 'percent', 'healthy', '长期投入较合理', '投资、储蓄及保障类支出已经形成稳定安排。', '继续检查投入是否符合目标期限和风险承受能力。', formula, reference)
-  return metric('investment_rate', '投资支出健康度', rate, 'percent', 'strong', '长期投入能力较强', '长期投入占收入达到较高水平。', '确认生活支出、偿债和现金储备没有因此受到挤压。', formula, reference)
+function insuranceExpenseRatioMetric(income: number, insuranceExpenses: number): MetricResult {
+  const formula = '年度保险支出 / 家庭年收入'
+  const reference = '0%不作好坏判断；高于0%且低于10%负担相对温和，10%-20%需结合现金流检查，超过20%重点关注长期缴费压力；占比不代表保障是否充足'
+  if (income <= 0) return metric('insurance_expense_ratio', '保险支出占比', null, 'percent', 'neutral', '等待收入数据', '没有家庭年收入，暂时无法评估保费负担。', '补充家庭收入后自动计算保险支出占比。', formula, reference)
+  const rate = insuranceExpenses / income * 100
+  if (rate === 0) return metric('insurance_expense_ratio', '保险支出占比', rate, 'percent', 'neutral', '未录入保险支出', '现有家庭支出中没有识别到保险或保费项目，不据此判断保障不足。', '如家庭已有保单，请补充年度保费；保障充足度需结合保额与家庭责任另行评估。', formula, reference)
+  if (rate < 10) return metric('insurance_expense_ratio', '保险支出占比', rate, 'percent', 'healthy', '保费负担相对温和', '当前年度保费占家庭收入比例低于10%，通常较易纳入持续现金流安排。', '继续核对保障范围、保额和缴费年限，不以低占比替代保障需求分析。', formula, reference)
+  if (rate <= 20) return metric('insurance_expense_ratio', '保险支出占比', rate, 'percent', 'attention', '需要检查持续缴费能力', '年度保费占家庭收入10%-20%，应结合年度结余、负债和应急资金判断长期负担。', '确认扣除保费后现金流仍为正，并核对未来各年的缴费安排。', formula, reference)
+  return metric('insurance_expense_ratio', '保险支出占比', rate, 'percent', 'warning', '保费负担需重点关注', '年度保费超过家庭年收入20%，长期缴费可能明显挤压其他家庭目标。', '重点复核保单类型、缴费期限、退保损失和家庭现金流承受能力。', formula, reference)
 }
 
 function educationMetric(cost: number, prepared: number, count: number): MetricResult {

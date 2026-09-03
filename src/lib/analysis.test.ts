@@ -93,14 +93,38 @@ describe('financial analysis', () => {
     expect(metric?.level).toBe('strong')
   })
 
-  it('changes investment health copy with recognized long-term spending', () => {
-    const none = createCustomer('未投入')
+  it('measures insurance spending without treating investments as premiums', () => {
+    const none = createCustomer('未投保')
     none.incomes = [{ ...createCashFlow('income'), amount: 10_000 }]
-    const prepared = createCustomer('有投入')
-    prepared.incomes = [{ ...createCashFlow('income'), amount: 10_000 }]
-    prepared.expenses = [{ ...createCashFlow('expense'), name: '家庭定投', category: '投资支出', amount: 3_000 }]
-    expect(analyzeCustomer(none).metrics.find((item) => item.key === 'investment_rate')?.level).toBe('critical')
-    expect(analyzeCustomer(prepared).metrics.find((item) => item.key === 'investment_rate')?.level).toBe('strong')
+    none.expenses = [{ ...createCashFlow('expense'), name: '家庭定投', category: '投资支出', amount: 3_000 }]
+    const moderate = createCustomer('适中保费')
+    moderate.incomes = [{ ...createCashFlow('income'), amount: 10_000 }]
+    moderate.expenses = [{ ...createCashFlow('expense'), name: '保险', category: '保险保障', amount: 1_000 }]
+    const high = createCustomer('较高保费')
+    high.incomes = [{ ...createCashFlow('income'), amount: 10_000 }]
+    high.expenses = [{ ...createCashFlow('expense'), name: '保险', category: '保险保障', amount: 2_100 }]
+
+    expect(analyzeCustomer(none).metrics.find((item) => item.key === 'insurance_expense_ratio')).toMatchObject({ value: 0, level: 'neutral' })
+    expect(analyzeCustomer(moderate).metrics.find((item) => item.key === 'insurance_expense_ratio')).toMatchObject({ value: 10, level: 'attention' })
+    expect(analyzeCustomer(high).metrics.find((item) => item.key === 'insurance_expense_ratio')).toMatchObject({ value: 21, level: 'warning' })
+  })
+
+  it.each([[9.99, 'healthy'], [10, 'attention'], [20, 'attention'], [20.01, 'warning']])('classifies insurance ratio %s at the correct boundary', (ratio, level) => {
+    const customer = createCustomer('边界测试')
+    customer.incomes = [{ ...createCashFlow('income'), amount: 100_000, frequency: 'yearly' }]
+    customer.expenses = [{ ...createCashFlow('expense'), name: '年度保费', amount: Number(ratio) * 1_000, frequency: 'yearly' }]
+    expect(analyzeCustomer(customer).metrics.find((item) => item.key === 'insurance_expense_ratio')?.level).toBe(level)
+  })
+
+  it('does not directly change the overall score when the same outflow is insurance', () => {
+    const customer = createCustomer('评分测试')
+    customer.incomes = [{ ...createCashFlow('income'), amount: 100_000, frequency: 'yearly' }]
+    customer.expenses = [{ ...createCashFlow('expense'), name: '生活', category: '生活支出', amount: 25_000, frequency: 'yearly' }]
+    const before = analyzeCustomer(customer)
+    customer.expenses[0].name = '保险'
+    const after = analyzeCustomer(customer)
+    expect(after.score).toBe(before.score)
+    expect(after.totals.annualExpenses).toBe(before.totals.annualExpenses)
   })
 
   it('uses the selected education route cash total without hidden inflation fields', () => {
