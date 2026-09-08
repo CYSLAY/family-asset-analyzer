@@ -185,7 +185,7 @@ export function SavingsInsuranceCalculator({ advisor }: { advisor: string }) {
       <section className="sic-panel sic-table-panel"><header><h2>逐年测算明细</h2><button type="button" onClick={() => setExpanded(true)}><ArrowsOutIcon />放大表格</button></header>{!expanded && table}</section>
     </>}
     <p className="sic-notice" role="status">{notice}</p>
-    <footer className="sic-sources"><p>数据来源：e-1-toolbox-2026-08-03.xlsx，TRST / PRMESP 工作表。非保证现金价值与优惠均为演示假设，实际以正式利益说明及保单条款为准；提前退保可能产生损失。</p><p>草稿与命名方案保存在本机。只有确认应用到客户后，方案才进入客户现金流；使用同一参考表计算，并单独说明币种折算。</p></footer>
+    <footer className="sic-sources"><p>数据来源：e-1-toolbox-2026-08-03.xlsx，TRST / PRMESP 工作表。非保证现金价值与优惠均为演示假设，实际以正式利益说明及保单条款为准；提前退保可能产生损失。</p><p>本页为独立测算，不改动客户档案。客户现金流中的储蓄险参数请在现金流管理中填写。</p></footer>
     {expanded && <dialog className="sic-dialog" ref={dialog} onCancel={() => setExpanded(false)} onClose={() => setExpanded(false)} aria-labelledby="sic-dialog-title"><header><div><h2 id="sic-dialog-title">{INSURANCE_NAMES[product]} · 逐年明细</h2><span>修改与页面同步 · 按 Esc 关闭</span></div><button type="button" autoFocus aria-label="关闭放大表格" onClick={() => setExpanded(false)}><XIcon /></button></header>{table}</dialog>}
     {fillRequest && result && <CashFlowFillDialog label={fillRequest.field === 'extras' ? '额外提款' : '指定融资利率'} sourceYear={fillRequest.year} lastYear={result.rows.at(-1)!.year} visibleLastYear={Math.min(years, result.rows.at(-1)!.year)} value={fillRequest.inputs[fillRequest.field][fillRequest.year] ?? 0} unit={fillRequest.field === 'rates' ? '%' : result.currency + '元'} values={result.rows.map(row => ({ year: row.year, value: fillRequest.inputs[fillRequest.field][row.year] ?? 0 }))} stale={fillRequest.inputs !== p} onClose={() => setFillRequest(null)} onConfirm={confirmFill} />}
   </section>
