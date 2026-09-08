@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { calculateInsurance, defaultInsuranceInputs } from './insuranceCalculator'
-import { insuranceScenarioRows } from './insuranceScenario'
+import { insuranceScenarioRows, resolveInsuranceScenario } from './insuranceScenario'
 import { createCashFlowPlanFromCustomer, buildCashFlowProjection } from './cashFlowPlan'
 import { createCustomer, type CashFlowPlan } from '../types/domain'
 
@@ -8,6 +8,21 @@ function scenario(product: 'TRST' | 'PRMESP'): NonNullable<CashFlowPlan['insuran
   return { version: 1, model: 'workbook-2026-08-03-v1', name: 'test', product, inputs: { ...defaultInsuranceInputs(product), currency: 'RMB-U', surrenderAge: 61 }, exchangeRateToRmb: 1 }
 }
 describe('unified insurance cash flow', () => {
+  it('automatically resolves legacy options without mutating saved parameters', () => {
+    const plan = createCashFlowPlanFromCustomer(createCustomer('test'))
+    plan.savingsInsuranceAnnualPremium = 2500000
+    plan.savingsInsurancePaymentYears = 1
+    const before = JSON.stringify(plan)
+    const resolved = resolveInsuranceScenario(plan)!
+    expect(resolved.inputs.amount).toBe(500000)
+    expect(resolved.inputs.prepaid).toBe(true)
+    expect(resolved.inputs.term).toBe(5)
+    expect(insuranceScenarioRows(resolved).slice(1).every(row => row.premium === 0)).toBe(true)
+    expect(JSON.stringify(plan)).toBe(before)
+    const saved = scenario('PRMESP')
+    expect(resolveInsuranceScenario({ ...plan, insuranceScenario: saved })).toBe(saved)
+    expect(resolveInsuranceScenario({ ...plan, savingsInsuranceAnnualPremium: 0 })).toBeUndefined()
+  })
   it.each(['TRST', 'PRMESP'] as const)('reuses %s workbook cash flows and settles surrender exactly once', product => {
     const saved = scenario(product), reference = calculateInsurance(product, saved.inputs)
     const rows = insuranceScenarioRows(saved)

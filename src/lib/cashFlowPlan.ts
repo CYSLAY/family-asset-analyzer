@@ -1,8 +1,7 @@
 import { annualize } from './analysis'
-import { insuranceSelection, savingsInsuranceYear } from './savingsInsurance'
 import type { CashFlowPlan, CashFlowPlanItem, CustomerProfile } from '../types/domain'
 import { isLiquidAsset } from '../types/domain'
-import { insuranceScenarioRows } from './insuranceScenario'
+import { insuranceScenarioRows, resolveInsuranceScenario } from './insuranceScenario'
 
 export interface CashFlowProjectionRow {
   offset: number
@@ -86,7 +85,8 @@ export function buildCashFlowProjection(plan: CashFlowPlan): CashFlowProjectionR
   const rows: CashFlowProjectionRow[] = []
   let balanceWithoutReturn = plan.initialFunds
   let insuranceScenarioLiquidBalance = plan.initialFunds
-  const scenarioRows = plan.insuranceScenario ? insuranceScenarioRows(plan.insuranceScenario) : null
+  const scenario = resolveInsuranceScenario(plan)
+  const scenarioRows = scenario ? insuranceScenarioRows(scenario) : null
 
   for (let offset = 0; offset < plan.projectionYears; offset += 1) {
     const year = plan.baseYear + offset
@@ -94,8 +94,7 @@ export function buildCashFlowProjection(plan: CashFlowPlan): CashFlowProjectionR
     const expenseValues = plan.expenses.map((item) => projectedItemAmount(item, year, plan.baseYear))
     const totalIncome = sum(incomeValues)
     const totalExpenses = sum(expenseValues)
-    const { product, paymentYears } = insuranceSelection(plan)
-    const savingsInsurance = scenarioRows ? (scenarioRows[offset] ?? { premium: 0, balance: 0, irr: null, receipt: 0 }) : { ...savingsInsuranceYear(plan.savingsInsuranceAnnualPremium, offset, product, paymentYears), receipt: 0 }
+    const savingsInsurance = scenarioRows?.[offset] ?? { premium: 0, balance: 0, irr: null, receipt: 0 }
     const totalExpensesWithInsurance = totalExpenses + savingsInsurance.premium
     const annualNet = totalIncome - totalExpenses
     const annualNetWithInsurance = totalIncome - totalExpensesWithInsurance

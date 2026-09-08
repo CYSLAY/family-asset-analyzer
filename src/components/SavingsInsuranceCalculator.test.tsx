@@ -6,27 +6,15 @@ beforeEach(() => { HTMLDialogElement.prototype.showModal = function () { this.se
 
 afterEach(() => { cleanup(); sessionStorage.clear(); localStorage.clear(); vi.restoreAllMocks() })
 describe('advisor calculator editing', () => {
-  it('reopens a named snapshot after ending the draft session', () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
-    const first = render(<SavingsInsuranceCalculator advisor="qa" />)
+  it('omits the plan library while retaining calculator editing', () => {
+    localStorage.setItem('retained-plan', 'unchanged')
+    render(<SavingsInsuranceCalculator advisor="qa" />)
+    expect(screen.queryByText('我的测算方案')).toBeNull()
+    expect(screen.queryByRole('textbox', { name: '方案名称' })).toBeNull()
     const amount = screen.getByRole('textbox', { name: '每年储蓄金额' })
     fireEvent.change(amount, { target: { value: '2345678' } }); fireEvent.blur(amount)
-    fireEvent.change(screen.getByRole('textbox', { name: '方案名称' }), { target: { value: '退休方案' } })
-    fireEvent.click(screen.getByRole('button', { name: '保存为新方案' }))
-    first.unmount(); sessionStorage.clear()
-    render(<SavingsInsuranceCalculator advisor="qa" />)
-    fireEvent.click(screen.getByText('已保存方案（1）'))
-    fireEvent.click(screen.getByRole('button', { name: '打开', hidden: true }))
-    expect((screen.getByRole('textbox', { name: '每年储蓄金额' }) as HTMLInputElement).value).toBe('2345678')
-  })
-  it('does not save stale valid values when an input has an invalid draft', () => {
-    render(<SavingsInsuranceCalculator advisor="qa" />)
-    const amount = screen.getByRole('textbox', { name: '每年储蓄金额' })
-    fireEvent.change(amount, { target: { value: 'abc' } }); fireEvent.blur(amount)
-    fireEvent.change(screen.getByRole('textbox', { name: '方案名称' }), { target: { value: '无效草稿' } })
-    fireEvent.click(screen.getByRole('button', { name: '保存为新方案' }))
-    expect(screen.getByText('请先修正无效参数，再保存方案。')).toBeTruthy()
-    expect(localStorage.length).toBe(0)
+    expect((amount as HTMLInputElement).value).toBe('2345678')
+    expect(localStorage.getItem('retained-plan')).toBe('unchanged')
   })
   it('fills only rows below the selected cell and can undo', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)

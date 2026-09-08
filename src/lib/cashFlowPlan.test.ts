@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { buildCashFlowProjection, createCashFlowPlanFromCustomer, expenseCoverageBand, fillYearlyAmountsBelow, fillYearlyAmountsRange } from './cashFlowPlan'
 import { createCustomer } from '../types/domain'
+import { resolveInsuranceScenario, insuranceScenarioRows } from './insuranceScenario'
 
 describe('cash flow plan', () => {
   it('pulls existing annualized income, expenses and liquid funds', () => {
@@ -71,10 +72,10 @@ describe('cash flow plan', () => {
     const [row] = buildCashFlowProjection(plan)
     expect(row.balanceWithoutReturn).toBe(900000)
     expect(row.fundsExpenseCoverageRate).toBeCloseTo(100000 / 900000 * 100)
-    expect(row.totalExpensesWithInsurance).toBe(600000)
-    expect(row.insuranceScenarioLiquidBalance).toBe(400000)
-    expect(row.balanceWithSavingsInsurance).toBe(400000)
-    expect(row.savingsInsuranceCoverageRate).toBeCloseTo(150)
+    expect(row.totalExpensesWithInsurance).toBeCloseTo(600092.8)
+    expect(row.insuranceScenarioLiquidBalance).toBeCloseTo(399907.2)
+    expect(row.balanceWithSavingsInsurance).toBeCloseTo(399907.2)
+    expect(row.savingsInsuranceCoverageRate).toBeCloseTo(600092.8 / 399907.2 * 100)
   })
 
   it('models five savings-insurance payments and the supplied reference balance schedule', () => {
@@ -87,15 +88,16 @@ describe('cash flow plan', () => {
     plan.expenses = []
     const rows = buildCashFlowProjection(plan)
 
-    expect(rows.slice(0, 5).map((row) => row.savingsInsurancePremium)).toEqual([500000, 500000, 500000, 500000, 500000])
+    const reference = insuranceScenarioRows(resolveInsuranceScenario(plan)!)
+    rows.slice(0, 5).forEach(row => expect(row.savingsInsurancePremium).toBeCloseTo(500092.8))
     expect(rows[5].savingsInsurancePremium).toBe(0)
-    expect(rows[3].savingsInsuranceBalance).toBe(622290)
-    expect(rows[4].savingsInsuranceBalance).toBe(964294)
-    expect(rows[5].savingsInsuranceBalance).toBe(1283208)
+    expect(rows[3].savingsInsuranceBalance).toBe(reference[3].balance)
+    expect(rows[4].savingsInsuranceBalance).toBe(reference[4].balance)
+    expect(rows[5].savingsInsuranceBalance).toBe(reference[5].balance)
     expect(rows[4].balanceWithoutReturn).toBe(5000000)
-    expect(rows[4].insuranceScenarioLiquidBalance).toBe(2500000)
-    expect(rows[4].balanceWithSavingsInsurance).toBe(3464294)
-    expect(rows[5].balanceWithSavingsInsurance).toBe(3783208)
+    expect(rows[4].insuranceScenarioLiquidBalance).toBeCloseTo(5000000 - 500092.8 * 5)
+    expect(rows[4].balanceWithSavingsInsurance).toBeCloseTo(rows[4].insuranceScenarioLiquidBalance + reference[4].balance)
+    expect(rows[5].balanceWithSavingsInsurance).toBeCloseTo(rows[5].insuranceScenarioLiquidBalance + reference[5].balance)
   })
 
   it('scales policy balances with the configured annual contribution', () => {
@@ -107,8 +109,8 @@ describe('cash flow plan', () => {
     plan.incomes = []
     plan.expenses = []
     const rows = buildCashFlowProjection(plan)
-    expect(rows[3].savingsInsuranceBalance).toBe(311145)
-    expect(rows[3].totalExpensesWithInsurance).toBe(250000)
+    expect(rows[3].savingsInsuranceBalance).toBeCloseTo(311145.23784)
+    expect(rows[3].totalExpensesWithInsurance).toBeCloseTo(250046.4)
   })
 
   it('applies an edited amount only to years below the source row', () => {
@@ -126,10 +128,11 @@ describe('cash flow plan', () => {
     plan.savingsInsurancePaymentYears = 1
     plan.savingsInsuranceAnnualPremium = 950254.942
     const rows = buildCashFlowProjection(JSON.parse(JSON.stringify(plan)))
-    expect(rows[0].totalExpensesWithInsurance).toBe(1050254.942)
+    const reference = insuranceScenarioRows(resolveInsuranceScenario(plan)!)
+    expect(rows[0].totalExpensesWithInsurance).toBe(100000 + reference[0].premium)
     expect(rows[1].totalExpensesWithInsurance).toBe(100000)
     expect(rows[4].balanceWithoutReturn).toBe(2500000)
-    expect(rows[4].balanceWithSavingsInsurance).toBeCloseTo(2500000 - 950254.942 + 1018473.244152)
+    expect(rows[4].balanceWithSavingsInsurance).toBeCloseTo(2500000 - reference[0].premium + reference[4].balance)
     expect(rows[4].savingsInsuranceCoverageRate).toBeCloseTo(100000 / rows[4].balanceWithSavingsInsurance * 100)
   })
 

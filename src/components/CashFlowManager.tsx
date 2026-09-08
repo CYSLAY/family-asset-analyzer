@@ -22,7 +22,7 @@ import type { CashFlowPlan } from '../types/domain'
 import { insuranceSelection, SAVINGS_INSURANCE_PRODUCTS, type SavingsInsuranceProduct } from '../lib/savingsInsurance'
 import { applyCashFlowFill, undoCashFlowFill, type CashFlowFillUndo } from '../lib/cashFlowFill'
 import { CashFlowFillDialog } from './CashFlowFillDialog'
-import { defaultInsuranceInputs, INSURANCE_NAMES } from '../lib/insuranceCalculator'
+import { INSURANCE_NAMES } from '../lib/insuranceCalculator'
 
 interface Props {
   onOpenCustomer: () => void
@@ -160,7 +160,7 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
       </div>
       <fieldset className="cashflow-insurance-settings">
         <legend>储蓄险方案</legend>
-        {plan.insuranceScenario ? <div><strong>{INSURANCE_NAMES[plan.insuranceScenario.product]} · 完整方案</strong><p><PrivateText>{plan.insuranceScenario.name}</PrivateText> · {plan.insuranceScenario.inputs.term} 年缴费 · {plan.insuranceScenario.inputs.currency} · 折算汇率 {plan.insuranceScenario.exchangeRateToRmb}</p><p>已计入供款、提款、退保回款及融资本金；保单余额按扣除未偿贷款后的净值显示。非保证部分不代表承诺收益。</p><button className="subtle-button" onClick={() => { if (window.confirm('返回此前的简版储蓄险场景？原有简版参数仍保留，完整方案请在本机方案库中重新应用。')) updatePlan({ insuranceScenario: undefined }) }}>返回原简版场景</button></div> : <><div className="cashflow-insurance-fields">
+        {plan.insuranceScenario ? <div><strong>{INSURANCE_NAMES[plan.insuranceScenario.product]} · 完整方案</strong><p><PrivateText>{plan.insuranceScenario.name}</PrivateText> · {plan.insuranceScenario.inputs.term} 年缴费 · {plan.insuranceScenario.inputs.currency} · 折算汇率 {plan.insuranceScenario.exchangeRateToRmb}</p><p>已计入供款、提款、退保回款及融资本金；保单余额按扣除未偿贷款后的净值显示。非保证部分不代表承诺收益。</p><Field label="储蓄金额"><MoneyInput unit="元（方案币种）" value={plan.insuranceScenario.inputs.amount} onChange={value => updatePlan({ insuranceScenario: { ...plan.insuranceScenario!, inputs: { ...plan.insuranceScenario!.inputs, amount: Math.max(0, value) } } })} /></Field></div> : <><div className="cashflow-insurance-fields">
           <Field label="产品"><select aria-label="产品" value={insurance.product} onChange={(event) => {
             const product = event.target.value as SavingsInsuranceProduct
             updatePlan({ savingsInsuranceProduct: product, savingsInsurancePaymentYears: product === 'prmesp' ? 1 : insurance.paymentYears })
@@ -170,13 +170,7 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
         </div>
         <p className="cashflow-insurance-summary">{insurance.paymentYears === 1 ? '仅首年缴费' : '连续缴费 5 年'}<span>累计投入 <strong>{formatMoney(premium * insurance.paymentYears)}</strong></span></p>
         {insurance.product === 'trst' && insurance.paymentYears === 1 ? <small className="cashflow-setting-help">一次性预缴 5 年保费，金额填写首年总投入。</small> : null}
-        {premium > 0 && <button className="subtle-button" onClick={() => {
-          if (!window.confirm('切换到完整参考表模型？将按当前金额、年龄及缴费方式重新计算，费用与优惠可能使结果不同；原简版参数会保留，可随时返回。')) return
-          const product = insurance.product === 'trst' ? 'TRST' : 'PRMESP'
-          const inputs = { ...defaultInsuranceInputs(product), currency: 'RMB-U', amount: product === 'TRST' && insurance.paymentYears === 1 ? premium / 5 : premium, prepaid: product === 'TRST' && insurance.paymentYears === 1, age: Math.max(1, plan.members[0]?.baseAge ?? 41), promotion: false }
-          inputs.surrenderAge = Math.min(201, inputs.age + 55)
-          updatePlan({ insuranceScenario: { version: 1, model: 'workbook-2026-08-03-v1', name: '由简版升级的方案', product, inputs, exchangeRateToRmb: 1 } })
-        }}>确认升级为完整参考模型</button>}</>}
+        <small className="cashflow-setting-help">采用完整参考模型，实际供款及保单价值包含模型费用。非保证部分不代表承诺收益。</small></>}
       </fieldset>
       <div className="cashflow-member-grid">
         {plan.members.length ? plan.members.map((member, index) => <div className="cashflow-member-field" key={member.id}><span><PrivateText>{member.name || `家庭成员 ${index + 1}`}</PrivateText></span><label><PrivateControl><input type="number" min="0" max="110" value={member.baseAge ?? ''} placeholder="年龄" onChange={(event) => updatePlan({ members: plan.members.map((item) => item.id === member.id ? { ...item, baseAge: nullableNumber(event.target.value) } : item) })} /></PrivateControl><em>岁</em></label></div>) : <p className="cashflow-inline-note">家庭成员尚未填写出生日期，可先在客户资料中补充，也可直接使用下面的现金流表。</p>}

@@ -1,5 +1,19 @@
-import { calculateInsurance } from './insuranceCalculator'
+import { calculateInsurance, defaultInsuranceInputs } from './insuranceCalculator'
+import { insuranceSelection } from './savingsInsurance'
 import type { CashFlowPlan } from '../types/domain'
+
+// Resolve legacy parameters without rewriting saved customer documents on page load.
+export function resolveInsuranceScenario(plan: CashFlowPlan): CashFlowPlan['insuranceScenario'] {
+  if (plan.insuranceScenario) return plan.insuranceScenario
+  const premium = plan.savingsInsuranceAnnualPremium ?? 0
+  if (premium <= 0) return undefined
+  const selection = insuranceSelection(plan)
+  const product = selection.product === 'trst' ? 'TRST' : 'PRMESP'
+  const prepaid = product === 'TRST' && selection.paymentYears === 1
+  const age = Math.max(1, plan.members[0]?.baseAge ?? 41)
+  const inputs = { ...defaultInsuranceInputs(product), currency: 'RMB-U', amount: prepaid ? premium / 5 : premium, prepaid, age, surrenderAge: Math.min(201, age + 55), promotion: false }
+  return { version: 1, model: 'workbook-2026-08-03-v1', name: '储蓄险方案', product, inputs, exchangeRateToRmb: 1 }
+}
 
 export function insuranceScenarioRows(scenario: NonNullable<CashFlowPlan['insuranceScenario']>) {
   if (scenario.version !== 1 || scenario.model !== 'workbook-2026-08-03-v1') throw Error('储蓄险模型版本不受支持，请重新选择方案')

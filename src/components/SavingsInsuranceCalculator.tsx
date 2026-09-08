@@ -3,7 +3,6 @@ import { ArrowDownIcon, ArrowsOutIcon, ArrowCounterClockwiseIcon, XIcon } from '
 import { calculateInsurance, CURRENCIES, defaultInsuranceInputs, INSURANCE_NAMES, WORKBOOK_FX,
   type InsuranceInputs, type InsuranceProduct } from '../lib/insuranceCalculator'
 import './SavingsInsuranceCalculator.css'
-import { InsurancePlanLibrary } from './InsurancePlanLibrary'
 import { CashFlowFillDialog } from './CashFlowFillDialog'
 
 type Drafts = Record<InsuranceProduct, InsuranceInputs>
@@ -22,7 +21,6 @@ export function SavingsInsuranceCalculator({ advisor }: { advisor: string }) {
     } catch { return makeDefaults() }
   })
   const [product, setProduct] = useState<InsuranceProduct>('TRST')
-  const [loadedRevision, setLoadedRevision] = useState(0)
   const [years, setYears] = useState(10)
   const [expanded, setExpanded] = useState(false)
   const [guarantees, setGuarantees] = useState(true)
@@ -144,13 +142,8 @@ export function SavingsInsuranceCalculator({ advisor }: { advisor: string }) {
     <p className="sic-table-foot">显示第 0–{visibleRows.at(-1)?.year ?? 0} 年，共 {visibleRows.length} 行。IRR 依原表口径显示；“—”表示原表尚未显示回报率，并非保证收益为零。</p>
   </>
 
-  return <section key={loadedRevision} ref={workspace} className="sic-workspace" aria-labelledby="sic-title">
+  return <section ref={workspace} className="sic-workspace" aria-labelledby="sic-title">
     <header className="sic-heading"><div><h1 id="sic-title">储蓄险计算</h1><p>设置缴费与提款方案，查看逐年现金价值及回报。</p></div><button className="sic-reset" type="button" onClick={() => { if (window.confirm('恢复当前产品的参考参数？只清除本次测算设置，不影响客户资料。')) { update(makeDefaults()[product]); setActive(null); setUndo(null); setNotice('已恢复参考参数。') } }}>恢复参考参数</button></header>
-    <InsurancePlanLibrary key={advisor} advisor={advisor} product={product} inputs={p} valid={Boolean(result)} hasInvalidDraft={() => Boolean(workspace.current?.querySelector('[aria-invalid="true"]'))} onLoad={saved => {
-      setDrafts(current => ({ ...current, [saved.product]: structuredClone(saved.inputs) }))
-      switchProduct(saved.product)
-      setLoadedRevision(revision => revision + 1)
-    }} />
     <div className="sic-product-tabs" role="group" aria-label="选择储蓄险产品">{(['TRST', 'PRMESP'] as const).map(id => <button type="button" key={id} aria-pressed={product === id} onClick={() => switchProduct(id)}><strong>{INSURANCE_NAMES[id]}</strong><span>{id === 'TRST' ? '3 年 / 5 年缴费，可选预缴' : '1 年缴费，可设融资'}</span></button>)}</div>
     <section className="sic-panel" aria-labelledby="sic-base-title"><h2 id="sic-base-title">投保与缴费</h2><div className="sic-fields">
       {numberField('age', '投保翌年岁', '岁', '沿用原表 ANB 年龄口径')}
