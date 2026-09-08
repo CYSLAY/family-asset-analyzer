@@ -165,6 +165,14 @@ export class InsuranceFormulaEngine {
       case 'OR': return node.args.some((_, i) => Boolean(this.scalar(value(i))))
       case 'NOT': return !this.scalar(value(0))
       case 'ISERROR': try { this.scalar(value(0)); return false } catch { return true }
+      case 'IFERROR': try { return this.scalar(value(0)) } catch { return value(1) }
+      case 'MATCH': {
+        if (!node.args[2] || num(2) !== 0) throw Error('MATCH 仅支持精确匹配')
+        const sought = this.scalar(value(0))
+        const index = this.flatten(value(1)).findIndex(v => typeof v === typeof sought && String(v).toLowerCase() === String(sought).toLowerCase())
+        if (index < 0) throw Error('MATCH 无对应数据')
+        return index + 1
+      }
       case 'LOWER': return str(0).toLowerCase()
       case 'TRIM': return str(0).trim().replace(/ +/g, ' ')
       case 'FIND': { const index = str(1).indexOf(str(0)); if (index < 0) throw Error('未找到文本'); return index + 1 }

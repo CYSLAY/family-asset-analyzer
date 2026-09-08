@@ -1,0 +1,28 @@
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright')
+const browser = await chromium.launch({ headless: true, channel: 'chrome' })
+try {
+  const page = await browser.newPage()
+  const errors = []
+  page.on('pageerror', e => errors.push(e.message))
+  await page.route('**/*', route => route.request().url().startsWith('http://127.0.0.1:44002/') ? route.continue() : route.abort())
+  for (const width of [390, 834, 1440]) {
+    await page.setViewportSize({ width, height: 1000 })
+    await page.goto('http://127.0.0.1:44002/?preview')
+    const nav = page.locator(width < 768 ? '.mobile-nav' : '.sidebar .nav-list')
+    await nav.getByRole('button', { name: '医疗保障计算' }).click()
+    await page.getByLabel('投保翌年岁（ANB）').fill('41')
+    await page.getByLabel('投保额（USD）').first().fill('100000')
+    await page.getByText('首年保费合计', { exact: true }).waitFor()
+    if (await page.locator('.medical-calculator details[open]').count()) throw Error('Details should initially collapse')
+    await page.screenshot({ path: `/private/tmp/medical-${width}.png`, fullPage: true })
+    await page.getByText('查看年度明细', { exact: true }).first().click()
+    await page.getByRole('region', { name: '保险年度明细表', exact: true }).waitFor()
+    await page.getByRole('region', { name: '保险年度明细表', exact: true }).locator('tbody tr').first().waitFor()
+    const dims = await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth }))
+    if (dims.scroll > width + 1) throw Error(`Overflow at ${width}: ${dims.scroll}`)
+    await page.getByRole('region', { name: '保险年度明细表', exact: true }).screenshot({ path: `/private/tmp/medical-table-${width}.png` })
+    await page.getByText('查看年度明细', { exact: true }).first().click()
+    console.log(JSON.stringify({ width, overflow: false, details: 'passed', navigation: 'passed' }))
+  }
+  if (errors.length) throw Error(errors.join('\n'))
+} finally { await browser.close() }

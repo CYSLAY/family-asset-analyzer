@@ -1,0 +1,36 @@
+// @vitest-environment jsdom
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { MedicalProtectionCalculator } from './MedicalProtectionCalculator'
+beforeEach(() => sessionStorage.clear())
+afterEach(() => { cleanup(); vi.restoreAllMocks() })
+it('keeps cards independent, validates the whole combination and collapses detail', () => {
+  render(<MedicalProtectionCalculator advisor="test" />)
+  fireEvent.change(screen.getByLabelText('投保翌年岁（ANB）'), { target: { value: '41' } })
+  fireEvent.change(screen.getByLabelText('投保额（USD）'), { target: { value: '100000' } })
+  expect(document.querySelector('details')?.open).toBe(false)
+  fireEvent.click(screen.getByRole('button', { name: '新增保险' }))
+  expect(screen.getByText('完善全部保险信息后显示合计，不计入不完整测算。')).toBeTruthy()
+  const second = within(screen.getByLabelText('保险 2'))
+  fireEvent.change(second.getByLabelText('保险产品'), { target: { value: 'CIE3' } })
+  expect((second.getByLabelText('供款期') as HTMLSelectElement).value).toBe('10')
+  expect((within(screen.getByLabelText('保险 1')).getByLabelText('供款期') as HTMLSelectElement).value).toBe('5')
+  fireEvent.change(second.getByLabelText('投保额（USD）'), { target: { value: '200000' } })
+  expect(screen.getByText('首年保费合计')).toBeTruthy()
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+  fireEvent.click(second.getByRole('button', { name: '移除保险 2' }))
+  expect(screen.getByLabelText('保险 2')).toBeTruthy()
+  confirm.mockReturnValue(true)
+  fireEvent.click(second.getByRole('button', { name: '移除保险 2' }))
+  expect(screen.queryByLabelText('保险 2')).toBeNull()
+})
+it('preserves unreadable draft and isolates advisors', () => {
+  sessionStorage.setItem('jojo-medical-v1:broken', 'invalid')
+  render(<MedicalProtectionCalculator advisor="broken" />)
+  fireEvent.change(screen.getByLabelText('投保翌年岁（ANB）'), { target: { value: '41' } })
+  expect(sessionStorage.getItem('jojo-medical-v1:broken')).toBe('invalid')
+  expect(screen.getByRole('alert').textContent).toContain('原记录未被覆盖')
+  cleanup()
+  render(<MedicalProtectionCalculator advisor="other" />)
+  expect((screen.getByLabelText('投保翌年岁（ANB）') as HTMLInputElement).value).toBe('')
+})

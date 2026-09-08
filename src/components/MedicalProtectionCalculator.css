@@ -1,0 +1,50 @@
+.medical-calculator { display: grid; gap: 24px; min-width: 0; }
+.medical-calculator h1 { margin: 0 0 12px; font-size: clamp(26px, 3vw, 36px); }
+.medical-calculator header p { margin: 0; color: var(--muted, #666); line-height: 1.6; }
+.medical-panel { padding: 24px; min-width: 0; border: 1px solid var(--line, #ddd); border-radius: 16px; background: #fff; }
+.medical-panel h2 { font-size: 20px; margin: 0 0 20px; }
+.medical-panel h2 small { font-size: 13px; color: #666; font-weight: 400; margin-left: 8px; }
+.medical-fields { display: grid; grid-template-columns: minmax(200px,1.4fr) minmax(120px,1fr) minmax(100px,.7fr) minmax(170px,1.1fr); gap: 16px; }
+.medical-fields label { display: grid; align-content: start; gap: 8px; min-width: 0; font-size: 14px; font-weight: 600; }
+.medical-calculator input, .medical-calculator select { width: 100%; min-width: 0; min-height: 44px; border: 1px solid #ccc; border-radius: 8px; padding: 10px 12px; color: #222; background: #fff; font: inherit; font-size: 16px; }
+.medical-calculator input[aria-invalid=true] { border-color: #b31b2b; }
+.medical-calculator :focus-visible { outline: 3px solid #a9142a; outline-offset: 3px; }
+.medical-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.medical-card-heading h2 { margin: 0; }
+.medical-card-heading button, .medical-add { display: inline-flex; gap: 8px; align-items: center; justify-content: center; min-height: 44px; padding: 8px 14px; border: 1px solid var(--line,#ddd); border-radius: 8px; background: #fff; color: #a9142a; font: inherit; cursor: pointer; }
+.medical-add { justify-self: start; }
+.medical-add:disabled { opacity: .6; cursor: not-allowed; }
+.medical-calculator button:not(:disabled):hover { background: #fff1f3; border-color: #ba5260; }
+.medical-calculator button, .medical-calculator summary { touch-action: manipulation; }
+.medical-calculator tbody tr { content-visibility: auto; contain-intrinsic-size: auto 42px; }
+.medical-totals { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; margin-top: 24px; padding: 18px 0; border-top: 1px solid #eee; }
+.medical-totals div { display: grid; gap: 8px; min-width: 0; }
+.medical-totals span { font-size: 13px; color: #666; }
+.medical-totals strong { font-size: clamp(20px,2.2vw,28px); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.medical-combined { border-color: #e5b9bf; background: #fff9fa; }
+.medical-combined .medical-totals strong { color: #aa192b; }
+.medical-note { color: #6b6263; font-size: 13px; line-height: 1.8; margin: 14px 0 0; }
+.medical-calculator footer { margin: 0; }
+.medical-pending { margin: 20px 0 0; color: #766466; font-size: 14px; }
+.medical-error { color: #a9142a; background: #fff1f3; padding: 14px; border-radius: 8px; }
+.medical-calculator details { margin-top: 12px; }
+.medical-calculator summary { padding: 12px 0; min-height: 44px; color: #8f2332; cursor: pointer; font-size: 14px; font-weight: 600; }
+.medical-period { display: flex; align-items: center; gap: 12px; font-size: 14px; padding: 8px 0 16px; }
+.medical-period select { width: auto; }
+.medical-table-scroll { max-width: 100%; overflow: auto; max-height: 540px; border: 1px solid #e8e2e3; border-radius: 8px; background: #fff; }
+.medical-calculator table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.medical-calculator caption { text-align: left; padding: 12px; font-size: 12px; color: #666; white-space: normal; }
+.medical-calculator th, .medical-calculator td { padding: 12px; text-align: right; border-bottom: 1px solid #eee; }
+.medical-calculator thead th { background: #f6f3f4; position: sticky; top: 0; font-weight: 600; }
+.medical-calculator tbody th { background: #faf8f8; }
+.medical-fx { grid-template-columns: repeat(2,minmax(0,1fr)); max-width: 520px; margin-top: 8px; }
+@media (max-width: 1200px) { .medical-fields { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 600px) {
+  .medical-calculator { gap: 16px; }
+  .medical-panel { padding: 16px; border-radius: 12px; }
+  .medical-fields { gap: 16px 12px; }
+  .medical-fields label:first-child, .medical-fields label:last-child { grid-column: 1/-1; }
+  .medical-fx label { grid-column: 1/-1; }
+  .medical-totals { gap: 12px; }
+  .medical-panel h2 { font-size: 18px; }
+}

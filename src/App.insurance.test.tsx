@@ -22,6 +22,7 @@ describe('insurance tool visibility', () => {
     useCustomerStore.setState({ initialized: true })
     render(<App />)
     expect(within(screen.getByLabelText('主导航')).getByRole('button', { name: '储蓄险计算' })).toBeTruthy()
+    expect(within(screen.getByLabelText('主导航')).getByRole('button', { name: '医疗保障计算' })).toBeTruthy()
   })
   it('never includes the tool in customer self-service navigation', async () => {
     useCustomerStore.setState({ initialized: true })
@@ -29,5 +30,6 @@ describe('insurance tool visibility', () => {
     fireEvent.click(screen.getByRole('button', { name: '客户自测测试入口' }))
     await waitFor(() => expect(screen.getByText('资料填写区域')).toBeTruthy())
     expect(screen.queryByRole('button', { name: '储蓄险计算' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '医疗保障计算' })).toBeNull()
   })
 })

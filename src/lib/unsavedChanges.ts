@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 
 const pending = new Set<symbol>()
 export function confirmLeavingUnsaved() {
-  return pending.size === 0 || window.confirm('还有未保存的名称或备注。离开后这些修改将丢失，是否继续？')
+  return pending.size === 0 || window.confirm('还有未保存的修改。离开后这些修改将丢失，是否继续？')
 }
 export function useUnsavedChanges(dirty: boolean) {
   useEffect(() => {
