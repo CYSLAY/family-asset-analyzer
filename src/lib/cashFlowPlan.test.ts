@@ -116,6 +116,23 @@ describe('cash flow plan', () => {
     expect(amounts).toEqual({ '2026': 100, '2027': 200, '2028': 900, '2029': 900 })
   })
 
+  it('includes a single PRMESP payment only in the insurance scenario and preserves selection on JSON reload', () => {
+    const plan = createCashFlowPlanFromCustomer(createCustomer('测试'), 2026)
+    plan.projectionYears = 6
+    plan.initialFunds = 3000000
+    plan.incomes = []
+    plan.expenses = [{ id: 'expense', label: '生活支出', annualAmount: 100000, growthRate: 0, startYear: 2026, endYear: 2031 }]
+    plan.savingsInsuranceProduct = 'prmesp'
+    plan.savingsInsurancePaymentYears = 1
+    plan.savingsInsuranceAnnualPremium = 950254.942
+    const rows = buildCashFlowProjection(JSON.parse(JSON.stringify(plan)))
+    expect(rows[0].totalExpensesWithInsurance).toBe(1050254.942)
+    expect(rows[1].totalExpensesWithInsurance).toBe(100000)
+    expect(rows[4].balanceWithoutReturn).toBe(2500000)
+    expect(rows[4].balanceWithSavingsInsurance).toBeCloseTo(2500000 - 950254.942 + 1018473.244152)
+    expect(rows[4].savingsInsuranceCoverageRate).toBeCloseTo(100000 / rows[4].balanceWithSavingsInsurance * 100)
+  })
+
   it('fills only the dragged range below the source row', () => {
     const amounts = fillYearlyAmountsRange({ '2026': 100, '2027': 200, '2030': 500 }, 2027, 2029, 900)
     expect(amounts).toEqual({ '2026': 100, '2027': 200, '2028': 900, '2029': 900, '2030': 500 })

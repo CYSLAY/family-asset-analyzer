@@ -56,6 +56,8 @@ export interface CashFlowPlan {
   annualReturnRate: number
   initialFunds: number
   savingsInsuranceAnnualPremium?: number
+  savingsInsuranceProduct?: 'trst' | 'prmesp'
+  savingsInsurancePaymentYears?: 1 | 5
   members: CashFlowPlanMember[]
   incomes: CashFlowPlanItem[]
   expenses: CashFlowPlanItem[]

@@ -1,3 +1,19 @@
+import { PRMESP_REFERENCE_BALANCES, PRMESP_REFERENCE_PREMIUM, TRST_PREPAID_REFERENCE_BALANCES, TRST_PREPAID_REFERENCE_PREMIUM } from './savingsInsuranceReferences'
+
+export type SavingsInsuranceProduct = 'trst' | 'prmesp'
+export type SavingsInsurancePaymentYears = 1 | 5
+
+export const SAVINGS_INSURANCE_PRODUCTS = {
+  trst: { name: '信守明天', paymentYears: [1, 5] },
+  prmesp: { name: '世誉财富', paymentYears: [1] },
+} as const
+
+export function insuranceSelection(plan: { savingsInsuranceProduct?: SavingsInsuranceProduct; savingsInsurancePaymentYears?: SavingsInsurancePaymentYears }) {
+  const product = plan.savingsInsuranceProduct === 'prmesp' ? 'prmesp' : 'trst'
+  const paymentYears = product === 'prmesp' || plan.savingsInsurancePaymentYears === 1 ? 1 : 5
+  return { product, paymentYears, name: SAVINGS_INSURANCE_PRODUCTS[product].name } as const
+}
+
 export const SAVINGS_INSURANCE_REFERENCE_ANNUAL_PREMIUM = 500000
 export const SAVINGS_INSURANCE_PAYMENT_YEARS = 5
 
@@ -24,9 +40,23 @@ export interface SavingsInsuranceYear {
   irr: number | null
 }
 
-export function savingsInsuranceYear(annualPremium: number | undefined, offset: number): SavingsInsuranceYear {
+export function savingsInsuranceYear(annualPremium: number | undefined, offset: number, product: SavingsInsuranceProduct = 'trst', paymentYears: SavingsInsurancePaymentYears = 5): SavingsInsuranceYear {
   const premiumAmount = Math.max(0, Number.isFinite(annualPremium) ? Number(annualPremium) : 0)
   if (premiumAmount === 0 || offset < 0) return { premium: 0, balance: 0, irr: null }
+  if (product === 'prmesp' || paymentYears === 1) {
+    const referencePremium = product === 'prmesp' ? PRMESP_REFERENCE_PREMIUM : TRST_PREPAID_REFERENCE_PREMIUM
+    const balances = product === 'prmesp' ? PRMESP_REFERENCE_BALANCES : TRST_PREPAID_REFERENCE_BALANCES
+    const referenceBalance = balances[offset] ?? 0
+    return {
+      premium: offset === 0 ? premiumAmount : 0,
+      balance: referenceBalance / referencePremium * premiumAmount,
+      // One initial payment, no withdrawals. Matches H69:H115; the source
+      // suppresses non-positive IRRs. Continue the same equation past year 50.
+      irr: offset > 0 && referenceBalance > referencePremium
+        ? (Math.pow(referenceBalance / referencePremium, 1 / offset) - 1) * 100
+        : null,
+    }
+  }
   const scale = premiumAmount / SAVINGS_INSURANCE_REFERENCE_ANNUAL_PREMIUM
   const referenceBalance = referenceBalances[offset] ?? 0
   return {

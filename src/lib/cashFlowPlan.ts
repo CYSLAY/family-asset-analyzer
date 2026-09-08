@@ -1,5 +1,5 @@
 import { annualize } from './analysis'
-import { savingsInsuranceYear } from './savingsInsurance'
+import { insuranceSelection, savingsInsuranceYear } from './savingsInsurance'
 import type { CashFlowPlan, CashFlowPlanItem, CustomerProfile } from '../types/domain'
 
 export interface CashFlowProjectionRow {
@@ -81,7 +81,8 @@ export function buildCashFlowProjection(plan: CashFlowPlan): CashFlowProjectionR
     const expenseValues = plan.expenses.map((item) => projectedItemAmount(item, year, plan.baseYear))
     const totalIncome = sum(incomeValues)
     const totalExpenses = sum(expenseValues)
-    const savingsInsurance = savingsInsuranceYear(plan.savingsInsuranceAnnualPremium, offset)
+    const { product, paymentYears } = insuranceSelection(plan)
+    const savingsInsurance = savingsInsuranceYear(plan.savingsInsuranceAnnualPremium, offset, product, paymentYears)
     const totalExpensesWithInsurance = totalExpenses + savingsInsurance.premium
     const annualNet = totalIncome - totalExpenses
     const annualNetWithInsurance = totalIncome - totalExpensesWithInsurance
