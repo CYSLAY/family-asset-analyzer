@@ -3,8 +3,30 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SavingsInsuranceCalculator } from './SavingsInsuranceCalculator'
 
-afterEach(() => { cleanup(); sessionStorage.clear(); vi.restoreAllMocks() })
+afterEach(() => { cleanup(); sessionStorage.clear(); localStorage.clear(); vi.restoreAllMocks() })
 describe('advisor calculator editing', () => {
+  it('reopens a named snapshot after ending the draft session', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const first = render(<SavingsInsuranceCalculator advisor="qa" />)
+    const amount = screen.getByRole('textbox', { name: '每年储蓄金额' })
+    fireEvent.change(amount, { target: { value: '2345678' } }); fireEvent.blur(amount)
+    fireEvent.change(screen.getByRole('textbox', { name: '方案名称' }), { target: { value: '退休方案' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存为新方案' }))
+    first.unmount(); sessionStorage.clear()
+    render(<SavingsInsuranceCalculator advisor="qa" />)
+    fireEvent.click(screen.getByText('已保存方案（1）'))
+    fireEvent.click(screen.getByRole('button', { name: '打开', hidden: true }))
+    expect((screen.getByRole('textbox', { name: '每年储蓄金额' }) as HTMLInputElement).value).toBe('2345678')
+  })
+  it('does not save stale valid values when an input has an invalid draft', () => {
+    render(<SavingsInsuranceCalculator advisor="qa" />)
+    const amount = screen.getByRole('textbox', { name: '每年储蓄金额' })
+    fireEvent.change(amount, { target: { value: 'abc' } }); fireEvent.blur(amount)
+    fireEvent.change(screen.getByRole('textbox', { name: '方案名称' }), { target: { value: '无效草稿' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存为新方案' }))
+    expect(screen.getByText('请先修正无效参数，再保存方案。')).toBeTruthy()
+    expect(localStorage.length).toBe(0)
+  })
   it('fills only rows below the selected cell and can undo', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     render(<SavingsInsuranceCalculator advisor="qa" />)

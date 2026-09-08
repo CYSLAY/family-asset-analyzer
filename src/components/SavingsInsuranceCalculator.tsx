@@ -3,6 +3,7 @@ import { ArrowDownIcon, ArrowsOutIcon, ArrowCounterClockwiseIcon, XIcon } from '
 import { calculateInsurance, CURRENCIES, defaultInsuranceInputs, INSURANCE_NAMES, WORKBOOK_FX,
   type InsuranceInputs, type InsuranceProduct } from '../lib/insuranceCalculator'
 import './SavingsInsuranceCalculator.css'
+import { InsurancePlanLibrary } from './InsurancePlanLibrary'
 
 type Drafts = Record<InsuranceProduct, InsuranceInputs>
 const money = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits: 2 })
@@ -20,6 +21,7 @@ export function SavingsInsuranceCalculator({ advisor }: { advisor: string }) {
     } catch { return makeDefaults() }
   })
   const [product, setProduct] = useState<InsuranceProduct>('TRST')
+  const [loadedRevision, setLoadedRevision] = useState(0)
   const [years, setYears] = useState(10)
   const [expanded, setExpanded] = useState(false)
   const [guarantees, setGuarantees] = useState(true)
@@ -30,6 +32,7 @@ export function SavingsInsuranceCalculator({ advisor }: { advisor: string }) {
   const [previousInputs, setPreviousInputs] = useState<InsuranceInputs | null>(null)
   const [notice, setNotice] = useState('')
   const dialog = useRef<HTMLDialogElement>(null)
+  const workspace = useRef<HTMLElement>(null)
   const p = drafts[product]
   const outcome = useMemo(() => {
     try { return { result: calculateInsurance(product, p), error: '' } }
@@ -128,8 +131,13 @@ export function SavingsInsuranceCalculator({ advisor }: { advisor: string }) {
     <p className="sic-table-foot">显示第 0–{visibleRows.at(-1)?.year ?? 0} 年，共 {visibleRows.length} 行。IRR 依原表口径显示；“—”表示原表尚未显示回报率，并非保证收益为零。</p>
   </>
 
-  return <section className="sic-workspace" aria-labelledby="sic-title">
+  return <section key={loadedRevision} ref={workspace} className="sic-workspace" aria-labelledby="sic-title">
     <header className="sic-heading"><div><h1 id="sic-title">储蓄险计算</h1><p>设置缴费与提款方案，查看逐年现金价值及回报。</p></div><button className="sic-reset" type="button" onClick={() => { if (window.confirm('恢复当前产品的参考参数？只清除本次测算设置，不影响客户资料。')) { update(makeDefaults()[product]); setActive(null); setUndo(null); setNotice('已恢复参考参数。') } }}>恢复参考参数</button></header>
+    <InsurancePlanLibrary key={advisor} advisor={advisor} product={product} inputs={p} valid={Boolean(result)} hasInvalidDraft={() => Boolean(workspace.current?.querySelector('[aria-invalid="true"]'))} onLoad={saved => {
+      setDrafts(current => ({ ...current, [saved.product]: structuredClone(saved.inputs) }))
+      switchProduct(saved.product)
+      setLoadedRevision(revision => revision + 1)
+    }} />
     <div className="sic-product-tabs" role="group" aria-label="选择储蓄险产品">{(['TRST', 'PRMESP'] as const).map(id => <button type="button" key={id} aria-pressed={product === id} onClick={() => switchProduct(id)}><strong>{INSURANCE_NAMES[id]}</strong><span>{id === 'TRST' ? '3 年 / 5 年缴费，可选预缴' : '1 年缴费，可设融资'}</span></button>)}</div>
     <section className="sic-panel" aria-labelledby="sic-base-title"><h2 id="sic-base-title">投保与缴费</h2><div className="sic-fields">
       {numberField('age', '投保翌年岁', '岁', '沿用原表 ANB 年龄口径')}
@@ -171,7 +179,7 @@ export function SavingsInsuranceCalculator({ advisor }: { advisor: string }) {
       <section className="sic-panel sic-table-panel"><header><h2>逐年测算明细</h2><button type="button" onClick={() => setExpanded(true)}><ArrowsOutIcon />放大表格</button></header>{!expanded && table}</section>
     </>}
     <p className="sic-notice" role="status">{notice}</p>
-    <footer className="sic-sources"><p>数据来源：e-1-toolbox-2026-08-03.xlsx，TRST / PRMESP 工作表。非保证现金价值与优惠均为演示假设，实际以正式利益说明及保单条款为准；提前退保可能产生损失。</p><p>参数仅在本浏览器会话暂存，不写入客户档案，不上传云端。与现金流管理中的储蓄险场景分别计算。</p></footer>
+    <footer className="sic-sources"><p>数据来源：e-1-toolbox-2026-08-03.xlsx，TRST / PRMESP 工作表。非保证现金价值与优惠均为演示假设，实际以正式利益说明及保单条款为准；提前退保可能产生损失。</p><p>当前草稿在浏览器会话暂存；命名保存的方案保留在本机，不写入客户档案、不上传云端。与现金流管理中的储蓄险场景分别计算。</p></footer>
     {expanded && <dialog className="sic-dialog" ref={dialog} onCancel={() => setExpanded(false)} onClose={() => setExpanded(false)} aria-labelledby="sic-dialog-title"><header><div><h2 id="sic-dialog-title">{INSURANCE_NAMES[product]} · 逐年明细</h2><span>修改与页面同步 · 按 Esc 关闭</span></div><button type="button" autoFocus aria-label="关闭放大表格" onClick={() => setExpanded(false)}><XIcon /></button></header>{table}</dialog>}
   </section>
 }

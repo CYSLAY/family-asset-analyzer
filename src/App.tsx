@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { confirmLeavingUnsaved } from './lib/unsavedChanges'
 import {
   ChartDonutIcon,
   ChartLineUpIcon,
@@ -116,6 +117,7 @@ export function App() {
   if (selfService && !publicReady) return <main className="public-loading"><span /><strong>正在准备您的家庭财务档案</strong><p>资料只会显示在您的当前填写空间中。</p></main>
 
   function openMainView(next: AppView) {
+    if (next !== view && !confirmLeavingUnsaved()) return
     if (selfService && next === 'insurance') return
     if (next === 'customers' && !selfService) selectCustomer('')
     if ((next === 'analysis' || next === 'cashflow') && selfService && (!selectedCustomer || !selectedCustomer.primaryContactName.trim())) return
@@ -128,6 +130,7 @@ export function App() {
   }
 
   function exitWorkspace() {
+    if (!confirmLeavingUnsaved()) return
     if (workspaceMode === 'admin') {
       clearAccessUser()
       setAccessUser(null)
@@ -184,7 +187,7 @@ export function App() {
         {view === 'intake' ? <IntakeWorkspace initialView={intakeStartView} selfService={selfService} onOpenReport={openReport} onOpenCustomers={() => { if (!selfService) { selectCustomer(''); setView('customers') } }} /> : null}
         {view === 'customers' && !selfService ? <CustomerDirectory onStartIntake={() => { setIntakeStartView('overview'); setView('intake') }} onOpenReport={() => setView('analysis')} onOpenCashFlow={() => setView('cashflow')} /> : null}
         {view === 'cashflow' ? <CashFlowManager selfService={selfService} onOpenCustomer={() => { setIntakeStartView('overview'); setView('intake') }} /> : null}
-        {view === 'insurance' && !selfService ? <Suspense fallback={<div role="status">正在加载储蓄险计算工具…</div>}><SavingsInsuranceCalculator advisor={accessUser ?? 'advisor'} /></Suspense> : null}
+        {view === 'insurance' && !selfService ? <Suspense fallback={<div role="status">正在加载储蓄险计算工具…</div>}><SavingsInsuranceCalculator key={accessUser ?? 'advisor'} advisor={accessUser ?? 'advisor'} /></Suspense> : null}
         {view === 'analysis' ? <Suspense fallback={<div className="report-skeleton" aria-label="正在生成分析报告"><span /><span /><span /></div>}><AnalysisDashboard onChooseCustomer={() => { if (selfService) { setIntakeStartView('overview'); setView('intake') } else { selectCustomer(''); setView('customers') } }} onOpenIntake={(target) => { setIntakeStartView(target); setView('intake') }} onOpenCashFlow={() => setView('cashflow')} /></Suspense> : null}
       </div>
     </main>

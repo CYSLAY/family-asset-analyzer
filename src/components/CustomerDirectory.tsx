@@ -17,6 +17,7 @@ import { createClientInvitation, deletePendingClientInvitation, invitationAccess
 import { buildCustomerDirectoryView, buildSelfServiceDirectoryItems, paginateSelfServiceDirectoryItems } from '../lib/customerDirectory'
 import { useCustomerStore } from '../stores/customerStore'
 import { customerAvatarInitial, PrivateControl, PrivateText } from '../lib/privacy'
+import { confirmLeavingUnsaved, useUnsavedChanges } from '../lib/unsavedChanges'
 
 interface CustomerDirectoryProps {
   onStartIntake: () => void
@@ -48,6 +49,8 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
   const [savingInvitation, setSavingInvitation] = useState('')
   const [copiedInvitation, setCopiedInvitation] = useState('')
   const [invitationError, setInvitationError] = useState('')
+  const unsavedNotes = Boolean(newName.trim() || invitationRecipient.trim() || invitations.some(invitation => recipientDrafts[invitation.code] !== undefined && recipientDrafts[invitation.code].trim() !== invitation.recipientName))
+  useUnsavedChanges(unsavedNotes)
 
   const directoryView = useMemo(() => buildCustomerDirectoryView(customers, search, advisorPage), [advisorPage, customers, search])
   const { advisorCustomers, advisorPageCount, advisorPage: currentAdvisorPage, displayedAdvisorCustomers } = directoryView
@@ -188,7 +191,7 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
           <header className="customer-source-heading"><div><span className="customer-source-mark advisor" /> <strong>顾问录入</strong><p>由您在管理工作区建立和维护的客户档案</p></div><span>{advisorCustomers.length} 份档案</span></header>
           {displayedAdvisorCustomers.length ? <div className="customer-list">
             {displayedAdvisorCustomers.map((customer) => <article className="customer-row advisor-customer-row" key={customer.id}>
-              <button className="customer-main" type="button" onClick={() => { selectCustomer(customer.id); onStartIntake() }}>
+              <button className="customer-main" type="button" onClick={() => { if (!confirmLeavingUnsaved()) return; selectCustomer(customer.id); onStartIntake() }}>
                 <span className="customer-avatar" aria-label="客户姓名首字">{customerAvatarInitial(customer.primaryContactName, customer.householdName)}</span>
                 <span><strong><PrivateText>{customer.householdName}</PrivateText></strong><small><PrivateText>{customer.city || '城市待补充'}</PrivateText>　{customer.members.length} 位成员　{intakeCompletion(customer)}% 已填写</small></span>
               </button>
@@ -269,7 +272,7 @@ interface CustomerRowActionsProps {
 
 function CustomerRowActions({ customer, onSelect, onStartIntake, onOpenReport, onOpenCashFlow, onDelete, onDeleteInvitation }: CustomerRowActionsProps) {
   const open = (next: () => void) => {
-    if (!customer) return
+    if (!customer || !confirmLeavingUnsaved()) return
     onSelect(customer.id)
     next()
   }

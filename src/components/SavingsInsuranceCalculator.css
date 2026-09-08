@@ -10,6 +10,20 @@
 .sic-product-tabs strong { font-size: 18px; }.sic-product-tabs span { font-size: 12px; color: var(--ink-muted); }
 .sic-panel { min-width: 0; padding: 22px; background: #fff; border: 1px solid var(--line); border-radius: 12px; }
 .sic-panel h2 { font-size: 16px; margin: 0 0 18px; }
+.sic-library { margin-bottom: 20px; }
+.sic-library > p { font-size: 12px; line-height: 1.7; color: var(--ink-muted); }
+.sic-library-save { display: flex; align-items: flex-end; gap: 12px; margin: 16px 0; }
+.sic-library-save label { flex: 1; min-width: 0; max-width: 480px; display: grid; gap: 8px; font-size: 13px; }
+.sic-library-save input { width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-height: 44px; font-size: 16px; }
+.sic-library .sic-reset { min-height: 44px; }
+.sic-library > small { display: block; color: var(--ink-muted); font-size: 11px; line-height: 1.7; margin-top: 12px; }
+.sic-library-list { list-style: none; padding: 0; margin: 12px 0 0; max-height: 380px; overflow: auto; }
+.sic-library-list li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+.sic-library-list li > div:first-child { min-width: 0; overflow-wrap: anywhere; }
+.sic-library-list strong { font-size: 14px; }
+.sic-library-list small { display: block; font-size: 11px; color: var(--ink-muted); margin-top: 6px; line-height: 1.6; }
+.sic-library-actions { display: flex; gap: 8px; }
+@media (max-width: 600px) { .sic-library-save { align-items: stretch; flex-direction: column; } .sic-library-list li { align-items: flex-start; flex-direction: column; gap: 10px; } .sic-library-actions { width: 100%; } .sic-library-actions button { flex: 1; } }
 .sic-fields { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px 16px; }
 .sic-field { min-width: 0; display: grid; align-content: start; gap: 8px; font-size: 13px; font-weight: 600; }
 .sic-control { display: flex; align-items: center; border: 1px solid #d4d4d4; border-radius: 8px; background: white; min-width: 0; overflow: hidden; }
