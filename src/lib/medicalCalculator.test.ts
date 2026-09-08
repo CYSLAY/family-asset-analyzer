@@ -13,6 +13,7 @@ describe('medical workbook without discounts', () => {
     it(`${product} calculates every payment term and full detail`, () => {
       for (const term of MEDICAL_PRODUCTS[product].terms) {
         const result = calculateMedical(profile, { product, term, amount: 100000, currency: 'USD' })
+        if (result.kind !== 'critical') throw Error('Expected critical illness result')
         expect(result.annual).toBeGreaterThan(0)
         expect(result.total).toBeCloseTo(result.annual * term, 6)
         const detail = result.detail()
@@ -62,6 +63,7 @@ describe('medical workbook without discounts', () => {
       CIP2: [2760, 3008.450457038392, 3279, 19540.8, 19486.7, 27369, 206299] }
     for (const product of Object.keys(expected) as (keyof typeof expected)[]) {
       const result = calculateMedical(profile, { product, amount: 100000, term: 20, currency: 'USD' })
+      if (result.kind !== 'critical') throw Error('Expected critical illness result')
       const rows = result.detail()
       const actual = [result.annual, rows[9].guaranteedCash, rows[9].bonusCash, rows[19].guaranteedCash, rows[19].bonusCash, rows[19].bonusBenefit, rows[49].bonusCash]
       actual.forEach((n, i) => expect(n).toBeCloseTo(expected[product][i], 4))
@@ -73,6 +75,7 @@ describe('medical workbook without discounts', () => {
       CIP2: [3138, 3287.649223529412, 2898.2, 21354.48150588, 16471, 26481.2, 167402.56] }
     for (const product of Object.keys(expected) as (keyof typeof expected)[]) {
       const result = calculateMedical({ age: 33, gender: 'F', smoker: 'S', region: 'B' }, { product, amount: 100000, term: 20, currency: 'USD' })
+      if (result.kind !== 'critical') throw Error('Expected critical illness result')
       const rows = result.detail()
       const actual = [result.annual, rows[9].guaranteedCash, rows[9].bonusCash, rows[19].guaranteedCash, rows[19].bonusCash, rows[19].bonusBenefit, rows[49].bonusCash]
       actual.forEach((n, i) => expect(n).toBeCloseTo(expected[product][i], 4))

@@ -1,15 +1,16 @@
 import workbook from './medicalWorkbook.json'
 import { InsuranceFormulaEngine, type SheetCells } from './insuranceFormulaEngine'
+import { calculateHospital, type HospitalOptions, type HospitalProduct } from './hospitalCalculator'
 
 export const MEDICAL_PRODUCTS = {
   CIM3: { name: '诚保一生危疾保', sheet: 'CIM3 BCIM3', terms: [5, 10, 15, 20, 25], discount: 'C20', premium: 'C25', first: 51, language: 'B154' },
   CIE3: { name: '危疾加护保 III', sheet: 'CIE3', terms: [10, 15, 20, 25], discount: 'C17', premium: 'C21', first: 47, language: 'B150' },
   CIP2: { name: '危疾首护保 II', sheet: 'CIP2', terms: [10, 15, 20, 25, 30], discount: 'C19', premium: 'C24', first: 50, language: 'B153' },
 } as const
-export type MedicalProduct = keyof typeof MEDICAL_PRODUCTS
+export type MedicalProduct = keyof typeof MEDICAL_PRODUCTS | HospitalProduct
 export type MedicalCurrency = 'USD' | 'HKD' | 'HKD-U' | 'RMB-U'
 export interface MedicalProfile { age: number; gender: 'M' | 'F'; smoker: 'N' | 'S'; region: 'A' | 'B' }
-export interface MedicalPolicy { product: MedicalProduct; amount: number; term: number; currency: MedicalCurrency }
+export interface MedicalPolicy extends HospitalOptions { product: MedicalProduct; amount: number; term: number; currency: MedicalCurrency }
 export const MEDICAL_FX = { hkdPerUsd: workbook.sheets.Notes.B12, rmbPerUsd: workbook.sheets.Notes.B13 }
 export type MedicalFx = typeof MEDICAL_FX
 export const displayCurrency = (currency: MedicalCurrency) => currency === 'RMB-U' ? 'RMB' : currency.startsWith('HKD') ? 'HKD' : 'USD'
@@ -17,6 +18,7 @@ export const insuredCurrency = (currency: MedicalCurrency) => currency === 'HKD'
 export interface MedicalYear { year: number; age: number; premium: number; cumulative: number; guaranteedCash: number; bonusCash: number; cash: number; guaranteedBenefit: number; bonusBenefit: number; benefit: number }
 
 export function calculateMedical(profile: MedicalProfile, policy: MedicalPolicy, fx: MedicalFx = MEDICAL_FX) {
+  if (policy.product === 'VIP' || policy.product === 'MCVIP') return calculateHospital(profile.age, policy.product, policy.currency, policy, fx)
   const product = MEDICAL_PRODUCTS[policy.product]
   if (!product) throw Error('请选择保险产品')
   if (!Number.isInteger(profile.age) || profile.age < 1 || profile.age > 75) throw Error('投保翌年岁须为 1–75 岁')
@@ -41,7 +43,7 @@ export function calculateMedical(profile: MedicalProfile, policy: MedicalPolicy,
   if (years.some(n => !Number.isFinite(n) || Math.abs(n - annual) > .001)) throw Error('年度保费与费率核对不一致，暂不能计算')
   const total = years.reduce((sum, n) => sum + n, 0)
   const toRmb = displayCurrency(policy.currency) === 'RMB' ? 1 : displayCurrency(policy.currency) === 'HKD' ? fx.rmbPerUsd / fx.hkdPerUsd : fx.rmbPerUsd
-  return { annual, total, annualRmb: annual * toRmb, totalRmb: total * toRmb, term: policy.term,
+  return { kind: 'critical' as const, annual, total, annualRmb: annual * toRmb, totalRmb: total * toRmb, term: policy.term, premiumsRmb: years.map(n => n * toRmb),
     detail(): MedicalYear[] {
       let cumulative = 0
       return Array.from({ length: Math.min(100, 100 - profile.age) }, (_, i) => {
@@ -60,7 +62,7 @@ export function combineMedical(results: ReturnType<typeof calculateMedical>[]) {
   const total = results.reduce((s, r) => s + r.totalRmb, 0)
   let cumulative = 0
   const years = Array.from({ length: Math.max(...results.map(r => r.term)) }, (_, i) => {
-    const premium = results.reduce((s, r) => s + (i < r.term ? r.annualRmb : 0), 0)
+    const premium = results.reduce((s, r) => s + (r.premiumsRmb[i] ?? 0), 0)
     cumulative += premium
     return { year: i + 1, premium, cumulative }
   })

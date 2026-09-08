@@ -7,6 +7,7 @@
 .medical-fields { display: grid; grid-template-columns: minmax(200px,1.4fr) minmax(120px,1fr) minmax(100px,.7fr) minmax(170px,1.1fr); gap: 16px; }
 .medical-fields label { display: grid; align-content: start; gap: 8px; min-width: 0; font-size: 14px; font-weight: 600; }
 .medical-profile-fields { grid-template-columns: minmax(175px,1.3fr) minmax(140px,1fr) repeat(3,minmax(90px,.8fr)); }
+.medical-hospital-fields { grid-template-columns: repeat(3,minmax(0,1fr)); }
 .medical-calculator input:read-only { background: #f6f3f4; color: #62595a; }
 .medical-calculator input, .medical-calculator select { width: 100%; min-width: 0; min-height: 44px; border: 1px solid #ccc; border-radius: 8px; padding: 10px 12px; color: #222; background: #fff; font: inherit; font-size: 16px; }
 .medical-calculator input[aria-invalid=true] { border-color: #b31b2b; }
@@ -50,6 +51,7 @@
   .medical-profile-fields label:first-child, .medical-profile-fields label:last-child { grid-column: auto; }
   .medical-profile-fields label:first-child { grid-column: 1/-1; }
   .medical-fx label { grid-column: 1/-1; }
+  .medical-hospital-fields label:nth-child(2), .medical-hospital-fields label:nth-child(3) { grid-column: 1/-1; }
   .medical-totals { gap: 12px; }
   .medical-panel h2 { font-size: 18px; }
 }
