@@ -8,10 +8,10 @@ const customerBackupSchema = z.object({
   city: z.string(),
   notes: z.string(),
   members: z.array(z.object({ id: z.string(), name: z.string() }).passthrough()),
-  assets: z.array(z.object({ id: z.string(), name: z.string() }).passthrough()),
-  liabilities: z.array(z.object({ id: z.string(), name: z.string() }).passthrough()),
-  incomes: z.array(z.object({ id: z.string(), name: z.string() }).passthrough()),
-  expenses: z.array(z.object({ id: z.string(), name: z.string() }).passthrough()),
+  assets: z.array(z.object({ id: z.string(), name: z.string(), category: z.string(), currentValue: z.number().nonnegative(), liquidity: z.string(), availableForEmergency: z.boolean() }).passthrough()),
+  liabilities: z.array(z.object({ id: z.string(), name: z.string(), category: z.string(), balance: z.number().nonnegative(), monthlyPayment: z.number().nonnegative(), dueWithinOneYear: z.number().nonnegative(), remainingMonths: z.number().nonnegative().nullable() }).passthrough()),
+  incomes: z.array(z.object({ id: z.string(), name: z.string(), category: z.string(), amount: z.number().nonnegative(), frequency: z.enum(['monthly','quarterly','yearly']) }).passthrough()),
+  expenses: z.array(z.object({ id: z.string(), name: z.string(), category: z.string(), amount: z.number().nonnegative(), frequency: z.enum(['monthly','quarterly','yearly']) }).passthrough()),
   educationGoals: z.array(z.object({ id: z.string() }).passthrough()),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -70,9 +70,10 @@ export async function createEncryptedBackup(customers: CustomerProfile[], passwo
 }
 
 export async function readEncryptedBackup(text: string, password: string): Promise<CustomerProfile[]> {
+  if (text.length > 20_000_000) throw new Error('备份文件过大，请分批处理')
   let encrypted: EncryptedBackup
   try { encrypted = JSON.parse(text) as EncryptedBackup } catch { throw new Error('无法读取这个备份文件') }
-  if (encrypted.format !== 'family-asset-analyzer-encrypted' || encrypted.version !== 1 || encrypted.algorithm !== 'AES-GCM') {
+  if (encrypted.format !== 'family-asset-analyzer-encrypted' || encrypted.version !== 1 || encrypted.algorithm !== 'AES-GCM' || encrypted.iterations !== 210_000) {
     throw new Error('这不是受支持的资产分析备份')
   }
   try {

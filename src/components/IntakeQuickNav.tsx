@@ -8,6 +8,7 @@ import {
   WalletIcon,
 } from '@phosphor-icons/react'
 import type { IntakeStepKey } from '../types/domain'
+import { useEffect, useRef } from 'react'
 
 export type IntakeView = 'overview' | IntakeStepKey
 export type IntakeNavTarget = IntakeView | 'report'
@@ -29,7 +30,12 @@ interface Props {
 }
 
 export function IntakeQuickNav({ activeView, filled, locked = false, onSelect }: Props) {
-  return <nav className="intake-quick-nav" aria-label="客户资料快速切换">
+  const ref = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const nav = ref.current, active = nav?.querySelector<HTMLElement>('.is-active')
+    if (nav && active && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = Math.max(0, active.offsetLeft - nav.offsetLeft - (nav.clientWidth - active.offsetWidth) / 2)
+  }, [activeView])
+  return <nav ref={ref} className="intake-quick-nav" aria-label="客户资料快速切换">
     <button className={activeView === 'overview' ? 'quick-nav-item is-active' : 'quick-nav-item'} disabled={locked} type="button" onClick={() => onSelect('overview')}><FileTextIcon size={17} /><span>录入总览</span></button>
     {intakeStepMeta.map((item) => {
       const Icon = item.icon

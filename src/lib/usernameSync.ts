@@ -1,15 +1,9 @@
 import type { CustomerProfile } from '../types/domain'
-import { deleteCustomerPermanently, getCustomers, putCustomer } from './localDb'
+import { adoptRemote, deleteCustomerPermanently, getCustomers, getLocalWorkspace } from './localDb'
 import { customerDeletionIds } from './customerDeletion'
 import { supabase } from './supabase'
 import { migrateCustomerProfile } from './customerMigrations'
-import { listPublicIntakesForAdvisor, pushPublicIntakeAsAdvisor } from './publicIntake'
-
-interface RemoteRecord {
-  id: string
-  client_updated_at: string
-  document: CustomerProfile
-}
+import { fetchVersionedCustomers, writeVersionedCustomer } from './revisionSync'
 
 interface RemoteDeletion {
   id: string
@@ -24,16 +18,21 @@ export async function confirmWorkspaceUsername(username: string, accessCode: str
   return data === true
 }
 
-export async function pushWorkspaceCustomer(username: string, accessCode: string, customer: CustomerProfile) {
-  if (!supabase) throw new Error('cloud_unavailable')
-  const { error } = await supabase.rpc('workspace_upsert_customer', {
-    p_username: username,
-    p_access_code: accessCode,
-    p_id: customer.id,
-    p_document: customer,
-    p_client_updated_at: customer.updatedAt,
-  })
+export async function loginWorkspace(username: string, password: string) {
+  if (!supabase) throw Error('cloud_unavailable')
+  const { data, error } = await supabase.rpc('workspace_login', { p_username: username, p_password: password })
   if (error) throw error
+  if (data?.error) throw Error(data.error)
+  if (!data?.token || !data?.expiresAt) throw Error('access_denied')
+  return data as { token: string; expiresAt: string }
+}
+
+export async function logoutWorkspace(token: string) {
+  if (supabase) { const { error } = await supabase.rpc('workspace_logout', { p_access_code: token }); if (error) throw error }
+}
+
+export async function pushWorkspaceCustomer(username: string, accessCode: string, customer: CustomerProfile) {
+  await writeVersionedCustomer(username, accessCode, customer)
 }
 
 export async function deleteWorkspaceCustomer(username: string, accessCode: string, id: string) {
@@ -44,43 +43,22 @@ export async function deleteWorkspaceCustomer(username: string, accessCode: stri
 
 export async function synchronizeWorkspace(username: string, accessCode: string) {
   if (!supabase) return getCustomers()
-  const [{ data, error }, publicCustomers, deletionResponse] = await Promise.all([
-    supabase.rpc('workspace_list_customers', { p_username: username, p_access_code: accessCode }),
-    listPublicIntakesForAdvisor(username, accessCode),
+  const workspace = getLocalWorkspace()
+  const [records, deletionResponse] = await Promise.all([
+    fetchVersionedCustomers(username, accessCode),
     supabase.rpc('workspace_list_customer_deletions', { p_username: username, p_access_code: accessCode }),
   ])
-  if (error) throw error
   if (deletionResponse.error) throw deletionResponse.error
+  if (workspace !== getLocalWorkspace()) throw Error('workspace_changed')
   const deletedIds = customerDeletionIds((deletionResponse.data ?? []) as RemoteDeletion[])
   const storedLocal = await getCustomers()
-  await Promise.all(storedLocal.filter((customer) => deletedIds.has(customer.id)).map((customer) => deleteCustomerPermanently(customer.id)))
-  const local = storedLocal.filter((customer) => !deletedIds.has(customer.id))
-  const records = (data ?? []) as RemoteRecord[]
-  const merged = new Map(local.map((customer) => [customer.id, customer]))
-  const remoteMigrationIds = new Set<string>()
+  await Promise.all(storedLocal.filter((customer) => deletedIds.has(customer.id)).map((customer) => deleteCustomerPermanently(customer.id, true)))
 
   for (const record of records) {
     if (deletedIds.has(record.id)) continue
-    const migration = migrateCustomerProfile({ ...record.document, source: 'advisor' })
-    if (migration.changed) remoteMigrationIds.add(record.id)
-    const localCustomer = merged.get(record.id)
-    if (!localCustomer || record.client_updated_at > localCustomer.updatedAt) {
-      await putCustomer(migration.customer)
-      merged.set(record.id, migration.customer)
-    }
-  }
-  for (const publicCustomer of publicCustomers) {
-    if (deletedIds.has(publicCustomer.id)) continue
-    const localCustomer = merged.get(publicCustomer.id)
-    if (!localCustomer || publicCustomer.updatedAt > localCustomer.updatedAt) {
-      await putCustomer(publicCustomer)
-      merged.set(publicCustomer.id, publicCustomer)
-    }
-  }
-  for (const id of remoteMigrationIds) {
-    const customer = merged.get(id)
-    if (customer?.source === 'self_service') await pushPublicIntakeAsAdvisor(username, accessCode, customer)
-    else if (customer) await pushWorkspaceCustomer(username, accessCode, customer)
+    if (workspace !== getLocalWorkspace()) throw Error('workspace_changed')
+    const migration = migrateCustomerProfile({ ...record.document, source: record.source })
+    await adoptRemote(migration.customer, record.revision, workspace)
   }
   return getCustomers()
 }

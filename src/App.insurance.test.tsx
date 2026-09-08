@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const access = vi.hoisted(() => ({ user: null as string | null }))
 vi.mock('./lib/access', () => ({ getAccessUser: () => access.user, getAccessSession: () => null, clearAccessUser: vi.fn() }))
-vi.mock('./lib/localDb', () => ({ putCustomer: vi.fn(async () => undefined), getCustomers: vi.fn(async () => []) }))
+vi.mock('./lib/localDb', () => ({ getQueuedCustomers: vi.fn(async () => []), getConflicts: vi.fn(async () => []), setLocalWorkspace: vi.fn(), getLocalWorkspace: () => 'test', putCustomer: vi.fn(async () => undefined), getCustomers: vi.fn(async () => []) }))
 vi.mock('./lib/publicIntake', () => ({
   getPublicIntakeSession: () => ({ id: 'qa-client' }), fetchPublicIntake: vi.fn(async () => null),
   pushPublicIntake: vi.fn(async () => undefined), clearPublicIntakeSession: vi.fn(),

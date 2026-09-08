@@ -72,10 +72,10 @@ export function analyzeCustomer(customer: CustomerProfile): FinancialAnalysis {
 
   const metrics = [
     netWorthMetric(assets - liabilities, customer.assets.length > 0 || customer.liabilities.length > 0),
-    debtRatioMetric(assets, liabilities),
+    debtRatioMetric(assets, liabilities, hasLiabilityData || customer.noLiabilitiesConfirmed === true),
     fixedAssetMetric(assets, fixedAssets),
     liquidCoverageMetric(liquidAssets, dueWithinOneYear, hasLiabilityData, customer.noLiabilitiesConfirmed === true),
-    debtServiceMetric(annualIncome, annualDebtPayments, liabilities),
+    debtServiceMetric(annualIncome, annualDebtPayments, liabilities, hasLiabilityData || customer.noLiabilitiesConfirmed === true),
     emergencyMetric(emergencyFunds, necessaryMonthlyOutflow, emergencyTarget),
     savingsMetric(annualIncome, annualSurplus),
     incomeConcentrationMetric(annualIncome, workIncome),
@@ -118,7 +118,8 @@ function netWorthMetric(value: number, hasBalanceData: boolean): MetricResult {
   return metric('net_worth', '净资产', value, 'currency', 'healthy', '净资产为正', '家庭资产能够覆盖当前负债。', '继续观察净资产是否随时间稳定增长。', '总资产 - 总负债', '不设置统一金额门槛，关注方向与增长')
 }
 
-function debtRatioMetric(assets: number, liabilities: number): MetricResult {
+function debtRatioMetric(assets: number, liabilities: number, known: boolean): MetricResult {
+  if (!known) return metric('debt_ratio', '资产负债率', null, 'percent', 'neutral', '负债资料待确认', '尚未填写负债，也未确认无负债。', '请补充负债或确认无负债。', '总负债 / 总资产', '资料齐全后评估')
   if (assets <= 0) return metric('debt_ratio', '资产负债率', liabilities > 0 ? 100 : null, 'percent', liabilities > 0 ? 'critical' : 'neutral', liabilities > 0 ? '缺少资产覆盖' : '等待资产数据', liabilities > 0 ? '已录入负债但没有可覆盖的资产。' : '录入资产和负债后才能计算总体杠杆。', liabilities > 0 ? '核对资产是否漏填，并优先处理短期债务。' : '先完成资产与负债录入。', '总负债 / 总资产', '0%-30%较低，30%-50%关注，超过50%压力上升')
   const ratio = liabilities / assets * 100
   if (ratio <= 30) return metric('debt_ratio', '资产负债率', ratio, 'percent', 'healthy', '总体杠杆较低', '负债占资产比例较低，资产缓冲相对充分。', '继续控制新增债务，并检查月供压力。', '总负债 / 总资产', '0%-30%较低，30%-50%关注，超过50%压力上升')
@@ -156,9 +157,10 @@ function liquidCoverageMetric(liquid: number, due: number, hasLiabilityData: boo
   return metric('liquid_coverage', '资产负债健康度', ratio, 'ratio', ratio >= 5 ? 'strong' : 'healthy', ratio >= 5 ? '短期偿债缓冲充足' : '短期偿债结构健康', '流动资产对一年内债务形成较充分覆盖。', '继续核对债务到期结构，并保持流动资金可随时使用。', '流动资产 / 未来一年应还债务', '低于1倍风险较高，1-3倍需关注，3倍及以上较健康')
 }
 
-function debtServiceMetric(income: number, payments: number, liabilities: number): MetricResult {
+function debtServiceMetric(income: number, payments: number, liabilities: number, known: boolean): MetricResult {
   const reference = '产品提醒线：20%以下较轻，20%-36%关注，超过36%压力上升；不是贷款审批标准'
-  if (liabilities <= 0) return metric('debt_service_ratio', '债务偿付占收入', null, 'percent', 'healthy', '当前没有负债偿付压力', '没有录入需要持续偿还的负债。', '如存在信用卡分期或其他月供，请补充录入。', '年度债务还款 / 家庭年收入', reference)
+  if (!known) return metric('debt_service_ratio', '债务偿付占收入', null, 'percent', 'neutral', '负债资料待确认', '尚未填写负债，也未确认无负债。', '请先核对家庭负债。', '年度债务还款 / 家庭年收入', reference)
+  if (liabilities <= 0 && payments <= 0) return metric('debt_service_ratio', '债务偿付占收入', null, 'percent', 'healthy', '当前没有负债偿付压力', '已确认没有需要持续偿还的负债。', '如存在信用卡分期或其他月供，请补充录入。', '年度债务还款 / 家庭年收入', reference)
   if (payments <= 0) return metric('debt_service_ratio', '债务偿付占收入', null, 'percent', 'neutral', '等待月供数据', '已录入负债余额，但尚未填写每月还款金额。', '补充每笔负债月供，才能判断收入承压程度。', '年度债务还款 / 家庭年收入', reference)
   if (income <= 0) return metric('debt_service_ratio', '债务偿付占收入', 100, 'percent', 'critical', '缺少收入覆盖月供', '存在持续债务还款，但没有可用于覆盖的家庭收入。', '核对收入是否漏填，并立即评估必要支出与偿债安排。', '年度债务还款 / 家庭年收入', reference)
   const ratio = payments / income * 100

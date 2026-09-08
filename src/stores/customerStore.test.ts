@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../lib/localDb', () => ({ getCustomers: vi.fn(async () => []), putCustomer: vi.fn(async () => {}), deleteCustomerPermanently: vi.fn(async () => {}) }))
+vi.mock('../lib/localDb', () => ({ getLocalWorkspace: () => 'advisor:qa', queueCustomer: vi.fn(async () => {}), getCustomers: vi.fn(async () => []), putCustomer: vi.fn(async () => {}), deleteCustomerPermanently: vi.fn(async () => {}) }))
 vi.mock('../lib/access', () => ({ getAccessSession: () => ({ username: 'qa', accessCode: 'test-only' }) }))
 vi.mock('../lib/usernameSync', () => ({ pushWorkspaceCustomer: vi.fn(), deleteWorkspaceCustomer: vi.fn() }))
 vi.mock('../lib/publicIntake', () => ({ getPublicIntakeSession: () => null, pushPublicIntake: vi.fn(), clearPublicIntakeSession: vi.fn(), deletePublicIntakeAsAdvisor: vi.fn(), pushPublicIntakeAsAdvisor: vi.fn() }))

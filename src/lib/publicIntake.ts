@@ -1,6 +1,9 @@
 import { type CustomerProfile } from '../types/domain'
+import { sameDocument } from './documentEquality'
 import { supabase } from './supabase'
 import { migrateCustomerProfile } from './customerMigrations'
+import { fetchVersionedCustomers, writeVersionedCustomer } from './revisionSync'
+import { acknowledgeCustomer, getCustomers, getLocalWorkspace, getSyncMetadata, preserveConflict } from './localDb'
 
 const SESSION_KEY = 'family-asset-self-service-session'
 
@@ -56,27 +59,27 @@ export async function redeemClientInvitation(code: string) {
 
 export async function fetchPublicIntake(session: PublicIntakeSession) {
   if (!supabase) return null
-  const { data, error } = await supabase.rpc('public_get_intake', { p_id: session.id, p_access_token: session.token })
-  if (error) {
-    if (error.message.includes('record_not_found')) return null
-    throw error
-  }
-  const record = ((data ?? []) as RemoteRecord[])[0]
+  const workspace = getLocalWorkspace()
+  const record = (await fetchVersionedCustomers('', session.token, session.id))[0]
   if (!record) return null
+  if (workspace !== getLocalWorkspace()) throw Error('workspace_changed')
+  const remote = { ...migrateCustomerProfile(record.document).customer, source: 'self_service' as const }
+  const local = (await getCustomers()).find(customer => customer.id === session.id)
+  const base = await getSyncMetadata(session.id, workspace)
+  if (local && !sameDocument(local, base?.document) && !sameDocument(local, remote)) {
+    if (!base || base.revision !== record.revision) await preserveConflict(local, remote, record.revision, workspace)
+    markSessionUploaded(session)
+    return local
+  }
+  await acknowledgeCustomer(remote, record.revision, workspace)
   markSessionUploaded(session)
-  return { ...migrateCustomerProfile(record.document).customer, source: 'self_service' as const }
+  return remote
 }
 
 export async function pushPublicIntake(session: PublicIntakeSession, customer: CustomerProfile) {
   if (!supabase) throw new Error('cloud_unavailable')
   const document = { ...customer, source: 'self_service' as const }
-  const { error } = await supabase.rpc('public_upsert_intake', {
-    p_id: session.id,
-    p_access_token: session.token,
-    p_document: document,
-    p_client_updated_at: customer.updatedAt,
-  })
-  if (error) throw error
+  await writeVersionedCustomer('', session.token, document)
   markSessionUploaded(session)
 }
 
@@ -89,15 +92,7 @@ export async function listPublicIntakesForAdvisor(username: string, accessCode: 
 }
 
 export async function pushPublicIntakeAsAdvisor(username: string, accessCode: string, customer: CustomerProfile) {
-  if (!supabase) throw new Error('cloud_unavailable')
-  const { error } = await supabase.rpc('workspace_upsert_public_intake', {
-    p_username: username,
-    p_access_code: accessCode,
-    p_id: customer.id,
-    p_document: { ...customer, source: 'self_service' as const },
-    p_client_updated_at: customer.updatedAt,
-  })
-  if (error) throw error
+  await writeVersionedCustomer(username, accessCode, { ...customer, source: 'self_service' as const })
 }
 
 export async function deletePublicIntakeAsAdvisor(username: string, accessCode: string, id: string) {

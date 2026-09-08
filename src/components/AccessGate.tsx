@@ -3,7 +3,7 @@ import { ArrowLeftIcon, ArrowRightIcon, BriefcaseIcon, HouseLineIcon, KeyIcon, S
 import jojoLogo from '../../assets/branding/jojo-personal-logo.png'
 import { isUsernameAllowed, normalizeUsername, saveAccessSession } from '../lib/access'
 import { redeemClientInvitation } from '../lib/publicIntake'
-import { confirmWorkspaceUsername } from '../lib/usernameSync'
+import { loginWorkspace } from '../lib/usernameSync'
 
 interface Props {
   onAdminAllowed: (username: string) => void
@@ -28,12 +28,10 @@ export function AccessGate({ onAdminAllowed, onStartSelfService }: Props) {
     setChecking(true)
     setError('')
     try {
-      if (!await confirmWorkspaceUsername(normalized, accessCode)) {
-        setError('用户名或访问密码不正确')
-        return
-      }
-      onAdminAllowed(saveAccessSession(normalized, accessCode))
-    } catch { setError('暂时无法验证，请检查网络后重试') }
+      const session = await loginWorkspace(normalized, accessCode)
+      setAccessCode('')
+      onAdminAllowed(saveAccessSession(normalized, session.token, session.expiresAt))
+    } catch (error) { setError(error instanceof Error && error.message === 'rate_limited' ? '尝试次数过多，请稍后再试（最长约 15 分钟）。' : error instanceof Error && error.message === 'access_denied' ? '用户名或访问密码不正确' : '暂时无法验证，请检查网络后重试') }
     finally { setChecking(false) }
   }
 

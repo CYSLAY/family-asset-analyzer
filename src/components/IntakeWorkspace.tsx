@@ -145,7 +145,7 @@ export function IntakeWorkspace({ onOpenReport, onOpenCustomers, selfService = f
       <div>
         {!selfService ? <button className="back-button" type="button" onClick={onOpenCustomers}><ArrowLeftIcon size={17} /> 返回客户管理</button> : null}
         <h1>{selfService ? customer.primaryContactName ? `${customer.primaryContactName}的家庭资料` : '我的家庭资料' : <PrivateText>{customer.householdName}</PrivateText>}</h1>
-        <p>{selfService ? selfServiceLocked ? '请先填写主要联系人姓名，之后即可进入其他资料模块。' : '可按任意顺序填写，完成度超过 10% 后会自动同步至云端。' : '可自由选择任意模块录入，系统会根据已有内容自动更新填写状态。'}</p>
+        <p>{selfService ? selfServiceLocked ? '请填写联系人姓名，否则无法填写其他内容' : '可按任意顺序填写，完成度超过 10% 后会自动同步至云端。' : '可自由选择任意模块录入，系统会根据已有内容自动更新填写状态。'}</p>
       </div>
       <div className="intake-progress-number"><strong>{intakeCompletion(customer)}%</strong><span>模块已有资料</span></div>
     </header>
@@ -221,7 +221,7 @@ function ProfileForm({ customer, requireName, onUpdate }: { customer: CustomerPr
 function MemberForm({ customer }: { customer: CustomerProfile }) {
   const { addMember, updateMember, removeMember } = useCustomerStore()
   return <section className="form-section module-form">
-    <div className="form-section-heading member-heading"><div><h2>家庭成员明细</h2><p>每位成员独立保存，便于收入与教育目标归属。</p></div><button className="subtle-button" type="button" onClick={() => void addMember(customer.id, createMember({ relation: '配偶' }))}><PlusIcon size={18} /> 添加成员</button></div>
+    <div className="form-section-heading member-heading"><div><p>每位成员独立保存，便于收入与教育目标归属。</p></div><button className="subtle-button" type="button" onClick={() => void addMember(customer.id, createMember({ relation: '配偶' }))}><PlusIcon size={18} /> 添加成员</button></div>
     <div className="member-stack">
       {customer.members.map((member, index) => <MemberCard customer={customer} member={member} index={index} onUpdate={(patch) => updateMember(customer.id, member.id, patch)} onRemove={() => {
         const linked = customer.assets.filter(item => item.ownerMemberId === member.id).length + customer.incomes.filter(item => item.memberId === member.id).length + customer.expenses.filter(item => item.memberId === member.id).length + customer.educationGoals.filter(item => item.childMemberId === member.id).length

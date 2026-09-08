@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../lib/localDb', () => ({
+  getLocalWorkspace: () => 'preview',
   deleteCustomerPermanently: vi.fn(),
   getCustomers: vi.fn(async () => []),
   putCustomer: vi.fn(async () => undefined),

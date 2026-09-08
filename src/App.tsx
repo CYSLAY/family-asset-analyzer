@@ -14,19 +14,20 @@ import {
 } from '@phosphor-icons/react'
 import { AccessGate } from './components/AccessGate'
 import { CustomerDirectory } from './components/CustomerDirectory'
-import { CashFlowManager } from './components/CashFlowManager'
+import { DataRecoveryPanel } from './components/DataRecoveryPanel'
 import { IntakeWorkspace } from './components/IntakeWorkspace'
 import type { IntakeView } from './components/IntakeQuickNav'
 import jojoLogo from '../assets/branding/jojo-personal-logo.png'
 import { clearAccessUser, getAccessSession, getAccessUser } from './lib/access'
-import { putCustomer } from './lib/localDb'
+import { getConflicts, getLocalWorkspace, getQueuedCustomers, putCustomer, setLocalWorkspace } from './lib/localDb'
 import { PrivateText, PrivacyModeProvider } from './lib/privacy'
 import { clearPublicIntakeSession, fetchPublicIntake, getPublicIntakeSession, pushPublicIntake } from './lib/publicIntake'
-import { synchronizeWorkspace } from './lib/usernameSync'
-import { useCustomerStore } from './stores/customerStore'
+import { logoutWorkspace, synchronizeWorkspace } from './lib/usernameSync'
+import { retryQueuedSync, useCustomerStore } from './stores/customerStore'
 import { canSyncSelfServiceCustomer, createCustomer, type CustomerProfile } from './types/domain'
 
 const AnalysisDashboard = lazy(() => import('./components/AnalysisDashboard').then((module) => ({ default: module.AnalysisDashboard })))
+const CashFlowManager = lazy(() => import('./components/CashFlowManager').then(module => ({ default: module.CashFlowManager })))
 const SavingsInsuranceCalculator = lazy(() => import('./components/SavingsInsuranceCalculator').then((module) => ({ default: module.SavingsInsuranceCalculator })))
 
 type AppView = 'intake' | 'customers' | 'cashflow' | 'analysis' | 'insurance'
@@ -52,6 +53,8 @@ export function App() {
   const [privacyMode, setPrivacyMode] = useState(true)
   const [workspaceSync, setWorkspaceSync] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle')
   const [publicReady, setPublicReady] = useState(false)
+  const [loadError, setLoadError] = useState(false)
+  const [sessionExpired, setSessionExpired] = useState(false)
   const [view, setView] = useState<AppView>('customers')
   const [intakeStartView, setIntakeStartView] = useState<IntakeView>('overview')
   const { customers, selectedCustomerId, initialized, saveState, syncState, initialize, selectCustomer, syncCustomer } = useCustomerStore()
@@ -59,21 +62,39 @@ export function App() {
   const selfService = workspaceMode === 'self_service'
 
   useEffect(() => {
-    if (!initialized) void initialize()
-  }, [initialize, initialized])
+    if (!workspaceMode) return
+    const next = localPreview ? 'preview' : workspaceMode === 'admin' ? `advisor:${accessUser}` : `self:${getPublicIntakeSession()?.id}`
+    setLocalWorkspace(next)
+    if (!initialized) void initialize().catch(() => setLoadError(true))
+  }, [initialize, initialized, workspaceMode, accessUser])
+
+  useEffect(() => {
+    if (!initialized || !workspaceMode) return
+    const timer = setInterval(() => {
+      if (!localPreview && workspaceMode === 'admin' && !getAccessSession()) setSessionExpired(true)
+      void retryQueuedSync()
+    }, 15000)
+    return () => clearInterval(timer)
+  }, [initialized, workspaceMode])
 
   useEffect(() => {
     const session = getAccessSession()
     if (workspaceMode !== 'admin' || !accessUser || !session || !initialized || workspaceSync !== 'idle') return
     setWorkspaceSync('syncing')
+    const workspace = getLocalWorkspace()
     void synchronizeWorkspace(accessUser, session.accessCode).then((syncedCustomers) => {
+      if (workspace !== getLocalWorkspace()) return
       const currentId = useCustomerStore.getState().selectedCustomerId
       useCustomerStore.setState({
         customers: syncedCustomers,
         selectedCustomerId: syncedCustomers.some((item) => item.id === currentId) ? currentId : null,
       })
       setWorkspaceSync('synced')
-    }).catch(() => setWorkspaceSync('error'))
+    }).catch(error => {
+      if (workspace !== getLocalWorkspace()) return
+      setWorkspaceSync('error')
+      if (error?.message === 'access_denied') setSessionExpired(true)
+    })
   }, [accessUser, initialized, workspaceMode, workspaceSync])
 
   useEffect(() => {
@@ -96,25 +117,28 @@ export function App() {
         remoteCustomer = await fetchPublicIntake(session)
         cloudFetched = true
       } catch { cloudFailed = true }
-      let customer: CustomerProfile | null = remoteCustomer && (!localCustomer || remoteCustomer.updatedAt >= localCustomer.updatedAt)
-        ? remoteCustomer
-        : localCustomer ? { ...localCustomer, source: 'self_service' } : null
+      let customer: CustomerProfile | null = remoteCustomer ?? (localCustomer ? { ...localCustomer, source: 'self_service' } : null)
       if (!customer) {
         customer = { ...createCustomer('', 'self_service'), id: session.id, householdName: '我的家庭' }
       }
+      if (cancelled) return
       await putCustomer(customer)
-      if (cloudFetched && (remoteCustomer || canSyncSelfServiceCustomer(customer)) && (!remoteCustomer || customer.updatedAt > remoteCustomer.updatedAt)) {
+      if (cloudFetched && !remoteCustomer && canSyncSelfServiceCustomer(customer)) {
         try { await pushPublicIntake(session, customer) } catch { cloudFailed = true }
       }
       if (cancelled) return
-      useCustomerStore.setState({ customers: [customer], selectedCustomerId: customer.id, syncState: cloudFailed ? 'error' : 'synced' })
+      const queued = (await getQueuedCustomers()).some(item => item.id === customer.id)
+      const conflict = (await getConflicts()).some(item => item.id === customer.id)
+      if (cancelled) return
+      useCustomerStore.setState({ customers: [customer], selectedCustomerId: customer.id, syncState: cloudFailed || conflict ? 'error' : queued ? 'dirty' : 'synced' })
       setPublicReady(true)
-    })()
+    })().catch(() => { if (!cancelled) setLoadError(true) })
     return () => { cancelled = true }
   }, [initialized, publicReady, workspaceMode])
 
   if (!workspaceMode) return <AccessGate onAdminAllowed={(username) => { setAccessUser(username); setPrivacyMode(true); setWorkspaceMode('admin'); setWorkspaceSync('idle'); setView('customers') }} onStartSelfService={() => { setWorkspaceMode('self_service'); setPublicReady(false); setIntakeStartView('profile'); setView('intake') }} />
-  if (selfService && !publicReady) return <main className="public-loading"><span /><strong>正在准备您的家庭财务档案</strong><p>资料只会显示在您的当前填写空间中。</p></main>
+  if (loadError) return <main className="public-loading" role="alert"><strong>本机资料暂时无法读取</strong><p>现有资料未被清除。请关闭其他旧版本页面后重试，勿清理浏览器数据。</p><button onClick={() => location.reload()}>重新加载</button></main>
+  if (!initialized || selfService && !publicReady || workspaceMode === 'admin' && !localPreview && workspaceSync === 'syncing') return <main className="public-loading"><span /><strong>正在准备您的家庭财务档案</strong><p>资料只会显示在您的当前填写空间中。</p></main>
 
   function openMainView(next: AppView) {
     if (next !== view && !confirmLeavingUnsaved()) return
@@ -132,6 +156,8 @@ export function App() {
   function exitWorkspace() {
     if (!confirmLeavingUnsaved()) return
     if (workspaceMode === 'admin') {
+      const session = getAccessSession()
+      if (session) void logoutWorkspace(session.accessCode).catch(() => undefined)
       clearAccessUser()
       setAccessUser(null)
       setWorkspaceSync('idle')
@@ -139,6 +165,9 @@ export function App() {
       clearPublicIntakeSession()
     }
     setWorkspaceMode(null)
+    setSessionExpired(false)
+    setLocalWorkspace('locked')
+    useCustomerStore.setState({ customers: [], selectedCustomerId: null, initialized: false })
     setPublicReady(false)
     selectCustomer('')
     setView(workspaceMode === 'admin' ? 'customers' : 'intake')
@@ -183,10 +212,12 @@ export function App() {
       </header>
 
       <div className="page-wrap">
+        {sessionExpired && <div className="public-sync-warning" role="alert">登录已过期，本机资料仍保留。重新登录后可继续同步。<button className="subtle-button" onClick={exitWorkspace}>重新登录</button></div>}
+        <DataRecoveryPanel advisor={!selfService && view === 'customers'} />
         {syncState === 'error' && selfService && selfServiceCloudEligible ? <div className="public-sync-warning" role="status">当前资料已保存在本机，云端连接恢复后会继续自动同步。</div> : null}
         {view === 'intake' ? <IntakeWorkspace initialView={intakeStartView} selfService={selfService} onOpenReport={openReport} onOpenCustomers={() => { if (!selfService) { selectCustomer(''); setView('customers') } }} /> : null}
         {view === 'customers' && !selfService ? <CustomerDirectory onStartIntake={() => { setIntakeStartView('overview'); setView('intake') }} onOpenReport={() => setView('analysis')} onOpenCashFlow={() => setView('cashflow')} /> : null}
-        {view === 'cashflow' ? <CashFlowManager selfService={selfService} onOpenCustomer={() => { setIntakeStartView('overview'); setView('intake') }} /> : null}
+        {view === 'cashflow' ? <Suspense fallback={<div role="status">正在加载现金流工具…</div>}><CashFlowManager selfService={selfService} onOpenCustomer={() => { setIntakeStartView('overview'); setView('intake') }} /></Suspense> : null}
         {view === 'insurance' && !selfService ? <Suspense fallback={<div role="status">正在加载储蓄险计算工具…</div>}><SavingsInsuranceCalculator key={accessUser ?? 'advisor'} advisor={accessUser ?? 'advisor'} /></Suspense> : null}
         {view === 'analysis' ? <Suspense fallback={<div className="report-skeleton" aria-label="正在生成分析报告"><span /><span /><span /></div>}><AnalysisDashboard onChooseCustomer={() => { if (selfService) { setIntakeStartView('overview'); setView('intake') } else { selectCustomer(''); setView('customers') } }} onOpenIntake={(target) => { setIntakeStartView(target); setView('intake') }} onOpenCashFlow={() => setView('cashflow')} /></Suspense> : null}
       </div>

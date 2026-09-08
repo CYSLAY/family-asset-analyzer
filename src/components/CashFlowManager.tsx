@@ -22,6 +22,7 @@ import type { CashFlowPlan } from '../types/domain'
 import { insuranceSelection, SAVINGS_INSURANCE_PRODUCTS, type SavingsInsuranceProduct } from '../lib/savingsInsurance'
 import { applyCashFlowFill, undoCashFlowFill, type CashFlowFillUndo } from '../lib/cashFlowFill'
 import { CashFlowFillDialog } from './CashFlowFillDialog'
+import { defaultInsuranceInputs, INSURANCE_NAMES } from '../lib/insuranceCalculator'
 
 interface Props {
   onOpenCustomer: () => void
@@ -33,7 +34,8 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
   const customer = customers.find((item) => item.id === selectedCustomerId) ?? null
   const availableCustomers = selfService ? customers.filter((item) => item.id === selectedCustomerId) : customers
   const plan = useMemo(() => customer ? customer.cashFlowPlan ?? createCashFlowPlanFromCustomer(customer) : null, [customer])
-  const rows = useMemo(() => plan ? buildCashFlowProjection(plan) : [], [plan])
+  const projection = useMemo(() => { try { return { rows: plan ? buildCashFlowProjection(plan) : [], error: '' } } catch (error) { return { rows: [], error: error instanceof Error ? error.message : '计算失败' } } }, [plan])
+  const rows = projection.rows
   const [displayYears, setDisplayYears] = useState(5)
   const [hideBlankColumns, setHideBlankColumns] = useState(true)
   const [tableExpanded, setTableExpanded] = useState(false)
@@ -130,12 +132,13 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
   const firstRow = rows[0]
   const lastRow = rows[Math.min(displayYears, rows.length) - 1]
   const insurance = insuranceSelection(plan)
-  const premium = Math.max(0, plan.savingsInsuranceAnnualPremium ?? 0)
+  const premium = plan.insuranceScenario?.inputs.amount ?? Math.max(0, plan.savingsInsuranceAnnualPremium ?? 0)
   const firstCashShortfall = rows.find(row => row.insuranceScenarioLiquidBalance < 0)
   const undoControl = <div className="cashflow-fill-undo"><span role="status">{fillNotice}</span>{fillUndo?.customerId === customer.id && fillUndo.baseYear === plan.baseYear && <button type="button" className="subtle-button" onClick={() => { savePlan(undoCashFlowFill(plan, customer.id, fillUndo)); setFillUndo(null); setFillNotice('已撤销填充，保留后续修改') }}>撤销填充</button>}</div>
 
   return <div className="cashflow-manager-page">
     <ManagerHeading customers={availableCustomers} selectedCustomerId={customer.id} onSelect={selectCustomer} onOpenCustomer={onOpenCustomer} selfService={selfService} />
+    {projection.error && <p className="public-sync-warning" role="alert">{projection.error}。请调整储蓄险方案；原始资料仍保留。</p>}
 
     <section className="cashflow-plan-summary" aria-label="现金流梳理摘要">
       <article><span>当前可用资金</span><strong>{formatMoney(plan.initialFunds)}</strong><small>默认排除房产、车辆及长期锁定资产</small></article>
@@ -157,7 +160,7 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
       </div>
       <fieldset className="cashflow-insurance-settings">
         <legend>储蓄险方案</legend>
-        <div className="cashflow-insurance-fields">
+        {plan.insuranceScenario ? <div><strong>{INSURANCE_NAMES[plan.insuranceScenario.product]} · 完整方案</strong><p><PrivateText>{plan.insuranceScenario.name}</PrivateText> · {plan.insuranceScenario.inputs.term} 年缴费 · {plan.insuranceScenario.inputs.currency} · 折算汇率 {plan.insuranceScenario.exchangeRateToRmb}</p><p>已计入供款、提款、退保回款及融资本金；保单余额按扣除未偿贷款后的净值显示。非保证部分不代表承诺收益。</p><button className="subtle-button" onClick={() => { if (window.confirm('返回此前的简版储蓄险场景？原有简版参数仍保留，完整方案请在本机方案库中重新应用。')) updatePlan({ insuranceScenario: undefined }) }}>返回原简版场景</button></div> : <><div className="cashflow-insurance-fields">
           <Field label="产品"><select aria-label="产品" value={insurance.product} onChange={(event) => {
             const product = event.target.value as SavingsInsuranceProduct
             updatePlan({ savingsInsuranceProduct: product, savingsInsurancePaymentYears: product === 'prmesp' ? 1 : insurance.paymentYears })
@@ -167,6 +170,13 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
         </div>
         <p className="cashflow-insurance-summary">{insurance.paymentYears === 1 ? '仅首年缴费' : '连续缴费 5 年'}<span>累计投入 <strong>{formatMoney(premium * insurance.paymentYears)}</strong></span></p>
         {insurance.product === 'trst' && insurance.paymentYears === 1 ? <small className="cashflow-setting-help">一次性预缴 5 年保费，金额填写首年总投入。</small> : null}
+        {premium > 0 && <button className="subtle-button" onClick={() => {
+          if (!window.confirm('切换到完整参考表模型？将按当前金额、年龄及缴费方式重新计算，费用与优惠可能使结果不同；原简版参数会保留，可随时返回。')) return
+          const product = insurance.product === 'trst' ? 'TRST' : 'PRMESP'
+          const inputs = { ...defaultInsuranceInputs(product), currency: 'RMB-U', amount: product === 'TRST' && insurance.paymentYears === 1 ? premium / 5 : premium, prepaid: product === 'TRST' && insurance.paymentYears === 1, age: Math.max(1, plan.members[0]?.baseAge ?? 41), promotion: false }
+          inputs.surrenderAge = Math.min(201, inputs.age + 55)
+          updatePlan({ insuranceScenario: { version: 1, model: 'workbook-2026-08-03-v1', name: '由简版升级的方案', product, inputs, exchangeRateToRmb: 1 } })
+        }}>确认升级为完整参考模型</button>}</>}
       </fieldset>
       <div className="cashflow-member-grid">
         {plan.members.length ? plan.members.map((member, index) => <div className="cashflow-member-field" key={member.id}><span><PrivateText>{member.name || `家庭成员 ${index + 1}`}</PrivateText></span><label><PrivateControl><input type="number" min="0" max="110" value={member.baseAge ?? ''} placeholder="年龄" onChange={(event) => updatePlan({ members: plan.members.map((item) => item.id === member.id ? { ...item, baseAge: nullableNumber(event.target.value) } : item) })} /></PrivateControl><em>岁</em></label></div>) : <p className="cashflow-inline-note">家庭成员尚未填写出生日期，可先在客户资料中补充，也可直接使用下面的现金流表。</p>}
@@ -295,8 +305,9 @@ type FillDragState = { kind: 'incomes' | 'expenses'; itemId: string; sourceYear:
 
 function ProjectionTable({ plan, rows, hideBlankColumns, onToggleBlankColumns, onUpdateAmount, onApplyDown, onFillRange }: { plan: CashFlowPlan; rows: ReturnType<typeof buildCashFlowProjection>; hideBlankColumns: boolean; onToggleBlankColumns: () => void; onUpdateAmount: (kind: 'incomes' | 'expenses', itemId: string, year: number, value: number) => void; onApplyDown: (kind: 'incomes' | 'expenses', itemId: string, sourceYear: number, value: number) => void; onFillRange: (kind: 'incomes' | 'expenses', itemId: string, sourceYear: number, targetYear: number, value: number) => void }) {
   const [fillDrag, setFillDrag] = useState<FillDragState | null>(null)
-  const insurance = insuranceSelection(plan)
-  const showInsurance = (plan.savingsInsuranceAnnualPremium ?? 0) > 0
+  const legacyInsurance = insuranceSelection(plan)
+  const insurance = plan.insuranceScenario ? { name: INSURANCE_NAMES[plan.insuranceScenario.product], paymentYears: plan.insuranceScenario.inputs.prepaid ? 1 : plan.insuranceScenario.inputs.term } : legacyInsurance
+  const showInsurance = Boolean(plan.insuranceScenario) || (plan.savingsInsuranceAnnualPremium ?? 0) > 0
   const fundsCoverageScaleMaximum = coverageBarScaleMaximum(rows.map((row) => row.fundsExpenseCoverageRate))
   const insuredCoverageScaleMaximum = coverageBarScaleMaximum(rows.map((row) => row.savingsInsuranceCoverageRate))
   const visibleIncomeIndexes = visibleItemIndexes(plan.incomes.length, rows.map((row) => row.incomeValues), hideBlankColumns)
@@ -304,7 +315,7 @@ function ProjectionTable({ plan, rows, hideBlankColumns, onToggleBlankColumns, o
   return <div className="cashflow-table-scroll">
     <table className="cashflow-projection-table">
       <thead>
-        <tr><th>年度</th><th>年份</th>{plan.members.map((member) => <th key={member.id}><PrivateText>{member.name}</PrivateText>年龄</th>)}{visibleIncomeIndexes.map((index) => <ToggleColumnHeader key={plan.incomes[index].id} label={plan.incomes[index].label} compact={hideBlankColumns} onToggle={onToggleBlankColumns} />)}<ToggleColumnHeader className="cashflow-total-column" label="总收入" compact={hideBlankColumns} onToggle={onToggleBlankColumns} />{visibleExpenseIndexes.map((index) => <ToggleColumnHeader key={plan.expenses[index].id} label={plan.expenses[index].label} compact={hideBlankColumns} onToggle={onToggleBlankColumns} />)}<ToggleColumnHeader className="cashflow-total-column" label="日常总支出" compact={hideBlankColumns} onToggle={onToggleBlankColumns} /><th>每年增量资金</th><th>资金总额</th><th title="日常总支出 ÷ 原场景资金总额">资金覆盖率</th>{showInsurance ? <><th className="insurance-scenario-column insurance-scenario-start" title={`${insurance.name}，${insurance.paymentYears === 1 ? '一次性交费' : '5 年交费'}；主数字为保单参考余额`}><span className="cashflow-scenario-label">{insurance.name} · {insurance.paymentYears === 1 ? '一次性交' : '5 年交'}</span>保单余额 / 当年保费</th><th className="insurance-scenario-column" title="日常总支出加当年保费">含保费总支出</th><th className="insurance-scenario-column" title="扣除保费后的剩余流动资金加保单参考余额">含保单资产总额</th><th className="insurance-scenario-column" title="购买储蓄险后总支出 ÷ 储蓄险场景资产总额">场景覆盖率</th></> : null}</tr>
+        <tr><th>年度</th><th>年份</th>{plan.members.map((member) => <th key={member.id}><PrivateText>{member.name}</PrivateText>年龄</th>)}{visibleIncomeIndexes.map((index) => <ToggleColumnHeader key={plan.incomes[index].id} label={plan.incomes[index].label} compact={hideBlankColumns} onToggle={onToggleBlankColumns} />)}<ToggleColumnHeader className="cashflow-total-column" label="总收入" compact={hideBlankColumns} onToggle={onToggleBlankColumns} />{visibleExpenseIndexes.map((index) => <ToggleColumnHeader key={plan.expenses[index].id} label={plan.expenses[index].label} compact={hideBlankColumns} onToggle={onToggleBlankColumns} />)}<ToggleColumnHeader className="cashflow-total-column" label="日常总支出" compact={hideBlankColumns} onToggle={onToggleBlankColumns} /><th>每年增量资金</th><th>资金总额</th><th title="日常总支出 ÷ 原场景资金总额">资金覆盖率</th>{showInsurance ? <><th className="insurance-scenario-column insurance-scenario-start" title={`${insurance.name}，${insurance.paymentYears === 1 ? '一次性交费' : `${insurance.paymentYears} 年交费`}；主数字为保单参考余额`}><span className="cashflow-scenario-label">{insurance.name} · {insurance.paymentYears === 1 ? '一次性交' : `${insurance.paymentYears} 年交`}</span>保单余额 / 当年保费</th><th className="insurance-scenario-column" title="日常总支出加当年保费">含保费总支出</th><th className="insurance-scenario-column" title="扣除保费后的剩余流动资金加保单参考余额">含保单资产总额</th><th className="insurance-scenario-column" title="购买储蓄险后总支出 ÷ 储蓄险场景资产总额">场景覆盖率</th></> : null}</tr>
       </thead>
       <tbody>{rows.map((row) => <tr key={row.year}>
         <td>{row.offset + 1}</td><td>{row.year}</td>{row.memberAges.map((age, index) => <td key={plan.members[index]?.id ?? index}><PrivateText>{age ?? '待补充'}</PrivateText></td>)}{visibleIncomeIndexes.map((index) => <EditableMoneyCell key={plan.incomes[index].id} kind="incomes" itemId={plan.incomes[index].id} year={row.year} label={`${row.year}年${plan.incomes[index].label}`} value={row.incomeValues[index]} fillDrag={fillDrag} onFillDragChange={setFillDrag} onFillRange={onFillRange} onChange={(next) => onUpdateAmount('incomes', plan.incomes[index].id, row.year, next)} onApplyDown={(next) => onApplyDown('incomes', plan.incomes[index].id, row.year, next)} />)}<td className="cashflow-total-column">{formatTableMoney(row.totalIncome)}</td>{visibleExpenseIndexes.map((index) => <EditableMoneyCell key={plan.expenses[index].id} kind="expenses" itemId={plan.expenses[index].id} year={row.year} label={`${row.year}年${plan.expenses[index].label}`} value={row.expenseValues[index]} fillDrag={fillDrag} onFillDragChange={setFillDrag} onFillRange={onFillRange} onChange={(next) => onUpdateAmount('expenses', plan.expenses[index].id, row.year, next)} onApplyDown={(next) => onApplyDown('expenses', plan.expenses[index].id, row.year, next)} />)}<td className="cashflow-total-column">{formatTableMoney(row.totalExpenses)}</td><td className={row.annualNet < 0 ? 'negative-cell' : ''}>{formatTableMoney(row.annualNet)}</td><td className={row.balanceWithoutReturn < 0 ? 'negative-cell' : ''}>{formatTableMoney(row.balanceWithoutReturn)}</td><CoverageCell value={row.fundsExpenseCoverageRate} scaleMaximum={fundsCoverageScaleMaximum} depleted={row.balanceWithoutReturn <= 0} basis="原场景资金总额" />{showInsurance ? <><InsuranceBalanceCell balance={row.savingsInsuranceBalance} premium={row.savingsInsurancePremium} irr={row.savingsInsuranceIrr} /><td className="insurance-scenario-column insurance-expense-cell">{formatTableMoney(row.totalExpensesWithInsurance)}</td><td className={`insurance-scenario-column insurance-assets-cell${row.balanceWithSavingsInsurance < 0 ? ' negative-cell' : ''}`}>{formatTableMoney(row.balanceWithSavingsInsurance)}</td><CoverageCell className="insurance-scenario-column" value={row.savingsInsuranceCoverageRate} scaleMaximum={insuredCoverageScaleMaximum} depleted={row.balanceWithSavingsInsurance <= 0} basis="储蓄险场景资产总额" /></> : null}

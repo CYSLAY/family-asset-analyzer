@@ -450,7 +450,7 @@ function AssetSheetRow({ preset, entry, customer, showEmergency, onChange, onDel
   const value = entry?.currentValue ?? 0
   const displayName = onDelete ? entry?.name || preset.name : preset.name
   return <div className={`sheet-row ${entry ? 'has-data' : ''}`}>
-    <div className="sheet-item-label"><strong>{displayName}</strong><small>{assetLabels[entry?.category ?? preset.category]}</small>{onDelete ? <button type="button" aria-label={`删除${displayName}`} onClick={onDelete}><TrashIcon size={14} /></button> : null}</div>
+    <div className="sheet-item-label"><strong>{displayName}</strong><small>{assetLabels[entry?.category ?? preset.category]}</small>{onDelete ? <button type="button" aria-label={`删除${displayName}`} onClick={() => { if (window.confirm('删除这条记录及其金额？其他记录不受影响。')) onDelete() }}><TrashIcon size={14} /></button> : null}</div>
     <SheetMoneyInput label={`${preset.name}当前价值`} mobileLabel="当前价值" value={value} onChange={(currentValue) => onChange({ currentValue })} />
     <SheetMoneyInput label={`${preset.name}年收益率`} mobileLabel="年收益率" suffix="%" value={entry?.annualReturnRate ?? 0} onChange={(annualReturnRate) => onChange({ annualReturnRate })} />
     <label className="sheet-select-wrap" data-mobile-label="所属成员"><span className="sr-only">{preset.name}所属成员</span><PrivateControl><select aria-label={`${preset.name}所属成员`} value={entry?.ownerMemberId ?? ''} onChange={(event) => onChange({ ownerMemberId: event.target.value || null })}><option value="">家庭共有</option>{memberOptions(customer)}</select></PrivateControl></label>
@@ -461,7 +461,7 @@ function AssetSheetRow({ preset, entry, customer, showEmergency, onChange, onDel
 
 function LiabilitySheetRow({ preset, entry, onChange, onDelete }: { preset: LiabilityPreset; entry?: LiabilityEntry; onChange: (patch: Partial<LiabilityEntry>) => void; onDelete?: () => void }) {
   return <div className={`sheet-row ${entry ? 'has-data' : ''}`}>
-    <div className="sheet-item-label"><strong>{entry?.name || preset.name}</strong><small>{liabilityLabels[entry?.category ?? preset.category]}</small>{onDelete ? <button type="button" aria-label={`删除${entry?.name || preset.name}`} onClick={onDelete}><TrashIcon size={14} /></button> : null}</div>
+    <div className="sheet-item-label"><strong>{entry?.name || preset.name}</strong><small>{liabilityLabels[entry?.category ?? preset.category]}</small>{onDelete ? <button type="button" aria-label={`删除${entry?.name || preset.name}`} onClick={() => { if (window.confirm('删除这条记录及其金额？其他记录不受影响。')) onDelete() }}><TrashIcon size={14} /></button> : null}</div>
     <SheetMoneyInput label={`${preset.name}当前余额`} mobileLabel="当前余额" value={entry?.balance ?? 0} onChange={(balance) => onChange({ balance })} />
     <SheetMoneyInput label={`${preset.name}每月还款`} mobileLabel="每月还款" value={entry?.monthlyPayment ?? 0} onChange={(monthlyPayment) => onChange({ monthlyPayment })} />
     <SheetMoneyInput label={`${preset.name}年利率`} mobileLabel="年利率" suffix="%" value={entry?.annualInterestRate ?? 0} onChange={(annualInterestRate) => onChange({ annualInterestRate })} />
@@ -475,13 +475,13 @@ function CompactFlowField({ label, entry, frequency, necessary, onChange, onDele
   return <div className={`compact-flow-field ${entry ? 'has-data' : ''}`}>
     <div className="compact-flow-label"><strong>{label}</strong>{necessary ? <small>必要支出</small> : null}</div>
     <label className="compact-flow-input"><span className="sr-only">{label}（{unit}）</span><input aria-label={`${label}（${unit}）`} type="number" min="0" inputMode="decimal" value={entry?.amount || ''} onChange={(event) => onChange(numberValue(event.target.value))} /><i>{unit}</i></label>
-    {onDelete ? <button className="compact-flow-delete" type="button" aria-label={`删除${label}`} onClick={onDelete}><TrashIcon size={14} /></button> : null}
+    {onDelete ? <button className="compact-flow-delete" type="button" aria-label={`删除${label}`} onClick={() => { if (window.confirm('删除这条记录及其金额？其他记录不受影响。')) onDelete() }}><TrashIcon size={14} /></button> : null}
   </div>
 }
 
 function CashFlowSheetRow({ preset, entry, customer, showNecessary, onChange, onDelete }: { preset: FlowPreset; entry?: CashFlowEntry; customer: CustomerProfile; showNecessary: boolean; onChange: (patch: Partial<CashFlowEntry>) => void; onDelete?: () => void }) {
   return <div className={`sheet-row ${entry ? 'has-data' : ''}`}>
-    <div className="sheet-item-label"><strong>{onDelete ? entry?.name || preset.name : preset.name}</strong><small>{entry?.category || preset.category}</small>{onDelete ? <button type="button" aria-label={`删除${entry?.name || preset.name}`} onClick={onDelete}><TrashIcon size={14} /></button> : null}</div>
+    <div className="sheet-item-label"><strong>{onDelete ? entry?.name || preset.name : preset.name}</strong><small>{entry?.category || preset.category}</small>{onDelete ? <button type="button" aria-label={`删除${entry?.name || preset.name}`} onClick={() => { if (window.confirm('删除这条记录及其金额？其他记录不受影响。')) onDelete() }}><TrashIcon size={14} /></button> : null}</div>
     <SheetMoneyInput label={`${preset.name}每期金额`} value={entry?.amount ?? 0} onChange={(amount) => onChange({ amount })} />
     <label className="sheet-select-wrap"><span className="sr-only">{preset.name}频率</span><select aria-label={`${preset.name}频率`} value={entry?.frequency ?? preset.frequency} onChange={(event) => onChange({ frequency: event.target.value as CashFlowEntry['frequency'] })}>{options(frequencyLabels)}</select></label>
     <label className="sheet-select-wrap"><span className="sr-only">{preset.name}归属成员</span><PrivateControl><select aria-label={`${preset.name}归属成员`} value={entry?.memberId ?? ''} onChange={(event) => onChange({ memberId: event.target.value || null })}><option value="">整个家庭</option>{memberOptions(customer)}</select></PrivateControl></label>
@@ -489,7 +489,7 @@ function CashFlowSheetRow({ preset, entry, customer, showNecessary, onChange, on
   </div>
 }
 function EntrySection({ title, description, action, onAdd, children }: { title: string; description: string; action: string; onAdd: () => void; children: React.ReactNode }) { return <section className="form-section entry-section"><div className="form-section-heading member-heading"><div><h2>{title}</h2><p>{description}</p></div><button className="subtle-button" type="button" onClick={onAdd}><PlusIcon size={18} /> {action}</button></div><div className="member-stack">{children}</div></section> }
-function EntryHeader({ name, privateName = false, onDelete }: { name: string; privateName?: boolean; onDelete: () => void }) { return <div className="member-card-heading"><div><span>原始记录</span><strong>{privateName ? <PrivateText>{name}</PrivateText> : name}</strong></div><button className="icon-button danger" title="删除记录" type="button" onClick={onDelete}><TrashIcon size={18} /></button></div> }
+function EntryHeader({ name, privateName = false, onDelete }: { name: string; privateName?: boolean; onDelete: () => void }) { return <div className="member-card-heading"><div><span>原始记录</span><strong>{privateName ? <PrivateText>{name}</PrivateText> : name}</strong></div><button className="icon-button danger" title="删除记录" type="button" onClick={() => { if (window.confirm('删除这条记录及其金额？其他记录不受影响。')) onDelete() }}><TrashIcon size={18} /></button></div> }
 function Field({ label, privateValue = false, children }: { label: string; privateValue?: boolean; children: React.ReactNode }) { return <label className="field-block"><span>{label}</span><div className="input-wrap">{privateValue ? <PrivateControl>{children}</PrivateControl> : children}</div></label> }
 function MoneyField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) { return <Field label={label}><input type="number" min="0" inputMode="decimal" value={value || ''} onChange={(e) => onChange(numberValue(e.target.value))} /><span className="input-suffix">元</span></Field> }
 function InlineEmpty({ text }: { text: string }) { return <div className="inline-empty">{text}</div> }

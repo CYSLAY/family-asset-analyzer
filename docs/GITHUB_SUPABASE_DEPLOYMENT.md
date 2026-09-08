@@ -1,6 +1,6 @@
 # GitHub Pages + Supabase 标准部署手册
 
-> 适用于本仓库，也可作为 Vite/React 静态网站接入 Supabase 的通用模板。更新日期：2026-08-14。
+> 适用于本仓库，也可作为 Vite/React 静态网站接入 Supabase 的通用模板。更新日期：2026-09-08。
 
 ## 1. 最终会得到什么
 
@@ -29,22 +29,22 @@ flowchart LR
 ### 2.1 顾问模式
 
 1. 前端先用 `VITE_ALLOWED_USERNAMES` 判断用户名是否出现在入口名单。
-2. 真正的认证由 Supabase 函数 `workspace_username_allowed` 完成。
+2. `workspace_login` 校验密码并签发 8 小时随机会话。后续 RPC 通过 `workspace_username_allowed` 验证会话；浏览器不保存顾问密码。
 3. 数据库中的 `workspace_users.access_hash` 保存 bcrypt 风格密码哈希，不保存明文密码。
 4. 顾问档案保存在 `workspace_customer_records`，以 `username + customer UUID` 隔离。
-5. 保存时传入 `client_updated_at`；数据库只接受不早于现有版本的数据，减少旧设备覆盖新数据的风险。
+5. `sync_write_v2` 校验客户端持有的服务端 revision；版本冲突保留本机与云端两份，等待用户选择，不按设备时钟覆盖。
 
 前端白名单只是界面层限制，不能代替数据库校验。新增顾问账号时，GitHub Variable 和 Supabase `workspace_users` 必须同时更新。
 
 ### 2.2 家庭财务自测模式
 
-1. 浏览器生成随机 UUID 与高强度随机访问令牌。
+1. 顾问生成随机邀请码；客户兑换后获得该档案 UUID 与访问令牌。默认最多兑换 3 次；第三次签发的令牌仍有效，撤销后云端拒绝读写。
 2. 令牌只保存在客户当前浏览器的 `localStorage`；Supabase 只保存 SHA-256 哈希。
 3. 联系人姓名未填写、资料完成度未达到同步阈值时，不上传云端。
-4. 达到条件后，修改先进入 IndexedDB，再以防抖方式自动调用 `public_upsert_intake`。
+4. 达到条件后，资料与待同步意图同时写入分区 IndexedDB，再防抖调用 `sync_write_v2`。失败保留队列，恢复网络后重试；冲突不自动重试覆盖。
 5. 客户只能凭本设备令牌读取自己的记录；顾问通过已验证的管理员凭据查看自填档案。
 
-这个模式不是传统账号系统。清理浏览器网站数据或换设备后，客户无法仅凭姓名找回原自测记录；如需正式多设备客户账号，应升级为 Supabase Auth。
+这个模式不是传统账号系统。换设备需要再次兑换仍可使用的邀请码，不能凭姓名读取档案；如需完整客户账号体系，应另行评估 Supabase Auth。
 
 ### 2.3 当前主要数据库对象
 
@@ -141,17 +141,14 @@ Fork 不会复制原仓库的 Actions Secrets，这是正确且安全的行为�
 首次部署且尚未使用 CLI 管理迁移时：
 
 1. 打开 Supabase **SQL Editor → New query**。
-2. 按文件名时间顺序，逐份执行：
+2. 按文件名时间顺序，逐份执行 `supabase/migrations/` 下的全部 SQL。不要只执行早期的四份文件。可先列出当前完整清单：
 
 ```text
-supabase/migrations/202608120001_initial_schema.sql
-supabase/migrations/202608120002_username_workspace.sql
-supabase/migrations/202608120003_access_password.sql
-supabase/migrations/202608130001_public_intake.sql
+ls supabase/migrations/*.sql
 ```
 
 3. 每份脚本成功后再执行下一份。
-4. 不要把四份脚本倒序或只执行最后一份；后面的函数依赖前面的表、扩展和函数。
+4. 不要倒序或只执行最后一份；后面的函数依赖前面的表、扩展和函数。成熟项目只应用确认尚未执行的增量，不盲目重跑旧函数定义。
 
 ### 7.2 创建顾问账号与密码哈希
 
@@ -172,7 +169,7 @@ set active = excluded.active,
 注意：
 
 - 这条语句只在 Supabase 安全界面中执行，不保存到仓库，不截图公开。
-- 当前产品界面仍适配数字访问密码，但复制项目时建议使用更长密码，并同步调整输入限制。
+- 登录支持字符密码。使用独立强密码；当前 bcrypt 登录接口限制为不超过 72 字节。
 - `VITE_ALLOWED_USERNAMES` 需要包含相同的小写用户名。
 
 验证时不要读取哈希全文，可运行：
@@ -366,7 +363,7 @@ https://OWNER.github.io/REPOSITORY/
 - 顾问新增测试档案并同步。
 - 第二台设备或无痕窗口用相同顾问凭据登录，可读到测试档案。
 - 客户自测填写超过同步阈值后，顾问端能在“客户自填”分类找到。
-- 修改同一客户后，较新的 `updatedAt` 胜出。
+- 两设备同时修改同一档案时，旧 revision 写入返回冲突，用户明确选择后才能继续，不丢弃另一份内容。
 - 删除必须经过红色按钮与二次确认，并验证云端记录一并删除。
 
 ### 权限验收
@@ -427,7 +424,7 @@ supabase/migrations/202608140001_add_example_field.sql
 1. 确认点击了同步或自测数据已达到自动上传阈值。
 2. 检查页面同步状态与浏览器 Network 中 RPC 响应。
 3. 两台设备是否使用同一个顾问工作区；客户自测随机令牌不会自动跨设备迁移。
-4. 比较记录的 `client_updated_at`，旧版本不会覆盖较新版本。
+4. 检查服务端 revision、待同步队列和冲突提示，不以两台设备时间先后决定覆盖。
 
 ### GitHub Actions 构建成功但页面空白
 
@@ -438,7 +435,7 @@ supabase/migrations/202608140001_add_example_field.sql
 
 ### 数据库报函数不存在
 
-说明 migration 未按顺序全部执行。核对四份 SQL，不要只重新运行最后一份。
+说明 migration 未按顺序全部执行。核对当前全部 SQL 清单，不要只重新运行最后一份。
 
 ### Secret 疑似泄露
 
@@ -489,7 +486,7 @@ Codex 应自动完成的内容：
 ## 18. 一页验收清单
 
 - [ ] 朋友使用自己的 GitHub 仓库和自己的 Supabase 项目。
-- [ ] 四份 migration 按顺序成功应用。
+- [ ] 当前全部 migration 按顺序成功应用。
 - [ ] 顾问用户名存在、启用且已设置密码哈希。
 - [ ] `.env.local` 未被 Git 跟踪。
 - [ ] GitHub 两个 Secrets 与一个 Variable 已配置。

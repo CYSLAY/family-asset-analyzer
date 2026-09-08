@@ -4,6 +4,7 @@ import { calculateInsurance, CURRENCIES, defaultInsuranceInputs, INSURANCE_NAMES
   type InsuranceInputs, type InsuranceProduct } from '../lib/insuranceCalculator'
 import './SavingsInsuranceCalculator.css'
 import { InsurancePlanLibrary } from './InsurancePlanLibrary'
+import { CashFlowFillDialog } from './CashFlowFillDialog'
 
 type Drafts = Record<InsuranceProduct, InsuranceInputs>
 const money = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits: 2 })
@@ -31,6 +32,7 @@ export function SavingsInsuranceCalculator({ advisor }: { advisor: string }) {
   const [undo, setUndo] = useState<{ field: 'extras' | 'rates'; values: Record<number, number | undefined>; applied: number } | null>(null)
   const [previousInputs, setPreviousInputs] = useState<InsuranceInputs | null>(null)
   const [notice, setNotice] = useState('')
+  const [fillRequest, setFillRequest] = useState<{ field: 'extras' | 'rates'; year: number; inputs: InsuranceInputs } | null>(null)
   const dialog = useRef<HTMLDialogElement>(null)
   const workspace = useRef<HTMLElement>(null)
   const p = drafts[product]
@@ -62,16 +64,27 @@ export function SavingsInsuranceCalculator({ advisor }: { advisor: string }) {
     setProduct(next); setActive(null); setUndo(null); setPreviousInputs(null); setNotice('')
   }
   function fillBelow() {
+    if (workspace.current?.querySelector('[aria-invalid="true"]')) { setNotice('请先修正无效数字，再进行填充。'); return }
+    if (active && result) setFillRequest({ ...active, inputs: p })
+  }
+  function updateOverride(field: 'extras' | 'rates', year: number, value: number) {
+    if (undo?.field === field && Object.hasOwn(undo.values, year)) {
+      const values = { ...undo.values }; delete values[year]
+      setUndo(Object.keys(values).length ? { ...undo, values } : null)
+    }
+    update({ [field]: { ...p[field], [year]: value } })
+  }
+  function confirmFill(end: number) {
     if (!active || !result) return
-    const end = result.rows.at(-1)!.year
+    if (!fillRequest || fillRequest.inputs !== p) return
     const value = p[active.field][active.year] ?? 0
     if (end <= active.year) return
-    if (!window.confirm(`将第 ${active.year + 1}–${end} 年的${active.field === 'extras' ? '额外提款' : '指定融资利率'}设为 ${value}${active.field === 'rates' ? '%' : ''}？仅覆盖下方同列，可撤销。`)) return
     setUndo({ field: active.field, values: Object.fromEntries(Array.from({ length: end - active.year }, (_, i) => [active.year + i + 1, p[active.field][active.year + i + 1]])), applied: value })
     const next = { ...p[active.field] }
     for (let y = active.year + 1; y <= end; y++) next[y] = value
     update({ [active.field]: next })
     setNotice(`已向下填充 ${end - active.year} 个年度。`)
+    setFillRequest(null)
   }
   function numberField(key: keyof InsuranceInputs, label: string, suffix = '', hint?: string) {
     return <label className="sic-field"><span>{label}</span><span className="sic-control"><NumericInput ariaLabel={label} value={p[key] as number} onCommit={v => update({ [key]: v })} /><em>{suffix}</em></span>{hint && <small>{hint}</small>}</label>
@@ -121,10 +134,10 @@ export function SavingsInsuranceCalculator({ advisor }: { advisor: string }) {
         </tr></thead>
         <tbody>{visibleRows.map(r => <tr key={r.year}>
           <th scope="row">{r.year === 0 ? '0 · 投保' : r.year}</th><td>{r.age}</td><td>{money(r.contribution)}</td>
-          {showWithdrawals && <><td className="sic-edit-cell">{product === 'PRMESP' && r.year === 0 ? '—' : <NumericInput ariaLabel={`第 ${r.year} 年额外提款`} value={p.extras[r.year] ?? 0} onFocus={() => setActive({ year: r.year, field: 'extras' })} onCommit={v => update({ extras: { ...p.extras, [r.year]: v } })} />}</td><td>{money(r.withdrawal)}</td><td>{money(r.cumulative)}</td></>}
+          {showWithdrawals && <><td className="sic-edit-cell">{product === 'PRMESP' && r.year === 0 ? '—' : <NumericInput ariaLabel={`第 ${r.year} 年额外提款`} value={p.extras[r.year] ?? 0} onFocus={() => setActive({ year: r.year, field: 'extras' })} onCommit={v => updateOverride('extras', r.year, v)} />}</td><td>{money(r.withdrawal)}</td><td>{money(r.cumulative)}</td></>}
           <td className="sic-balance">{money(r.balance)}</td><td>{(returnMode === 'IRR' ? r.irr : r.yoy) === 0 ? '—' : percent(returnMode === 'IRR' ? r.irr : r.yoy)}</td>
           {guarantees && <><td>{money(r.guaranteed)}</td><td>{money(r.nonGuaranteed)}</td></>}
-          {financing && <><td className="sic-edit-cell">{r.year === 0 ? '—' : <NumericInput ariaLabel={`第 ${r.year} 年指定融资利率`} value={p.rates[r.year] ?? 0} onFocus={() => setActive({ year: r.year, field: 'rates' })} onCommit={v => update({ rates: { ...p.rates, [r.year]: v } })} />}</td><td>{money(r.interest)}</td><td>{money(r.cumulativeInterest)}</td></>}
+          {financing && <><td className="sic-edit-cell">{r.year === 0 ? '—' : <NumericInput ariaLabel={`第 ${r.year} 年指定融资利率`} value={p.rates[r.year] ?? 0} onFocus={() => setActive({ year: r.year, field: 'rates' })} onCommit={v => updateOverride('rates', r.year, v)} />}</td><td>{money(r.interest)}</td><td>{money(r.cumulativeInterest)}</td></>}
         </tr>)}</tbody>
       </table>
     </div>
@@ -179,8 +192,9 @@ export function SavingsInsuranceCalculator({ advisor }: { advisor: string }) {
       <section className="sic-panel sic-table-panel"><header><h2>逐年测算明细</h2><button type="button" onClick={() => setExpanded(true)}><ArrowsOutIcon />放大表格</button></header>{!expanded && table}</section>
     </>}
     <p className="sic-notice" role="status">{notice}</p>
-    <footer className="sic-sources"><p>数据来源：e-1-toolbox-2026-08-03.xlsx，TRST / PRMESP 工作表。非保证现金价值与优惠均为演示假设，实际以正式利益说明及保单条款为准；提前退保可能产生损失。</p><p>当前草稿在浏览器会话暂存；命名保存的方案保留在本机，不写入客户档案、不上传云端。与现金流管理中的储蓄险场景分别计算。</p></footer>
+    <footer className="sic-sources"><p>数据来源：e-1-toolbox-2026-08-03.xlsx，TRST / PRMESP 工作表。非保证现金价值与优惠均为演示假设，实际以正式利益说明及保单条款为准；提前退保可能产生损失。</p><p>草稿与命名方案保存在本机。只有确认应用到客户后，方案才进入客户现金流；使用同一参考表计算，并单独说明币种折算。</p></footer>
     {expanded && <dialog className="sic-dialog" ref={dialog} onCancel={() => setExpanded(false)} onClose={() => setExpanded(false)} aria-labelledby="sic-dialog-title"><header><div><h2 id="sic-dialog-title">{INSURANCE_NAMES[product]} · 逐年明细</h2><span>修改与页面同步 · 按 Esc 关闭</span></div><button type="button" autoFocus aria-label="关闭放大表格" onClick={() => setExpanded(false)}><XIcon /></button></header>{table}</dialog>}
+    {fillRequest && result && <CashFlowFillDialog label={fillRequest.field === 'extras' ? '额外提款' : '指定融资利率'} sourceYear={fillRequest.year} lastYear={result.rows.at(-1)!.year} visibleLastYear={Math.min(years, result.rows.at(-1)!.year)} value={fillRequest.inputs[fillRequest.field][fillRequest.year] ?? 0} unit={fillRequest.field === 'rates' ? '%' : result.currency + '元'} values={result.rows.map(row => ({ year: row.year, value: fillRequest.inputs[fillRequest.field][row.year] ?? 0 }))} stale={fillRequest.inputs !== p} onClose={() => setFillRequest(null)} onConfirm={confirmFill} />}
   </section>
 }
 

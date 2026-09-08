@@ -59,6 +59,7 @@ export interface CashFlowPlan {
   savingsInsuranceAnnualPremium?: number
   savingsInsuranceProduct?: 'trst' | 'prmesp'
   savingsInsurancePaymentYears?: 1 | 5
+  insuranceScenario?: { version: 1; model: 'workbook-2026-08-03-v1'; name: string; product: import('../lib/insuranceCalculator').InsuranceProduct; inputs: import('../lib/insuranceCalculator').InsuranceInputs; exchangeRateToRmb: number }
   members: CashFlowPlanMember[]
   incomes: CashFlowPlanItem[]
   expenses: CashFlowPlanItem[]

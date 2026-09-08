@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SavingsInsuranceCalculator } from './SavingsInsuranceCalculator'
+beforeEach(() => { HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') } })
 
 afterEach(() => { cleanup(); sessionStorage.clear(); localStorage.clear(); vi.restoreAllMocks() })
 describe('advisor calculator editing', () => {
@@ -35,6 +36,7 @@ describe('advisor calculator editing', () => {
     fireEvent.change(source, { target: { value: '10' } })
     fireEvent.blur(source)
     fireEvent.click(screen.getByRole('button', { name: '向下填充' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认填充' }))
     expect((screen.getByRole('textbox', { name: '第 4 年额外提款' }) as HTMLInputElement).value).toBe('0')
     expect((screen.getByRole('textbox', { name: '第 6 年额外提款' }) as HTMLInputElement).value).toBe('10')
     const age = screen.getByRole('textbox', { name: '投保翌年岁' })
@@ -70,7 +72,7 @@ describe('advisor calculator editing', () => {
     render(<SavingsInsuranceCalculator advisor="qa" />)
     fireEvent.focus(screen.getByRole('textbox', { name: '第 5 年额外提款' }))
     fireEvent.click(screen.getByRole('button', { name: '向下填充' }))
-    expect(window.confirm).toHaveBeenCalledOnce()
+    fireEvent.click(screen.getByRole('button', { name: '取消' }))
     expect((screen.getByRole('button', { name: '撤销' }) as HTMLButtonElement).disabled).toBe(true)
   })
 })

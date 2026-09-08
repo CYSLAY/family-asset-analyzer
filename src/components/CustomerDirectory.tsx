@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CaretLeftIcon,
   CaretRightIcon,
@@ -39,6 +39,13 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
   const [selfServicePage, setSelfServicePage] = useState(1)
   const [pendingDelete, setPendingDelete] = useState<CustomerProfile | null>(null)
   const [pendingInvitationDelete, setPendingInvitationDelete] = useState<ClientInvitation | null>(null)
+  const deleteDialog = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    if (!pendingDelete && !pendingInvitationDelete) return
+    deleteDialog.current?.showModal()
+    const previous = document.body.style.overflow; document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previous }
+  }, [pendingDelete, pendingInvitationDelete])
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
   const [invitations, setInvitations] = useState<ClientInvitation[]>([])
@@ -243,8 +250,7 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
         </section>
       </div>
 
-      {pendingDelete || pendingInvitationDelete ? <div className="modal-backdrop delete-modal-backdrop" role="presentation" onMouseDown={() => { if (!deleting) { setPendingDelete(null); setPendingInvitationDelete(null) } }}>
-        <section className="delete-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-description" onMouseDown={(event) => event.stopPropagation()}>
+      {pendingDelete || pendingInvitationDelete ? <dialog ref={deleteDialog} className="delete-confirm-dialog native-delete-dialog" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-description" onCancel={event => { event.preventDefault(); if (!deleting) { setPendingDelete(null); setPendingInvitationDelete(null) } }}>
           <span className="delete-dialog-icon"><TrashIcon size={24} weight="bold" /></span>
           <span className="section-kicker">{pendingInvitationDelete ? '删除邀请码' : '删除客户档案'}</span>
           <h2 id="delete-dialog-title">{pendingInvitationDelete ? `确定删除“${pendingInvitationDelete.code}”吗？` : <>确定删除“<PrivateText>{pendingDelete?.householdName}</PrivateText>”吗？</>}</h2>
@@ -254,8 +260,7 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
             <button className="subtle-button" type="button" disabled={deleting} onClick={() => { setPendingDelete(null); setPendingInvitationDelete(null) }}>取消</button>
             <button className="danger-confirm-button" type="button" disabled={deleting} onClick={() => void handleDelete()}><TrashIcon size={17} /> {deleting ? '正在删除' : '确认永久删除'}</button>
           </div>
-        </section>
-      </div> : null}
+      </dialog> : null}
     </div>
   )
 }

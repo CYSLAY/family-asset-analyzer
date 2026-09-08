@@ -93,6 +93,7 @@ export function calculateInsurance(product: InsuranceProduct, p: InsuranceInputs
   return { rows, totalContribution: n('C16'), totalWithdrawal: n('C17'), irr: n(product === 'TRST' ? 'C18' : 'F18'),
     rebate: n('F16'), notional: n('F17'), maxWithdrawal,
     loan: product === 'PRMESP' && p.financingRate > 0 ? n('C22') : 0,
+    loanRepaymentAge: product === 'PRMESP' && p.financingRate > 0 ? n('C24') : null,
     lowNotional: String(e.cell(product, 'D7')),
     currency: p.currency.startsWith('RMB') ? '人民币' : p.currency.startsWith('HKD') ? '港币' : CURRENCIES[p.currency],
   }
