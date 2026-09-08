@@ -36,6 +36,13 @@ export function clearPublicIntakeSession() {
   localStorage.removeItem(SESSION_KEY)
 }
 
+function markSessionUploaded(session: PublicIntakeSession) {
+  const current = getPublicIntakeSession()
+  // A completed request must not restore credentials after logout or replace
+  // a different invitation redeemed while the request was in flight.
+  if (current?.id === session.id && current.token === session.token) savePublicIntakeSession({ ...current, uploaded: true })
+}
+
 export async function redeemClientInvitation(code: string) {
   if (!supabase) throw new Error('cloud_unavailable')
   const { data, error } = await supabase.rpc('public_redeem_client_invitation', { p_code: code.trim().toLowerCase() })
@@ -56,7 +63,7 @@ export async function fetchPublicIntake(session: PublicIntakeSession) {
   }
   const record = ((data ?? []) as RemoteRecord[])[0]
   if (!record) return null
-  savePublicIntakeSession({ ...session, uploaded: true })
+  markSessionUploaded(session)
   return { ...migrateCustomerProfile(record.document).customer, source: 'self_service' as const }
 }
 
@@ -70,7 +77,7 @@ export async function pushPublicIntake(session: PublicIntakeSession, customer: C
     p_client_updated_at: customer.updatedAt,
   })
   if (error) throw error
-  savePublicIntakeSession({ ...session, uploaded: true })
+  markSessionUploaded(session)
 }
 
 export async function listPublicIntakesForAdvisor(username: string, accessCode: string) {

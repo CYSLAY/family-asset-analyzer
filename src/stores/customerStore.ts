@@ -42,6 +42,7 @@ function scheduleSelfServiceSync(customerId: string) {
   clearTimeout(selfServiceSyncTimers.get(customerId))
   selfServiceSyncTimers.set(customerId, setTimeout(() => {
     selfServiceSyncTimers.delete(customerId)
+    if (getAccessSession()) return
     const session = getPublicIntakeSession()
     const customer = useCustomerStore.getState().customers.find((item) => item.id === customerId)
     if (!session || session.id !== customerId || !customer || customer.source !== 'self_service' || (!session.uploaded && !canSyncSelfServiceCustomer(customer))) return
