@@ -34,6 +34,8 @@ describe('automatic intake status', () => {
     expect(intakeCompletion(customer)).toBeGreaterThan(10)
     expect(canSyncSelfServiceCustomer(customer)).toBe(false)
     customer.primaryContactName = '测试客户'
+    expect(canSyncSelfServiceCustomer(customer)).toBe(false)
+    customer.assets = [{ ...createAsset(), currentValue: 10000 }]
     expect(canSyncSelfServiceCustomer(customer)).toBe(true)
   })
 })

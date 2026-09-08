@@ -223,7 +223,10 @@ function MemberForm({ customer }: { customer: CustomerProfile }) {
   return <section className="form-section module-form">
     <div className="form-section-heading member-heading"><div><h2>家庭成员明细</h2><p>每位成员独立保存，便于收入与教育目标归属。</p></div><button className="subtle-button" type="button" onClick={() => void addMember(customer.id, createMember({ relation: '配偶' }))}><PlusIcon size={18} /> 添加成员</button></div>
     <div className="member-stack">
-      {customer.members.map((member, index) => <MemberCard customer={customer} member={member} index={index} onUpdate={(patch) => updateMember(customer.id, member.id, patch)} onRemove={() => removeMember(customer.id, member.id)} key={member.id} />)}
+      {customer.members.map((member, index) => <MemberCard customer={customer} member={member} index={index} onUpdate={(patch) => updateMember(customer.id, member.id, patch)} onRemove={() => {
+        const linked = customer.assets.filter(item => item.ownerMemberId === member.id).length + customer.incomes.filter(item => item.memberId === member.id).length + customer.expenses.filter(item => item.memberId === member.id).length + customer.educationGoals.filter(item => item.childMemberId === member.id).length
+        if (window.confirm(`移除该成员？关联的 ${linked} 项资料及金额将保留，改为家庭归属；教育目标保留为待关联。`)) void removeMember(customer.id, member.id)
+      }} key={member.id} />)}
     </div>
   </section>
 }

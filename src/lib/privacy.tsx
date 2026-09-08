@@ -25,11 +25,11 @@ export function PrivateText({ children, className = '', mask = PRIVACY_MASK }: {
 export function PrivateControl({ children, mask = PRIVACY_MASK }: { children: ReactNode; mask?: string }) {
   const enabled = usePrivacyMode()
   const multiline = isValidElement(children) && children.type === 'textarea'
-  return <span className={`privacy-control${multiline ? ' is-multiline' : ''}`}>
+  return <span title={enabled ? '关闭顶部眼睛按钮的隐私模式后可编辑' : undefined} className={`privacy-control${multiline ? ' is-multiline' : ''}`}>
     {enabled
       ? multiline
-        ? <textarea aria-label="隐私信息已隐藏" className="privacy-mask-control" readOnly value={mask} />
-        : <input aria-label="隐私信息已隐藏" className="privacy-mask-control" readOnly value={mask} />
+        ? <textarea aria-label="隐私信息已隐藏" aria-description="关闭顶部隐私模式后可编辑" className="privacy-mask-control" readOnly value={mask} />
+        : <input aria-label="隐私信息已隐藏" aria-description="关闭顶部隐私模式后可编辑" className="privacy-mask-control" readOnly value={mask} />
       : children}
   </span>
 }

@@ -84,9 +84,11 @@ describe('financial analysis', () => {
     expect(result.metrics.find((item) => item.key === 'liquid_coverage')?.value).toBe(3)
   })
 
-  it('shows no debt instead of insufficient data when the household has no liabilities', () => {
+  it('shows no debt only after the household explicitly confirms it', () => {
     const customer = createCustomer('无负债')
     customer.assets = [{ ...createAsset(), currentValue: 200_000 }]
+    expect(analyzeCustomer(customer).metrics.find((item) => item.key === 'liquid_coverage')?.value).toBeNull()
+    customer.noLiabilitiesConfirmed = true
     const metric = analyzeCustomer(customer).metrics.find((item) => item.key === 'liquid_coverage')
     expect(metric?.title).toBe('当前没有短期偿债压力')
     expect(metric?.displayValue).toBe('无负债')
@@ -105,12 +107,12 @@ describe('financial analysis', () => {
     high.expenses = [{ ...createCashFlow('expense'), name: '保险', category: '保险保障', amount: 2_100 }]
 
     expect(analyzeCustomer(none).metrics.find((item) => item.key === 'insurance_expense_ratio')).toMatchObject({ value: 0, level: 'neutral' })
-    expect(analyzeCustomer(moderate).metrics.find((item) => item.key === 'insurance_expense_ratio')).toMatchObject({ value: 10, level: 'attention' })
+    expect(analyzeCustomer(moderate).metrics.find((item) => item.key === 'insurance_expense_ratio')).toMatchObject({ value: 10, level: 'healthy' })
     expect(analyzeCustomer(high).metrics.find((item) => item.key === 'insurance_expense_ratio')).toMatchObject({ value: 21, level: 'warning' })
     expect(analyzeCustomer(high).metrics.find((item) => item.key === 'insurance_expense_ratio')?.reference).toBe('1. 0%：无保险投入\n2. 低于10%：有一定投入\n3. 10%–20%：较合理区间\n4. 高于20%：需确保现金流健康')
   })
 
-  it.each([[9.99, 'healthy'], [10, 'attention'], [20, 'attention'], [20.01, 'warning']])('classifies insurance ratio %s at the correct boundary', (ratio, level) => {
+  it.each([[9.99, 'healthy'], [10, 'healthy'], [20, 'healthy'], [20.01, 'warning']])('classifies insurance ratio %s at the correct boundary', (ratio, level) => {
     const customer = createCustomer('边界测试')
     customer.incomes = [{ ...createCashFlow('income'), amount: 100_000, frequency: 'yearly' }]
     customer.expenses = [{ ...createCashFlow('expense'), name: '年度保费', amount: Number(ratio) * 1_000, frequency: 'yearly' }]

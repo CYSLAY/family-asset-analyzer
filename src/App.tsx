@@ -102,7 +102,7 @@ export function App() {
         customer = { ...createCustomer('', 'self_service'), id: session.id, householdName: '我的家庭' }
       }
       await putCustomer(customer)
-      if (cloudFetched && canSyncSelfServiceCustomer(customer) && (!remoteCustomer || customer.updatedAt > remoteCustomer.updatedAt)) {
+      if (cloudFetched && (remoteCustomer || canSyncSelfServiceCustomer(customer)) && (!remoteCustomer || customer.updatedAt > remoteCustomer.updatedAt)) {
         try { await pushPublicIntake(session, customer) } catch { cloudFailed = true }
       }
       if (cancelled) return
@@ -144,9 +144,9 @@ export function App() {
   const navigation = selfService ? selfServiceNavigation : adminNavigation
   const modeLabel = selfService ? '家庭财务自测' : '家庭财务分析'
   const modeDescription = selfService ? '我的资料与报告' : '客户资料工作区'
-  const selfServiceCloudEligible = Boolean(selectedCustomer && canSyncSelfServiceCustomer(selectedCustomer))
+  const selfServiceCloudEligible = Boolean(selectedCustomer && (getPublicIntakeSession()?.uploaded || canSyncSelfServiceCustomer(selectedCustomer)))
   const syncLabel = selfService
-    ? !selfServiceCloudEligible ? '填写姓名后自动同步' : syncState === 'dirty' ? '等待自动同步' : syncState === 'syncing' ? '正在自动同步' : syncState === 'error' ? '云端同步待重试' : '资料已自动同步'
+    ? !selfServiceCloudEligible ? '资料完善超过 10% 后自动同步' : syncState === 'dirty' ? '等待自动同步' : syncState === 'syncing' ? '正在自动同步' : syncState === 'error' ? '云端同步待重试' : '资料已自动同步'
     : workspaceSync === 'synced' ? '云端工作区已连接' : workspaceSync === 'syncing' ? '正在连接云端' : workspaceSync === 'error' ? '云端连接失败' : '退出当前工作区'
 
   return <PrivacyModeProvider enabled={!selfService && privacyMode}><div className={`${selfService ? 'app-shell self-service-shell' : 'app-shell'}${!selfService && privacyMode ? ' privacy-mode' : ''}`}>

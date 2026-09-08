@@ -1,4 +1,5 @@
 import type { CashFlowEntry, CustomerProfile } from '../types/domain'
+import { isLiquidAsset } from '../types/domain'
 import { estimateEducationGoalCash } from './educationCosts'
 
 export type HealthLevel = 'critical' | 'warning' | 'attention' | 'healthy' | 'strong' | 'neutral'
@@ -49,8 +50,8 @@ export function analyzeCustomer(customer: CustomerProfile): FinancialAnalysis {
   const assets = customer.assets.reduce((sum, item) => sum + item.currentValue, 0)
   const liabilities = customer.liabilities.reduce((sum, item) => sum + item.balance, 0)
   const fixedAssets = customer.assets.filter((item) => item.category === 'property' || item.category === 'vehicle').reduce((sum, item) => sum + item.currentValue, 0)
-  const liquidAssets = customer.assets.filter((item) => item.liquidity !== 'long_term').reduce((sum, item) => sum + item.currentValue, 0)
-  const emergencyFunds = customer.assets.filter((item) => item.availableForEmergency && item.liquidity !== 'long_term').reduce((sum, item) => sum + item.currentValue, 0)
+  const liquidAssets = customer.assets.filter(isLiquidAsset).reduce((sum, item) => sum + item.currentValue, 0)
+  const emergencyFunds = customer.assets.filter((item) => item.availableForEmergency && isLiquidAsset(item)).reduce((sum, item) => sum + item.currentValue, 0)
   const annualIncome = customer.incomes.reduce((sum, item) => sum + annualize(item), 0)
   const annualExpenses = customer.expenses.reduce((sum, item) => sum + annualize(item), 0)
   const annualDebtPayments = customer.liabilities.reduce((sum, item) => sum + item.monthlyPayment * 12, 0)
@@ -73,7 +74,7 @@ export function analyzeCustomer(customer: CustomerProfile): FinancialAnalysis {
     netWorthMetric(assets - liabilities, customer.assets.length > 0 || customer.liabilities.length > 0),
     debtRatioMetric(assets, liabilities),
     fixedAssetMetric(assets, fixedAssets),
-    liquidCoverageMetric(liquidAssets, dueWithinOneYear, hasLiabilityData),
+    liquidCoverageMetric(liquidAssets, dueWithinOneYear, hasLiabilityData, customer.noLiabilitiesConfirmed === true),
     debtServiceMetric(annualIncome, annualDebtPayments, liabilities),
     emergencyMetric(emergencyFunds, necessaryMonthlyOutflow, emergencyTarget),
     savingsMetric(annualIncome, annualSurplus),
@@ -145,7 +146,8 @@ function estimateOneYearDebt(liability: CustomerProfile['liabilities'][number]) 
   return 0
 }
 
-function liquidCoverageMetric(liquid: number, due: number, hasLiabilityData: boolean): MetricResult {
+function liquidCoverageMetric(liquid: number, due: number, hasLiabilityData: boolean, confirmed: boolean): MetricResult {
+  if (!hasLiabilityData && !confirmed) return metric('liquid_coverage', '资产负债健康度', null, 'ratio', 'neutral', '负债资料待确认', '尚未填写负债，也未确认无负债。', '补充负债或确认当前无负债。', '流动资产 / 未来一年应还债务', '')
   if (!hasLiabilityData) return { ...metric('liquid_coverage', '资产负债健康度', 10, 'ratio', 'strong', '当前没有短期偿债压力', '当前没有录入需要偿还的负债，流动资产无需承担未来一年还款。', '', '当前无负债', ''), displayValue: '无负债' }
   if (due <= 0) return metric('liquid_coverage', '资产负债健康度', null, 'ratio', 'neutral', '还款计划待补充', '已录入负债余额，但月供、剩余期数和未来一年应还金额不足以推算短期还款。', '补充月供或未来一年应还金额。', '流动资产 / 未来一年应还债务', '低于1倍风险较高，1-3倍需关注，3倍及以上较健康')
   const ratio = liquid / due
@@ -201,8 +203,8 @@ function insuranceExpenseRatioMetric(income: number, insuranceExpenses: number):
   if (income <= 0) return metric('insurance_expense_ratio', '保险支出占比', null, 'percent', 'neutral', '等待收入数据', '没有家庭年收入，暂时无法评估保费负担。', '补充家庭收入后自动计算保险支出占比。', formula, reference)
   const rate = insuranceExpenses / income * 100
   if (rate === 0) return metric('insurance_expense_ratio', '保险支出占比', rate, 'percent', 'neutral', '未录入保险支出', '现有家庭支出中没有识别到保险或保费项目，不据此判断保障不足。', '如家庭已有保单，请补充年度保费；保障充足度需结合保额与家庭责任另行评估。', formula, reference)
-  if (rate < 10) return metric('insurance_expense_ratio', '保险支出占比', rate, 'percent', 'healthy', '保费负担相对温和', '当前年度保费占家庭收入比例低于10%，通常较易纳入持续现金流安排。', '继续核对保障范围、保额和缴费年限，不以低占比替代保障需求分析。', formula, reference)
-  if (rate <= 20) return metric('insurance_expense_ratio', '保险支出占比', rate, 'percent', 'attention', '需要检查持续缴费能力', '年度保费占家庭收入10%-20%，应结合年度结余、负债和应急资金判断长期负担。', '确认扣除保费后现金流仍为正，并核对未来各年的缴费安排。', formula, reference)
+  if (rate < 10) return metric('insurance_expense_ratio', '保险支出占比', rate, 'percent', 'healthy', '有一定投入', '当前年度保费占家庭收入比例低于10%。占比不代表保障是否充足。', '继续核对保障范围、保额和缴费年限。', formula, reference)
+  if (rate <= 20) return metric('insurance_expense_ratio', '保险支出占比', rate, 'percent', 'healthy', '较合理区间', '当前占比位于本工具10%–20%的参考区间，仍需结合家庭结余与缴费期限核对。', '确认扣除保费后现金流仍为正，并核对未来各年的缴费安排。', formula, reference)
   return metric('insurance_expense_ratio', '保险支出占比', rate, 'percent', 'warning', '保费负担需重点关注', '年度保费超过家庭年收入20%，长期缴费可能明显挤压其他家庭目标。', '重点复核保单类型、缴费期限、退保损失和家庭现金流承受能力。', formula, reference)
 }
 

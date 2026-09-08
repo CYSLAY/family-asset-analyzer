@@ -65,9 +65,7 @@ export function buildCustomerDirectoryView(customers: CustomerProfile[], search:
     selfServiceCustomers,
     advisorPage,
     advisorPageCount,
-    displayedAdvisorCustomers: searchActive
-      ? advisorCustomers
-      : advisorCustomers.slice((advisorPage - 1) * advisorPageSize, advisorPage * advisorPageSize),
+    displayedAdvisorCustomers: advisorCustomers.slice((advisorPage - 1) * advisorPageSize, advisorPage * advisorPageSize),
     displayedSelfServiceCustomers: searchActive
       ? selfServiceCustomers
       : selfServiceCustomers.slice(0, selfServicePageSize),

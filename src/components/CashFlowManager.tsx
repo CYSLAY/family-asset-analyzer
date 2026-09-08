@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type DragEvent as ReactDragEvent, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent as ReactDragEvent, type KeyboardEvent } from 'react'
 import {
   ArrowClockwiseIcon,
   ArrowsOutIcon,
@@ -35,11 +35,13 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
   const plan = useMemo(() => customer ? customer.cashFlowPlan ?? createCashFlowPlanFromCustomer(customer) : null, [customer])
   const rows = useMemo(() => plan ? buildCashFlowProjection(plan) : [], [plan])
   const [displayYears, setDisplayYears] = useState(5)
-  const [hideBlankColumns, setHideBlankColumns] = useState(false)
+  const [hideBlankColumns, setHideBlankColumns] = useState(true)
   const [tableExpanded, setTableExpanded] = useState(false)
+  const tableDialog = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
     if (!tableExpanded) return
+    tableDialog.current?.showModal()
     const previousOverflow = document.body.style.overflow
     const closeOnEscape = (event: globalThis.KeyboardEvent) => { if (event.key === 'Escape') setTableExpanded(false) }
     document.body.style.overflow = 'hidden'
@@ -110,7 +112,7 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
       const current = kind === 'incomes' ? row.incomeValues[itemIndex] : row.expenseValues[itemIndex]
       return Math.abs(current) >= .5 && Math.abs(current - value) >= .5
     }).length
-    return changedExisting === 0 || window.confirm(`${kind === 'incomes' ? '收入' : '支出'}列中有 ${changedExisting} 个已有金额与当前格不同。确认使用“${formatTableMoney(value)} 元”执行${action}吗？`)
+    return targetYear > sourceYear && window.confirm(`${action}：${sourceYear + 1}–${targetYear} 年，共 ${targetYear - sourceYear} 格；将替换 ${changedExisting} 个不同的非零金额。仅修改本列，填入 ${formatTableMoney(value)} 元，确认继续？`)
   }
 
   function selectDisplayYears(years: number) {
@@ -134,15 +136,19 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
   const lastRow = rows[Math.min(displayYears, rows.length) - 1]
   const insurance = insuranceSelection(plan)
   const premium = Math.max(0, plan.savingsInsuranceAnnualPremium ?? 0)
+  const firstCashShortfall = rows.find(row => row.insuranceScenarioLiquidBalance < 0)
 
   return <div className="cashflow-manager-page">
     <ManagerHeading customers={availableCustomers} selectedCustomerId={customer.id} onSelect={selectCustomer} onOpenCustomer={onOpenCustomer} selfService={selfService} />
 
     <section className="cashflow-plan-summary" aria-label="现金流梳理摘要">
-      <article><span>当前可用资金</span><strong>{formatMoney(plan.initialFunds)}</strong><small>默认读取非房产、非车辆资产</small></article>
+      <article><span>当前可用资金</span><strong>{formatMoney(plan.initialFunds)}</strong><small>默认排除房产、车辆及长期锁定资产</small></article>
       <article><span>首年净现金流</span><strong className={(firstRow?.annualNet ?? 0) < 0 ? 'negative-value' : ''}>{formatMoney(firstRow?.annualNet ?? 0)}</strong><small>总收入减总支出</small></article>
       <article><span>{displayYears} 年后资金</span><strong className={(lastRow?.balanceWithoutReturn ?? 0) < 0 ? 'negative-value' : ''}>{formatMoney(lastRow?.balanceWithoutReturn ?? 0)}</strong><small>按原有收入与日常支出计算</small></article>
     </section>
+
+    {premium > 0 && <p className="cashflow-model-note" role="status">储蓄险场景：{displayYears} 年后可动用资金 {formatMoney(lastRow?.insuranceScenarioLiquidBalance ?? 0)}（不含保单价值）。{firstCashShortfall ? `首次现金不足出现在 ${firstCashShortfall.year} 年，缺口 ${formatMoney(-firstCashShortfall.insuranceScenarioLiquidBalance)}。` : '预测期内未出现现金不足。'}保单价值不等于可无损提取的现金，系统不会自动借款弥补缺口。</p>}
+    {customer.liabilities.some(debt => debt.monthlyPayment > 0 && debt.remainingMonths === null) && <p className="cashflow-model-note">部分贷款尚未填写剩余期限，默认按持续月供预测。请补充期限或在表格中调整对应年份。</p>}
 
     <section className="cashflow-settings-panel">
       <div className="cashflow-section-heading">
@@ -198,8 +204,8 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
       <p className="cashflow-model-note">{insurance.product === 'prmesp' ? '世誉财富：参考 e-1-toolbox-2026-08-03 的 PRMESP 工作表，以优惠后实际供款及逐年余额同比换算。' : insurance.paymentYears === 1 ? '信守明天一次性交：参考同一文件 TRST 工作表的一笔过预缴公式，计入参考预缴折扣，不叠加推广返还。' : '信守明天：5 年交沿用原参考计划（每年 50 万元）。'} 余额包含保证及非保证部分，按参考方案比例折算为人民币，不预测汇率变化。IRR 为持有期间的内部回报率，不作为固定年利率复利。首行为投保当年，对应参考表年期 0；早期未展示的 IRR 留空。实际保单价值以保险公司计划书为准。</p>
     </section>
 
-    {tableExpanded ? <div className="cashflow-table-modal-backdrop" role="presentation" onMouseDown={() => setTableExpanded(false)}>
-      <section aria-describedby="cashflow-table-dialog-description" aria-labelledby="cashflow-table-dialog-title" aria-modal="true" className="cashflow-table-dialog" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
+    {tableExpanded ? <dialog ref={tableDialog} className="cashflow-table-modal-backdrop" style={{ margin: 0, width: '100vw', height: '100dvh', maxWidth: 'none', maxHeight: 'none', border: 0 }} aria-describedby="cashflow-table-dialog-description" aria-labelledby="cashflow-table-dialog-title" onCancel={() => setTableExpanded(false)} onClose={() => setTableExpanded(false)} onMouseDown={event => { if (event.target === event.currentTarget) setTableExpanded(false) }}>
+      <section className="cashflow-table-dialog">
         <header className="cashflow-table-dialog-header">
           <div><span className="section-kicker">现金流管理</span><h2 id="cashflow-table-dialog-title">家庭现金流长期预测</h2><p id="cashflow-table-dialog-description">放大模式保留全部编辑功能，修改后会自动保存并重新计算。</p></div>
           <div className="cashflow-table-dialog-actions">
@@ -212,7 +218,7 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
         </div>
         <footer className="cashflow-table-dialog-footer"><span>当前显示 {displayYears} 年</span><span>{hideBlankColumns ? '已隐藏空白收入与支出列' : '已展开全部收入与支出列'}</span><span>按 Esc 也可关闭</span></footer>
       </section>
-    </div> : null}
+    </dialog> : null}
   </div>
 }
 

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { canSyncSelfServiceCustomer, createCustomer, type CustomerProfile, type FamilyMember, type SaveState } from '../types/domain'
+import { canSyncSelfServiceCustomer, createCustomer, detachMember, type CustomerProfile, type FamilyMember, type SaveState } from '../types/domain'
 import { deleteCustomerPermanently, getCustomers, putCustomer } from '../lib/localDb'
 import { getAccessSession } from '../lib/access'
 import { deleteWorkspaceCustomer, pushWorkspaceCustomer } from '../lib/usernameSync'
@@ -30,17 +30,28 @@ function replaceCustomer(customers: CustomerProfile[], customer: CustomerProfile
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 }
 
-let selfServiceSyncTimer: ReturnType<typeof setTimeout> | null = null
+const selfServiceSyncTimers = new Map<string, ReturnType<typeof setTimeout>>()
+const customerSyncStates = new Map<string, CustomerStore['syncState']>()
+
+function setCustomerSyncState(id: string, state: CustomerStore['syncState']) {
+  customerSyncStates.set(id, state)
+  if (useCustomerStore.getState().selectedCustomerId === id) useCustomerStore.setState({ syncState: state })
+}
 
 function scheduleSelfServiceSync(customerId: string) {
-  if (selfServiceSyncTimer) clearTimeout(selfServiceSyncTimer)
-  selfServiceSyncTimer = setTimeout(() => {
+  clearTimeout(selfServiceSyncTimers.get(customerId))
+  selfServiceSyncTimers.set(customerId, setTimeout(() => {
+    selfServiceSyncTimers.delete(customerId)
     const session = getPublicIntakeSession()
     const customer = useCustomerStore.getState().customers.find((item) => item.id === customerId)
-    if (!session || session.id !== customerId || !customer || customer.source !== 'self_service' || !canSyncSelfServiceCustomer(customer)) return
-    useCustomerStore.setState({ syncState: 'syncing' })
+    if (!session || session.id !== customerId || !customer || customer.source !== 'self_service' || (!session.uploaded && !canSyncSelfServiceCustomer(customer))) return
+    setCustomerSyncState(customerId, 'syncing')
     void pushPublicIntake(session, customer)
-      .then(() => useCustomerStore.setState({ syncState: 'synced' }))
+      .then(() => {
+        const current = useCustomerStore.getState().customers.find(item => item.id === customerId)
+        setCustomerSyncState(customerId, current === customer ? 'synced' : 'dirty')
+        if (current && current !== customer) scheduleSelfServiceSync(customerId)
+      })
       .catch((error: unknown) => {
         if (isDeletedRecordError(error)) {
           clearPublicIntakeSession()
@@ -51,10 +62,15 @@ function scheduleSelfServiceSync(customerId: string) {
           })))
           return
         }
-        useCustomerStore.setState({ syncState: 'error' })
+        setCustomerSyncState(customerId, 'error')
       })
-  }, 850)
+  }, 850))
 }
+
+if (typeof window !== 'undefined') window.addEventListener('online', () => {
+  const session = getPublicIntakeSession()
+  if (session) scheduleSelfServiceSync(session.id)
+})
 
 export const useCustomerStore = create<CustomerStore>((set, get) => ({
   customers: [],
@@ -76,14 +92,15 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
     })
   },
 
-  selectCustomer: (id) => set({ selectedCustomerId: id }),
+  selectCustomer: (id) => set({ selectedCustomerId: id, syncState: customerSyncStates.get(id) ?? 'idle' }),
 
   addCustomer: async (primaryContactName) => {
     const customer = createCustomer(primaryContactName)
     set((state) => ({ customers: [customer, ...state.customers], selectedCustomerId: customer.id, saveState: 'saving' }))
     try {
       await putCustomer(customer)
-      set({ saveState: 'saved', syncState: 'dirty' })
+      set({ saveState: 'saved' })
+      setCustomerSyncState(customer.id, 'dirty')
       if (customer.source === 'self_service') scheduleSelfServiceSync(customer.id)
       return customer
     } catch (error) {
@@ -99,7 +116,8 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
     set((state) => ({ customers: replaceCustomer(state.customers, customer), saveState: 'saving' }))
     try {
       await putCustomer(customer)
-      set({ saveState: 'saved', syncState: 'dirty' })
+      set({ saveState: 'saved' })
+      setCustomerSyncState(customer.id, 'dirty')
       if (customer.source === 'self_service') scheduleSelfServiceSync(customer.id)
     } catch {
       set({ saveState: 'error' })
@@ -122,7 +140,7 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
   removeMember: async (customerId, memberId) => {
     const current = get().customers.find((item) => item.id === customerId)
     if (!current || current.members.length <= 1) return
-    await get().updateCustomer(customerId, { members: current.members.filter((member) => member.id !== memberId) })
+    await get().updateCustomer(customerId, detachMember(current, memberId))
   },
 
   deleteCustomer: async (id) => {
@@ -146,15 +164,15 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
     const publicSession = getPublicIntakeSession()
     const customer = get().customers.find((item) => item.id === id)
     if (!customer) return
-    set({ syncState: 'syncing' })
+    setCustomerSyncState(id, 'syncing')
     try {
       if (customer.source === 'self_service' && session) await pushPublicIntakeAsAdvisor(session.username, session.accessCode, customer)
       else if (customer.source === 'self_service' && publicSession?.id === customer.id) await pushPublicIntake(publicSession, customer)
       else if (session) await pushWorkspaceCustomer(session.username, session.accessCode, customer)
-      else return set({ syncState: 'error' })
-      set({ syncState: 'synced' })
+      else return setCustomerSyncState(id, 'error')
+      setCustomerSyncState(id, get().customers.find(item => item.id === id) === customer ? 'synced' : 'dirty')
     } catch {
-      set({ syncState: 'error' })
+      setCustomerSyncState(id, 'error')
     }
   },
 }))

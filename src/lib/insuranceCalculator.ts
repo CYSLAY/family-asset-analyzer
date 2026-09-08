@@ -36,7 +36,7 @@ export function insuranceInputErrors(product: InsuranceProduct, p: InsuranceInpu
   if (p.prepaid && (product !== 'TRST' || p.term !== 5 || !['USD', 'HKD-U', 'RMB-U'].includes(p.currency))) errors.push('一笔过预缴仅适用于美元保单的 5 年缴费方案。')
   if (p.fulfillment < 0 || p.fulfillment > 200) errors.push('现金价值实现率须在 0%–200% 之间。')
   if (p.growth <= -100 || p.growth > 100 || p.inflation <= -100 || p.inflation > 100) errors.push('增长率和通胀率须大于 -100%，且不超过 100%。')
-  if (!Number.isInteger(p.withdrawalAge) || p.withdrawalAge < p.age || p.withdrawalAge > p.age + 98) errors.push('提款开始翌年岁须在测算范围内。')
+  if (p.withdrawal > 0 && (!Number.isInteger(p.withdrawalAge) || p.withdrawalAge < p.age || p.withdrawalAge > p.age + 98)) errors.push('提款开始翌年岁须在测算范围内。')
   if (p.withdrawal < 0 || p.withdrawalYears < 0 || !Number.isInteger(p.withdrawalYears)) errors.push('提款金额不得为负数，提取年期须为非负整数。')
   if (p.withdrawal > 0 && (p.withdrawalAge > p.surrenderAge || p.withdrawalYears > 0 && p.withdrawalAge + p.withdrawalYears - 1 > p.surrenderAge)) errors.push('提款期间不得超过退保年度。')
   if (p.maturity && p.bigCase && product === 'TRST') errors.push('期满优惠与大额保单优惠不可同时选择。')

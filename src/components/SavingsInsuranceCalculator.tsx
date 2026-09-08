@@ -26,7 +26,7 @@ export function SavingsInsuranceCalculator({ advisor }: { advisor: string }) {
   const [hideEmpty, setHideEmpty] = useState(false)
   const [returnMode, setReturnMode] = useState('IRR')
   const [active, setActive] = useState<{ year: number; field: 'extras' | 'rates' } | null>(null)
-  const [undo, setUndo] = useState<InsuranceInputs | null>(null)
+  const [undo, setUndo] = useState<{ field: 'extras' | 'rates'; values: Record<number, number | undefined>; applied: number } | null>(null)
   const [previousInputs, setPreviousInputs] = useState<InsuranceInputs | null>(null)
   const [notice, setNotice] = useState('')
   const dialog = useRef<HTMLDialogElement>(null)
@@ -64,7 +64,7 @@ export function SavingsInsuranceCalculator({ advisor }: { advisor: string }) {
     const value = p[active.field][active.year] ?? 0
     if (end <= active.year) return
     if (!window.confirm(`将第 ${active.year + 1}–${end} 年的${active.field === 'extras' ? '额外提款' : '指定融资利率'}设为 ${value}${active.field === 'rates' ? '%' : ''}？仅覆盖下方同列，可撤销。`)) return
-    setUndo(p)
+    setUndo({ field: active.field, values: Object.fromEntries(Array.from({ length: end - active.year }, (_, i) => [active.year + i + 1, p[active.field][active.year + i + 1]])), applied: value })
     const next = { ...p[active.field] }
     for (let y = active.year + 1; y <= end; y++) next[y] = value
     update({ [active.field]: next })
@@ -78,7 +78,9 @@ export function SavingsInsuranceCalculator({ advisor }: { advisor: string }) {
   }
   const visibleRows = result?.rows.filter(r => r.year <= years) ?? []
   const showWithdrawals = !hideEmpty || result?.rows.some(r => r.withdrawal || r.extra)
+  const errorPanel = outcome.error ? <div className="sic-error" role="alert">{outcome.error.includes('!') ? '当前组合无法完成计算，请撤销本次修改后重新输入。' : outcome.error}{previousInputs && <button type="button" className="sic-reset" onClick={() => { setDrafts(current => ({ ...current, [product]: previousInputs })); setPreviousInputs(null) }}>撤销本次修改</button>}</div> : null
   const table = <>
+    {errorPanel}
     <div className="sic-table-controls">
       <div className="sic-periods" aria-label="显示年期">
         {[5, 10].map(y => <button type="button" key={y} aria-pressed={years === y} onClick={() => setYears(y)}>{y} 年</button>)}
@@ -95,7 +97,15 @@ export function SavingsInsuranceCalculator({ advisor }: { advisor: string }) {
     <div className="sic-edit-toolbar">
       <span>{active ? `第 ${active.year} 年 · ${active.field === 'extras' ? '额外提款' : '指定融资利率'}` : financing ? '离开输入格后自动重算；指定利率为 0 时沿用基础融资利率。' : '点击浅色金额格可编辑额外提款，离开输入格后自动重算。'}</span>
       <div><button type="button" disabled={!active || !result || active.year >= result.rows.at(-1)!.year} onClick={fillBelow}><ArrowDownIcon />向下填充</button>
-        <button type="button" disabled={!undo} onClick={() => { if (undo) { update(undo); setUndo(null); setNotice('已撤销填充。') } }}><ArrowCounterClockwiseIcon />撤销</button></div>
+        <button type="button" disabled={!undo} onClick={() => { if (undo) {
+          const values = { ...p[undo.field] }
+          for (const [year, oldValue] of Object.entries(undo.values)) {
+            if (values[Number(year)] !== undo.applied) continue
+            if (oldValue === undefined) delete values[Number(year)]
+            else values[Number(year)] = oldValue
+          }
+          update({ [undo.field]: values }); setUndo(null); setNotice('已撤销填充，保留之后单独修改的参数和金额。')
+        } }}><ArrowCounterClockwiseIcon />撤销</button></div>
     </div>
     <div className="sic-table-scroll" tabIndex={0} aria-label="逐年测算明细，可横向滚动">
       <table className="sic-table">
@@ -149,7 +159,7 @@ export function SavingsInsuranceCalculator({ advisor }: { advisor: string }) {
       <details className="sic-panel"><summary>汇率假设<span>可调整</span></summary><div className="sic-fields sic-two">{numberField('hkdRate', '1 美元折合港币', '元')}{numberField('rmbRate', '1 美元折合人民币', '元')}</div><p className="sic-hint">初始值来自参考表，不是实时汇率。仅用于美元保单的显示币种换算。</p></details>
     </div>
 
-    {outcome.error ? <div className="sic-error" role="alert">{outcome.error.includes('!') ? '当前组合无法完成原表计算，请检查提款金额、年期或优惠设置；未展示旧结果。' : outcome.error}{previousInputs && <button type="button" className="sic-reset" onClick={() => { setDrafts(current => ({ ...current, [product]: previousInputs })); setPreviousInputs(null) }}>撤销本次修改</button>}</div> : result && <>
+    {outcome.error ? (!expanded && errorPanel) : result && <>
       {result.lowNotional && result.lowNotional !== '0' ? <p className="sic-error" role="status">当前名义金额低于参考表的最低要求，请提高储蓄金额。</p> : null}
       <section className="sic-results" aria-label="测算摘要">
         <div><span>{financing ? '累计自付供款及利息' : '总供款'}</span><strong>{money(result.totalContribution)}</strong><small>{result.currency}元</small></div>
@@ -170,10 +180,10 @@ function NumericInput({ value, onCommit, ariaLabel, onFocus }: { value: number; 
   const [text, setText] = useState(String(value))
   const [invalid, setInvalid] = useState(false)
   useEffect(() => { setText(String(value)); setInvalid(false) }, [value])
-  return <input type="text" inputMode="decimal" aria-label={ariaLabel} aria-invalid={invalid} value={text} onFocus={onFocus} onChange={e => setText(e.target.value)}
+  return <><input type="text" inputMode="decimal" aria-label={ariaLabel} aria-invalid={invalid} value={text} onFocus={onFocus} onChange={e => setText(e.target.value)}
     onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) e.currentTarget.blur() }} onBlur={() => {
       const next = Number(text.replaceAll(',', '').trim())
       if (!text.trim() || !Number.isFinite(next)) { setInvalid(true); return }
       setInvalid(false); onCommit(next)
-    }} />
+    }} />{invalid && <small role="alert">请输入有效数字；结果暂按修改前数值计算。</small>}</>
 }

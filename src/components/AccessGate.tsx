@@ -58,7 +58,7 @@ export function AccessGate({ onAdminAllowed, onStartSelfService }: Props) {
       <div className="access-brand invite-brand"><img src={jojoLogo} alt="Jojo" /></div>
       <span className="quiet-label">家庭财务自测</span>
       <h1>输入客户邀请码</h1>
-      <p>请输入顾问提供的本年度邀请码，验证后即可开始填写。</p>
+      <p>请输入顾问提供的邀请码，验证后即可开始填写。</p>
       <form onSubmit={submitInvite}>
         <label className="field-block"><span>邀请码</span><div className="invite-code-control"><KeyIcon aria-hidden="true" size={19} /><input autoCapitalize="none" autoComplete="off" autoCorrect="off" autoFocus maxLength={10} spellCheck={false} value={inviteCode} onChange={(event) => { setInviteCode(event.target.value); setError('') }} placeholder="请输入顾问提供的邀请码" /></div></label>
         {error ? <p className="access-error" role="alert">{error}</p> : null}
@@ -77,7 +77,7 @@ export function AccessGate({ onAdminAllowed, onStartSelfService }: Props) {
       <p>请输入管理员用户名和访问密码。</p>
       <form onSubmit={submit}>
         <label className="field-block"><span>用户名</span><input autoCapitalize="none" autoComplete="username" autoFocus value={username} onChange={(event) => { setUsername(event.target.value); setError('') }} placeholder="请输入用户名" /></label>
-        <label className="field-block"><span>访问密码</span><input type="password" inputMode="numeric" autoComplete="current-password" value={accessCode} onChange={(event) => { setAccessCode(event.target.value); setError('') }} placeholder="请输入访问密码" /></label>
+        <label className="field-block"><span>访问密码</span><input type="password" autoComplete="current-password" value={accessCode} onChange={(event) => { setAccessCode(event.target.value); setError('') }} placeholder="请输入访问密码" /></label>
         {error ? <p className="access-error" role="alert">{error}</p> : null}
         <button className="primary-action" disabled={checking || !username.trim() || !accessCode} type="submit">{checking ? '正在验证' : '进入管理工作区'} <ArrowRightIcon size={18} /></button>
       </form>

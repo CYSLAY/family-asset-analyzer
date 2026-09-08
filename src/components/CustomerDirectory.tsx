@@ -50,7 +50,7 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
   const [invitationError, setInvitationError] = useState('')
 
   const directoryView = useMemo(() => buildCustomerDirectoryView(customers, search, advisorPage), [advisorPage, customers, search])
-  const { searchActive, advisorCustomers, advisorPageCount, advisorPage: currentAdvisorPage, displayedAdvisorCustomers } = directoryView
+  const { advisorCustomers, advisorPageCount, advisorPage: currentAdvisorPage, displayedAdvisorCustomers } = directoryView
   const selfServiceEntries = useMemo(() => buildSelfServiceDirectoryItems(invitations, customers, search), [customers, invitations, search])
   const selfServiceDirectoryPage = useMemo(() => paginateSelfServiceDirectoryItems(selfServiceEntries, selfServicePage), [selfServiceEntries, selfServicePage])
   const { displayedItems: displayedSelfServiceEntries, page: currentSelfServicePage, pageCount: selfServicePageCount } = selfServiceDirectoryPage
@@ -196,7 +196,7 @@ export function CustomerDirectory({ onStartIntake, onOpenReport, onOpenCashFlow 
               <CustomerRowActions customer={customer} onSelect={selectCustomer} onStartIntake={onStartIntake} onOpenReport={onOpenReport} onOpenCashFlow={onOpenCashFlow} onDelete={(record) => { setDeleteError(''); setPendingDelete(record) }} />
             </article>)}
           </div> : <p className="customer-section-empty">{search ? '没有匹配的顾问录入档案。' : '还没有顾问录入档案，可从上方新建客户。'}</p>}
-          {!searchActive && advisorPageCount > 1 ? <nav className="customer-pagination" aria-label="顾问录入档案分页">
+          {advisorPageCount > 1 ? <nav className="customer-pagination" aria-label="顾问录入档案分页">
             <span>第 {currentAdvisorPage} 页，共 {advisorPageCount} 页</span>
             <div>
               <button aria-label="上一页" disabled={currentAdvisorPage === 1} type="button" onClick={() => setAdvisorPage((page) => Math.max(1, page - 1))}><CaretLeftIcon size={16} /> 上一页</button>

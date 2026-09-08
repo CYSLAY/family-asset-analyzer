@@ -17,6 +17,7 @@ export interface FamilyMember {
 export interface CustomerProfile {
   id: string
   source?: 'advisor' | 'self_service'
+  noLiabilitiesConfirmed?: boolean
   householdName: string
   primaryContactName: string
   city: string
@@ -98,7 +99,34 @@ export function intakeCompletion(customer: CustomerProfile) {
 }
 
 export function canSyncSelfServiceCustomer(customer: CustomerProfile) {
-  return Boolean(customer.primaryContactName.trim()) && intakeCompletion(customer) > 10
+  return Boolean(customer.primaryContactName.trim()) && effectiveCompletion(customer) > 10
+}
+
+// Upload eligibility is independent of navigation's six module markers.
+export function effectiveCompletion(c: CustomerProfile) {
+  const has = (value: unknown) => Boolean(typeof value === 'string' ? value.trim() : value)
+  const score = (weight: number, values: unknown[]) => weight * values.filter(has).length / values.length
+  const members = c.members
+  return Math.round(score(5, [c.primaryContactName]) + score(5, [c.city, c.notes])
+    + score(15, [members.some(m => m.birthDate), members.some(m => m.jobType || m.phone), members.some(m => m.healthNotes || m.heightCm || m.weightKg)])
+    + score(15, [c.assets.some(a => ['property', 'vehicle'].includes(a.category) && a.currentValue > 0)])
+    + score(20, [c.assets.some(a => !['property', 'vehicle'].includes(a.category) && a.currentValue > 0) || c.liabilities.some(l => l.balance > 0 || l.monthlyPayment > 0) || c.noLiabilitiesConfirmed])
+    + score(25, [c.incomes.some(f => f.amount > 0), c.expenses.some(f => f.amount > 0)])
+    + score(15, [c.educationGoals.some(g => g.stagePlans?.some(p => p.route) || g.preparedAmount > 0)]))
+}
+
+export function isLiquidAsset(asset: AssetEntry) {
+  return asset.category !== 'property' && asset.category !== 'vehicle' && asset.liquidity !== 'long_term'
+}
+
+export function detachMember(c: CustomerProfile, id: string): Partial<CustomerProfile> {
+  return {
+    members: c.members.filter(m => m.id !== id),
+    assets: c.assets.map(a => a.ownerMemberId === id ? { ...a, ownerMemberId: null } : a),
+    incomes: c.incomes.map(f => f.memberId === id ? { ...f, memberId: null } : f),
+    expenses: c.expenses.map(f => f.memberId === id ? { ...f, memberId: null } : f),
+    educationGoals: c.educationGoals.map(g => g.childMemberId === id ? { ...g, childMemberId: null } : g),
+  }
 }
 
 export type AssetCategory = 'cash' | 'bank' | 'fund' | 'stock' | 'bond' | 'property' | 'vehicle' | 'pension' | 'receivable' | 'other'

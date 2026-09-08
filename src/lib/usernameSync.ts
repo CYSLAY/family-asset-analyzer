@@ -25,7 +25,7 @@ export async function confirmWorkspaceUsername(username: string, accessCode: str
 }
 
 export async function pushWorkspaceCustomer(username: string, accessCode: string, customer: CustomerProfile) {
-  if (!supabase) return
+  if (!supabase) throw new Error('cloud_unavailable')
   const { error } = await supabase.rpc('workspace_upsert_customer', {
     p_username: username,
     p_access_code: accessCode,
@@ -37,7 +37,7 @@ export async function pushWorkspaceCustomer(username: string, accessCode: string
 }
 
 export async function deleteWorkspaceCustomer(username: string, accessCode: string, id: string) {
-  if (!supabase) return
+  if (!supabase) throw new Error('cloud_unavailable')
   const { error } = await supabase.rpc('workspace_delete_customer', { p_username: username, p_access_code: accessCode, p_id: id })
   if (error) throw error
 }

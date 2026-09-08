@@ -1,6 +1,7 @@
 import { annualize } from './analysis'
 import { insuranceSelection, savingsInsuranceYear } from './savingsInsurance'
 import type { CashFlowPlan, CashFlowPlanItem, CustomerProfile } from '../types/domain'
+import { isLiquidAsset } from '../types/domain'
 
 export interface CashFlowProjectionRow {
   offset: number
@@ -53,15 +54,25 @@ export function createCashFlowPlanFromCustomer(customer: CustomerProfile, baseYe
   const expenseEntries = customer.expenses.map((item) => ({ label: classifyExpense(item.name || item.category), amount: annualize(item) }))
   const mortgagePayments = customer.liabilities
     .filter((item) => item.monthlyPayment > 0)
-    .map((item) => ({ label: item.category === 'mortgage' ? '房贷支出' : '贷款偿还', amount: item.monthlyPayment * 12 }))
-  const expenses = mergeWithDefaults([...expenseEntries, ...mortgagePayments], defaultExpenseLabels, baseYear, projectionYears)
+  const expenses = mergeWithDefaults(expenseEntries, defaultExpenseLabels, baseYear, projectionYears)
+  for (const debt of mortgagePayments) {
+    const label = debt.category === 'mortgage' ? '房贷支出' : '贷款偿还'
+    let item = expenses.find(e => e.label === label)
+    if (!item) { item = createPlanItem(label, baseYear, projectionYears); expenses.push(item) }
+    const base = item.annualAmount
+    const previous = item.yearlyAmounts ?? {}
+    item.yearlyAmounts = Object.fromEntries(Array.from({ length: 55 }, (_, offset) => {
+      const months = debt.remainingMonths === null ? 12 : Math.max(0, Math.min(12, debt.remainingMonths - offset * 12))
+      return [String(baseYear + offset), (previous[String(baseYear + offset)] ?? base) + debt.monthlyPayment * months]
+    }))
+  }
 
   return {
     baseYear,
     projectionYears,
     annualReturnRate: 3.5,
     initialFunds: customer.assets
-      .filter((asset) => asset.category !== 'property' && asset.category !== 'vehicle')
+      .filter(isLiquidAsset)
       .reduce((sum, asset) => sum + asset.currentValue, 0),
     savingsInsuranceAnnualPremium: 0,
     members,
@@ -136,7 +147,7 @@ export function mergeCustomerDataIntoPlan(plan: CashFlowPlan, customer: Customer
     members: mergeMembers(plan, fresh),
     incomes: mergePlanItems(plan.incomes, fresh.incomes),
     expenses: mergePlanItems(plan.expenses, fresh.expenses),
-    initialFunds: plan.initialFunds || fresh.initialFunds,
+    initialFunds: plan.initialFunds,
   }
 }
 
@@ -147,7 +158,7 @@ function mergeMembers(plan: CashFlowPlan, fresh: CashFlowPlan) {
 
 function mergePlanItems(current: CashFlowPlanItem[], fresh: CashFlowPlanItem[]) {
   const labels = new Set(current.map((item) => normalizeLabel(item.label)))
-  return [...current, ...fresh.filter((item) => item.annualAmount > 0 && !labels.has(normalizeLabel(item.label)))]
+  return [...current, ...fresh.filter((item) => (item.annualAmount > 0 || Object.values(item.yearlyAmounts ?? {}).some((value) => value > 0)) && !labels.has(normalizeLabel(item.label)))]
 }
 
 function mergeWithDefaults(entries: Array<{ label: string; amount: number }>, defaults: string[], baseYear: number, projectionYears: number) {

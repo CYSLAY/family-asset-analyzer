@@ -3,6 +3,8 @@ import type { EducationGoal, EducationStagePlan } from '../types/domain'
 export interface EducationCostEstimate {
   annualTuition: number
   annualLiving: number
+  annualTraining?: number
+  composite?: boolean
   oneTimeFees: number
   annualTotal: number
   cashTotal: number
@@ -63,13 +65,19 @@ export function estimateEducationStage(plan: EducationStagePlan): EducationCostE
 
   if (plan.route === '公立' || plan.route === '私立') {
     const annualTotal = (plan.route === '公立' ? domesticPublicAnnual : domesticPrivateAnnual)[plan.stage] ?? (plan.route === '公立' ? 50000 : 150000)
+    const reference: Record<string, [number, number, number]> = {
+      '小学': [0, 6000, 140000], '初中': [0, 7000, 140000], '高中': [2068, 8800, 140000],
+    }
+    const parts = plan.route === '公立' ? reference[plan.stage] : plan.stage === '幼儿园' ? [18000, 8240, 0] : undefined
     return {
-      annualTuition: Math.round(annualTotal * 0.72),
-      annualLiving: Math.round(annualTotal * 0.28),
+      annualTuition: parts?.[0] ?? 0,
+      annualLiving: parts?.[1] ?? 0,
+      annualTraining: parts?.[2] ?? 0,
+      composite: !parts,
       oneTimeFees: 0,
       annualTotal,
       cashTotal: annualTotal * years,
-      basis: plan.route === '公立' ? '参考图现价标准与国内公立教育常见支出' : '参考图现价标准与国内私立教育市场中位估算',
+      basis: parts ? '参考方案现价费用；培训为预设预算，并非学校收费' : '综合预算假设，未拆分学费与食宿；非学校报价',
     }
   }
 
@@ -78,10 +86,10 @@ export function estimateEducationStage(plan: EducationStagePlan): EducationCostE
   if (destination === '美国' && plan.stage === '研究生') return exactReferenceEstimate(years, 196668.9, 125363.05, 90765, '参考图美国研究生入学费、学费及食宿费标准')
 
   const annualTotal = Math.round((destinationAnnual[destination] ?? destinationAnnual['其他国家或地区']) * (stageFactor[plan.stage] ?? 1))
-  const livingRatio = plan.stage === '本科' || plan.stage === '研究生' ? 0.36 : 0.28
   return {
-    annualTuition: Math.round(annualTotal * (1 - livingRatio)),
-    annualLiving: Math.round(annualTotal * livingRatio),
+    annualTuition: 0,
+    annualLiving: 0,
+    composite: true,
     oneTimeFees: 0,
     annualTotal,
     cashTotal: annualTotal * years,

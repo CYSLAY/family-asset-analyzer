@@ -6,6 +6,7 @@ import {
   createEducationGoal,
   createLiability,
   createMember,
+  isLiquidAsset,
   educationStageDefaults,
   type AssetEntry,
   type CashFlowEntry,
@@ -128,7 +129,7 @@ function BalanceEditor({ customer, onUpdate, mode, showSummary }: EditorProps & 
     return { preset, entry }
   })
   const extraLiabilities = customer.liabilities.filter((item) => !claimedLiabilityIds.has(item.id))
-  const visibleTotal = visibleAssets.reduce((sum, item) => sum + item.currentValue, 0)
+  const visibleTotal = visibleAssets.filter(item => mode === 'fixed' || isLiquidAsset(item)).reduce((sum, item) => sum + item.currentValue, 0)
   const totalAssets = customer.assets.reduce((sum, item) => sum + item.currentValue, 0)
   const totalLiabilities = customer.liabilities.reduce((sum, item) => sum + item.balance, 0)
 
@@ -178,6 +179,7 @@ function BalanceEditor({ customer, onUpdate, mode, showSummary }: EditorProps & 
       </div>
     </SheetSection>
     {mode === 'liquid' ? <SheetSection title="家庭负债" description="当前余额、月供与未来一年应还金额会分别用于净资产和短期偿债分析。">
+      <label className="checkbox-field"><input type="checkbox" checked={customer.noLiabilitiesConfirmed === true} disabled={customer.liabilities.some(l => l.balance > 0 || l.monthlyPayment > 0)} onChange={event => onUpdate({ noLiabilitiesConfirmed: event.target.checked })} />已核对，当前没有负债</label>
       <div className="entry-sheet liability-sheet">
         <div className="sheet-row sheet-head"><span>负债项目</span><span>当前余额</span><span>每月还款</span><span>年利率</span><span>剩余月数</span><span>未来一年应还</span></div>
         {liabilityRows.map(({ preset, entry }) => <LiabilitySheetRow key={preset.name} preset={preset} entry={entry} onChange={(patch) => saveLiability(preset, entry, patch)} />)}
@@ -304,7 +306,7 @@ function CashFlowEditor({ customer, onUpdate, showSummary }: EditorProps & { sho
         <label className="add-income-member"><PlusIcon size={17} /><span className="sr-only">添加其他收入成员</span><PrivateControl><select value="" onChange={(event) => addIncomeMember(event.target.value)}><option value="">添加其他成员</option>{availableIncomeMembers.map((member) => <option value={member.id} key={member.id}>{member.name || member.relation}</option>)}<option value="new">新建家庭成员</option></select></PrivateControl></label>
       </div>
     </SheetSection>
-    <SheetSection title="家庭支出" description="按家庭整体填写，常见项目采用参考图中的月度或年度口径。">
+    <SheetSection title="家庭支出" description="按家庭整体填写，请留意各项金额的月度或年度单位。">
       <div className="compact-flow-grid expense-flow-grid">
         {expenseRows.map(({ preset, entry }) => <CompactFlowField key={preset.name} label={preset.name} entry={entry} frequency={entry?.frequency ?? preset.frequency} necessary={entry?.necessary ?? preset.necessary} onChange={(amount) => saveFlow('expenses', preset, entry, { amount })} />)}
         {extraExpenses.map((entry) => <CompactFlowField key={entry.id} label={entry.name || entry.category} entry={entry} frequency={entry.frequency} necessary={entry.necessary} onChange={(amount) => saveFlow('expenses', { name: entry.name, category: entry.category, frequency: entry.frequency, necessary: entry.necessary }, entry, { amount })} onDelete={() => onUpdate({ expenses: customer.expenses.filter((item) => item.id !== entry.id) })} />)}
@@ -378,7 +380,7 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
         <div className="form-grid three-columns education-basics">
           <Field privateValue label="对应子女"><select value={goal.childMemberId ?? ''} onChange={(e) => updateGoal(goal.id, { childMemberId: e.target.value || null })}><option value="">暂未指定</option>{customer.members.filter((m) => m.relation === '子女').map((m) => <option value={m.id} key={m.id}>{m.name || '未命名子女'}</option>)}</select></Field>
           <Field label="当前教育阶段"><select value={goal.currentStage} onChange={(e) => updateGoal(goal.id, { currentStage: e.target.value })}><option>未开始</option><option>早教</option><option>幼儿园</option><option>小学</option><option>初中</option><option>高中</option><option>本科</option><option>研究生</option><option>已完成</option></select></Field>
-          <MoneyField label="其他培训费用／年" value={goal.extraTrainingCostAnnual ?? 0} onChange={(value) => updateGoal(goal.id, { extraTrainingCostAnnual: value })} />
+          <MoneyField label="追加培训费用／年（基准之外）" value={goal.extraTrainingCostAnnual ?? 0} onChange={(value) => updateGoal(goal.id, { extraTrainingCostAnnual: value })} />
         </div>
 
         <div className="education-pathway" aria-label="教育路线设置">
@@ -404,7 +406,7 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
                 <strong>{plan.route ? `${formatMoney(estimate.annualTotal)}/年` : '选择路线后估算'}</strong>
                 {plan.route
                   ? <>
-                    <small>学费／课程 {formatMoney(estimate.annualTuition)} · 食宿／生活 {formatMoney(estimate.annualLiving)}</small>
+                    <small>{estimate.composite ? '综合预算估算，非学校报价' : <>学费 {formatMoney(estimate.annualTuition)} · 食宿 {formatMoney(estimate.annualLiving)}{estimate.annualTraining ? <> · 培训 {formatMoney(estimate.annualTraining)}</> : null}</>}</small>
                     {estimate.oneTimeFees ? <small>一次性入学费 {formatMoney(estimate.oneTimeFees)}</small> : null}
                     <small>{plan.durationYears} 年现金小计 {formatMoney(estimate.cashTotal)}</small>
                   </>
@@ -420,7 +422,7 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
           <div className="education-cost-total">
             <span>教育现金总计</span>
             <strong>{educationCash.selectedYears ? formatMoney(educationCash.cashTotal) : '待选择路线'}</strong>
-            <small>按当前学制和现价估算，标准来自参考图及公开市场中位数；不含未来通胀、汇率波动及奖学金。</small>
+            <small>按所选学制和当前预算假设估算，并非学校报价；不含未来通胀、汇率波动及奖学金。</small>
           </div>
         </div>
 
@@ -434,7 +436,7 @@ function GoalEditor({ customer, onUpdate }: EditorProps) {
     </EntrySection>
     <aside className="education-source-note" aria-label="教育费用数据来源">
       <strong>费用估算口径与数据来源</strong>
-      <p>估算基准截至 2026 年 8 月，均按人民币现价现金口径展示。国内教育费用结合参考图标准与公立、私立教育常见支出估算；香港留学参考<a href="https://admissions.hku.hk/fees-and-scholarships/fees" target="_blank" rel="noreferrer">香港大学非本地生学费、住宿及生活费</a>；英国参考<a href="https://study-uk.britishcouncil.org/moving-uk/cost-studying" target="_blank" rel="noreferrer">British Council 国际学生学费与生活费区间</a>；美国参考<a href="https://research.collegeboard.org/trends/college-pricing" target="_blank" rel="noreferrer">College Board 2025–26 学年学费、住宿及膳食标准</a>。其他国家和地区采用公开教育费用的市场中位规划值。</p>
+      <p>预算基准：2026 年 8 月，按人民币现价估算。国内路线使用预设规划预算，培训支出已计入分项，可按家庭实际安排调整。香港留学费用可核对<a href="https://admissions.hku.hk/fees-and-scholarships/fees" target="_blank" rel="noreferrer">香港大学学费、住宿及生活费</a>；英国可核对<a href="https://study-uk.britishcouncil.org/moving-uk/cost-studying" target="_blank" rel="noreferrer">British Council 学费与生活费区间</a>；美国可核对<a href="https://research.collegeboard.org/trends/college-pricing" target="_blank" rel="noreferrer">College Board 教育费用报告</a>。上述链接用于核对费用范围，不代表各路线预算均为统计中位数或学校报价；未有分项依据的路线仅展示综合预算。</p>
       <p>以上结果用于家庭财务规划，不构成学校正式报价；实际费用会因院校、专业、城市、汇率、通胀、奖学金及个人生活方式而变化，请以院校最新公布资料为准。</p>
     </aside>
   </div>

@@ -120,7 +120,7 @@ export function AnalysisDashboard({ onChooseCustomer, onOpenCashFlow, onOpenInta
 }
 
 function ReportSection({ id, index, title, description, children }: { id: string; index: string; title: string; description: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(id === 'balance-report')
   return <section className={open ? 'report-section is-open' : 'report-section is-collapsed'} id={id}>
     <header className="report-section-heading"><span>{index}</span><div><h2>{title}</h2><p>{description}</p></div><button className="report-section-toggle" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>{open ? '收起' : '展开'}<CaretDownIcon className={open ? 'is-open' : ''} size={18} /></button></header>
     {open ? <div className="report-section-content">{children}</div> : null}
@@ -162,7 +162,7 @@ function HealthPanel({ metric, max, healthyRange }: { metric: MetricResult; max:
 
 function PanelHeader({ title, metric }: { title: string; metric?: MetricResult }) {
   const badge = metric?.key === 'insurance_expense_ratio'
-    ? metric.value === null ? '待补充' : metric.value === 0 ? '未录入' : metric.level === 'healthy' ? '负担温和' : metric.level === 'attention' ? '需关注' : '重点关注'
+    ? metric.value === null ? '待补充' : metric.value === 0 ? '无保险投入' : metric.value < 10 ? '有一定投入' : metric.value <= 20 ? '较合理区间' : '需确保现金流健康'
     : metric ? levelLabels[metric.level] : ''
   return <header className="panel-heading"><h3>{title}</h3>{metric ? <span className="level-badge">{badge}</span> : null}</header>
 }

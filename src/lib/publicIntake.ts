@@ -1,10 +1,10 @@
-import { canSyncSelfServiceCustomer, type CustomerProfile } from '../types/domain'
+import { type CustomerProfile } from '../types/domain'
 import { supabase } from './supabase'
 import { migrateCustomerProfile } from './customerMigrations'
 
 const SESSION_KEY = 'family-asset-self-service-session'
 
-export interface PublicIntakeSession { id: string; token: string }
+export interface PublicIntakeSession { id: string; token: string; uploaded?: boolean }
 
 interface RedeemedInvitation {
   intake_id: string
@@ -56,6 +56,7 @@ export async function fetchPublicIntake(session: PublicIntakeSession) {
   }
   const record = ((data ?? []) as RemoteRecord[])[0]
   if (!record) return null
+  savePublicIntakeSession({ ...session, uploaded: true })
   return { ...migrateCustomerProfile(record.document).customer, source: 'self_service' as const }
 }
 
@@ -69,6 +70,7 @@ export async function pushPublicIntake(session: PublicIntakeSession, customer: C
     p_client_updated_at: customer.updatedAt,
   })
   if (error) throw error
+  savePublicIntakeSession({ ...session, uploaded: true })
 }
 
 export async function listPublicIntakesForAdvisor(username: string, accessCode: string) {
@@ -77,7 +79,6 @@ export async function listPublicIntakesForAdvisor(username: string, accessCode: 
   if (error) throw error
   return ((data ?? []) as RemoteRecord[])
     .map((record) => ({ ...migrateCustomerProfile(record.document).customer, source: 'self_service' as const }))
-    .filter(canSyncSelfServiceCustomer)
 }
 
 export async function pushPublicIntakeAsAdvisor(username: string, accessCode: string, customer: CustomerProfile) {
