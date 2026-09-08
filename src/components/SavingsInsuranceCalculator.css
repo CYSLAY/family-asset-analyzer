@@ -1,0 +1,76 @@
+.sic-workspace { min-width: 0; --sic-green: #eff8f1; }
+.sic-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.sic-heading h1 { font-size: clamp(24px, 2.4vw, 32px); margin: 0 0 8px; letter-spacing: -.025em; }
+.sic-heading p, .sic-hint { color: var(--ink-muted); font-size: 13px; line-height: 1.6; margin: 0; }
+.sic-advisor-tag { flex-shrink: 0; padding: 6px 10px; border-radius: 7px; background: #fbe8eb; color: #a81d2b; font-size: 12px; }
+.sic-reset { flex-shrink: 0; border: 1px solid var(--line); border-radius: 8px; background: white; padding: 9px 12px; min-height: 40px; color: #971a28; font-size: 12px; cursor: pointer; }.sic-error .sic-reset { margin-left: 12px; }
+.sic-product-tabs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-bottom: 18px; }
+.sic-product-tabs button { display: grid; gap: 6px; text-align: left; padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); cursor: pointer; }
+.sic-product-tabs button[aria-pressed=true] { border-color: #c9192e; box-shadow: inset 0 0 0 1px #c9192e; background: #fff7f8; }
+.sic-product-tabs strong { font-size: 18px; }.sic-product-tabs span { font-size: 12px; color: var(--ink-muted); }
+.sic-panel { min-width: 0; padding: 22px; background: #fff; border: 1px solid var(--line); border-radius: 12px; }
+.sic-panel h2 { font-size: 16px; margin: 0 0 18px; }
+.sic-fields { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px 16px; }
+.sic-field { min-width: 0; display: grid; align-content: start; gap: 8px; font-size: 13px; font-weight: 600; }
+.sic-control { display: flex; align-items: center; border: 1px solid #d4d4d4; border-radius: 8px; background: white; min-width: 0; overflow: hidden; }
+.sic-control input { width: 100%; min-width: 0; border: none; background: transparent; padding: 10px 12px; min-height: 44px; color: var(--ink); font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sic-control:focus-within { outline: 2px solid #c9192e; outline-offset: 2px; }
+.sic-control input:focus { outline: none; }
+.sic-control em { padding-right: 12px; font-style: normal; font-size: 12px; font-weight: 400; color: var(--ink-muted); white-space: nowrap; }
+.sic-field select { width: 100%; min-width: 0; min-height: 44px; padding: 8px 10px; border: 1px solid #d4d4d4; border-radius: 8px; color: var(--ink); background: white; font-size: 14px; }
+.sic-field small { font-size: 11px; line-height: 1.5; font-weight: 400; color: #666; }
+.sic-prepaid { padding-top: 18px; margin-top: 18px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.sic-prepaid small { font-size: 12px; color: #666; }
+.sic-check { display: flex; align-items: center; gap: 8px; font-size: 13px; min-height: 36px; }
+.sic-workspace input[type=checkbox], .sic-dialog input[type=checkbox] { accent-color: #c9192e; width: 17px; height: 17px; flex-shrink: 0; }
+.sic-check:has(input:disabled) { color: #777; }
+.sic-advanced-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: start; gap: 12px; margin: 14px 0 22px; }
+.sic-advanced-grid .sic-panel { padding: 16px 20px; }
+.sic-panel summary { cursor: pointer; font-size: 14px; font-weight: 650; min-height: 24px; line-height: 24px; }
+.sic-panel summary > span { float: right; color: #666; font-size: 11px; font-weight: 400; }
+.sic-panel[open] summary { margin-bottom: 18px; }
+.sic-two { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.sic-offers { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+.sic-hint { font-size: 11px; margin-top: 14px; }
+.sic-error { border-left: 3px solid #c9192e; padding: 14px 16px; background: #fff1f2; color: #941d2a; line-height: 1.6; font-size: 13px; }
+.sic-results { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; }
+.sic-results > div { display: grid; gap: 10px; padding: 20px; min-width: 0; border-right: 1px solid var(--line); }
+.sic-results > div:last-child { border: none; }.sic-results span { font-size: 12px; color: #666; }
+.sic-results strong { font-size: clamp(19px,2vw,27px); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.sic-results small { font-size: 11px; color: #666; line-height: 1.5; }.sic-result-accent { background: #f0f8f2; }.sic-result-accent strong { color: #226644; }
+.sic-result-meta { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 11px; color: #666; margin: 12px 0 24px; }
+.sic-table-panel { padding: 0; overflow: hidden; }.sic-table-panel > header { padding: 18px 20px; display: flex; justify-content: space-between; gap: 12px; align-items: center; border-bottom: 1px solid var(--line); }.sic-table-panel h2 { margin: 0; }
+.sic-workspace button, .sic-dialog button { font-family: inherit; white-space: nowrap; }
+.sic-table-panel button, .sic-dialog button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid #d8d8d8; border-radius: 7px; padding: 7px 11px; min-height: 36px; background: white; color: #951b29; font-size: 12px; cursor: pointer; }
+.sic-workspace button:disabled, .sic-dialog button:disabled { cursor: default; color: #888; background: #f7f7f7; }
+.sic-workspace :focus-visible, .sic-dialog :focus-visible { outline: 2px solid #bd1c2c; outline-offset: 2px; }
+.sic-table-controls { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; padding: 14px 20px; }
+.sic-periods, .sic-table-switches, .sic-edit-toolbar > div { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }.sic-periods button[aria-pressed=true] { color: #fff; background: #be1b2c; border-color: #be1b2c; }
+.sic-table-controls select { min-height: 36px; border: 1px solid #d8d8d8; border-radius: 7px; padding: 6px; background: white; color: var(--ink); font-size: 12px; max-width: 140px; }.sic-table-switches label { display: flex; gap: 5px; align-items: center; font-size: 12px; }
+.sic-edit-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 20px 14px; }.sic-edit-toolbar > span { font-size: 11px; color: #666; line-height: 1.5; }
+.sic-table-scroll { width: 100%; max-height: 590px; overflow: auto; overscroll-behavior: contain; }
+.sic-table { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+.sic-table caption { text-align: left; padding: 8px 16px; font-size: 11px; color: #666; background: #fafafa; }
+.sic-table th, .sic-table td { border-right: 1px solid #e9e9e9; border-bottom: 1px solid #e9e9e9; padding: 12px 14px; text-align: right; white-space: nowrap; background: white; min-width: 105px; }
+.sic-table thead th { position: sticky; top: 0; z-index: 2; background: #f4f4f4; font-size: 12px; font-weight: 600; }
+.sic-table tr > :first-child { position: sticky; left: 0; z-index: 1; text-align: center; min-width: 70px; background: #fafafa; border-right-color: #d8d8d8; }.sic-table thead tr > :first-child { z-index: 3; }
+.sic-table tr > :nth-child(2) { min-width: 70px; text-align: center; }.sic-table .sic-balance { background: #eff8f1; color: #226644; font-weight: 650; }
+.sic-table .sic-edit-cell { padding: 3px 6px; background: #fffdf7; }.sic-edit-cell input { width: 126px; min-height: 38px; padding: 7px; border: 1px solid transparent; border-radius: 5px; text-align: right; font: inherit; color: inherit; background: transparent; }.sic-edit-cell input:focus { background: white; }
+.sic-workspace input[aria-invalid=true], .sic-dialog input[aria-invalid=true] { outline: 2px solid #c9192e; background: #fff1f2; }
+.sic-table-foot { margin: 0; padding: 12px 20px; font-size: 11px; line-height: 1.6; color: #666; }
+.sic-notice { min-height: 18px; font-size: 12px; color: #226644; }.sic-sources { font-size: 11px; line-height: 1.7; color: #666; }.sic-sources p { margin: 6px 0; }
+.sic-dialog { width: calc(100vw - 32px); max-width: none; max-height: calc(100dvh - 32px); padding: 0; border: 1px solid #ddd; border-radius: 14px; color: var(--ink); background: white; }
+.sic-dialog::backdrop { background: rgb(20 10 12 / .6); }
+.sic-dialog > header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--line); }.sic-dialog h2 { margin: 0 0 5px; font-size: 18px; }.sic-dialog header span { font-size: 11px; color: #666; }.sic-dialog .sic-table-scroll { max-height: calc(100dvh - 255px); }
+@media (max-width: 1100px) { .sic-fields { grid-template-columns: repeat(2,minmax(0,1fr)); }.sic-results { grid-template-columns: repeat(2,minmax(0,1fr)); }.sic-results > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }.sic-results > div:nth-child(2) { border-right: 0; } }
+@media (max-width: 600px) {
+  .sic-heading { align-items: flex-start; }.sic-heading p { font-size: 12px; }.sic-advisor-tag { font-size: 10px; }
+  .sic-product-tabs { gap: 8px; }.sic-product-tabs button { padding: 14px 12px; }.sic-product-tabs strong { font-size: 17px; }.sic-product-tabs span { font-size: 10px; white-space: normal; }
+  .sic-panel { padding: 16px; }.sic-fields { gap: 16px 10px; }.sic-field { font-size: 12px; }.sic-field select { font-size: 16px; padding: 6px; }.sic-currency-field { grid-column: 1 / -1; }
+  .sic-control input { padding: 10px 8px; }.sic-control em { padding-right: 8px; }.sic-field small { font-size: 10px; }
+  .sic-advanced-grid { grid-template-columns: minmax(0,1fr); }.sic-advanced-grid .sic-panel { padding: 14px 16px; }.sic-prepaid { gap: 5px; }.sic-prepaid small { font-size: 11px; }
+  .sic-results > div { padding: 16px 12px; gap: 8px; }.sic-results strong { font-size: 21px; }.sic-results span, .sic-results small { font-size: 10px; }
+  .sic-result-meta { margin-bottom: 18px; }.sic-table-panel { padding: 0; }.sic-table-panel > header { padding: 14px; }.sic-table-controls { padding: 12px; gap: 10px; }.sic-table-controls button, .sic-table-controls select { min-height: 40px; }
+  .sic-edit-toolbar { padding: 4px 12px 12px; flex-wrap: wrap; }.sic-edit-toolbar > div { margin-left: auto; }.sic-table { font-size: 14px; }.sic-edit-cell input { font-size: 16px; min-height: 42px; }
+  .sic-dialog { width: calc(100vw - 12px); max-height: calc(100dvh - 12px); border-radius: 10px; }.sic-dialog > header { padding: 12px; }.sic-dialog .sic-table-scroll { max-height: calc(100dvh - 330px); }.sic-dialog h2 { font-size: 16px; }
+}

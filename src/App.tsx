@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import {
   ChartDonutIcon,
   ChartLineUpIcon,
+  CalculatorIcon,
   CheckCircleIcon,
   ClipboardTextIcon,
   EyeIcon,
@@ -25,13 +26,15 @@ import { useCustomerStore } from './stores/customerStore'
 import { canSyncSelfServiceCustomer, createCustomer, type CustomerProfile } from './types/domain'
 
 const AnalysisDashboard = lazy(() => import('./components/AnalysisDashboard').then((module) => ({ default: module.AnalysisDashboard })))
+const SavingsInsuranceCalculator = lazy(() => import('./components/SavingsInsuranceCalculator').then((module) => ({ default: module.SavingsInsuranceCalculator })))
 
-type AppView = 'intake' | 'customers' | 'cashflow' | 'analysis'
+type AppView = 'intake' | 'customers' | 'cashflow' | 'analysis' | 'insurance'
 type WorkspaceMode = 'admin' | 'self_service'
 
 const adminNavigation = [
   { view: 'customers' as const, label: '客户管理', icon: UsersThreeIcon },
   { view: 'cashflow' as const, label: '现金流管理', icon: ChartLineUpIcon },
+  { view: 'insurance' as const, label: '储蓄险计算', icon: CalculatorIcon },
 ]
 
 const selfServiceNavigation = [
@@ -113,6 +116,7 @@ export function App() {
   if (selfService && !publicReady) return <main className="public-loading"><span /><strong>正在准备您的家庭财务档案</strong><p>资料只会显示在您的当前填写空间中。</p></main>
 
   function openMainView(next: AppView) {
+    if (selfService && next === 'insurance') return
     if (next === 'customers' && !selfService) selectCustomer('')
     if ((next === 'analysis' || next === 'cashflow') && selfService && (!selectedCustomer || !selectedCustomer.primaryContactName.trim())) return
     if (next === 'intake') setIntakeStartView(selfService ? 'profile' : 'overview')
@@ -166,10 +170,10 @@ export function App() {
 
     <main className="main-content">
       <header className="topbar">
-        <div><span className="topbar-title">{view === 'intake' ? selfService ? '资料填写' : '客户管理' : view === 'customers' ? '客户管理' : view === 'cashflow' ? '现金流管理' : selfService ? '我的分析报告' : '财务分析报告'}</span>{selectedCustomer ? <PrivateText className="topbar-customer">{selectedCustomer.householdName}</PrivateText> : null}</div>
+        <div><span className="topbar-title">{view === 'insurance' ? '储蓄险计算' : view === 'intake' ? selfService ? '资料填写' : '客户管理' : view === 'customers' ? '客户管理' : view === 'cashflow' ? '现金流管理' : selfService ? '我的分析报告' : '财务分析报告'}</span>{selectedCustomer && view !== 'insurance' ? <PrivateText className="topbar-customer">{selectedCustomer.householdName}</PrivateText> : null}</div>
         <div className="topbar-actions">
-          <div className={saveState === 'error' ? 'save-status has-error' : 'save-status'}><CheckCircleIcon size={18} weight="fill" /> {saveState === 'saving' ? '正在预保存' : saveState === 'error' ? '本地保存失败' : selfService ? syncLabel : '已预存在本机'}</div>
-          {!selfService && selectedCustomer ? <button className="save-cloud-button" disabled={saveState === 'saving' || syncState === 'syncing'} type="button" onClick={() => void syncCustomer(selectedCustomer.id)}>{syncState === 'syncing' ? '正在同步' : syncState === 'synced' ? '云端已保存' : syncState === 'error' ? '重试同步' : '保存并同步'}</button> : null}
+          <div className={view !== 'insurance' && saveState === 'error' ? 'save-status has-error' : 'save-status'}><CheckCircleIcon size={18} weight="fill" /> {view === 'insurance' ? '独立测算' : saveState === 'saving' ? '正在预保存' : saveState === 'error' ? '本地保存失败' : selfService ? syncLabel : '已预存在本机'}</div>
+          {!selfService && selectedCustomer && view !== 'insurance' ? <button className="save-cloud-button" disabled={saveState === 'saving' || syncState === 'syncing'} type="button" onClick={() => void syncCustomer(selectedCustomer.id)}>{syncState === 'syncing' ? '正在同步' : syncState === 'synced' ? '云端已保存' : syncState === 'error' ? '重试同步' : '保存并同步'}</button> : null}
           {!selfService ? <button aria-label={privacyMode ? '关闭隐私模式并显示客户资料' : '开启隐私模式并隐藏客户资料'} aria-pressed={privacyMode} className={privacyMode ? 'privacy-toggle is-active' : 'privacy-toggle'} title={privacyMode ? '关闭隐私模式' : '开启隐私模式'} type="button" onClick={() => setPrivacyMode((enabled) => !enabled)}>{privacyMode ? <EyeSlashIcon size={18} /> : <EyeIcon size={18} />}<span>{privacyMode ? '隐私模式' : '显示资料'}</span></button> : null}
           <button aria-label={selfService ? '返回入口' : '退出管理工作区'} className="cloud-status-button" type="button" onClick={exitWorkspace}><SignOutIcon size={18} /><span>{selfService ? '返回入口' : '退出'}</span></button>
         </div>
@@ -180,6 +184,7 @@ export function App() {
         {view === 'intake' ? <IntakeWorkspace initialView={intakeStartView} selfService={selfService} onOpenReport={openReport} onOpenCustomers={() => { if (!selfService) { selectCustomer(''); setView('customers') } }} /> : null}
         {view === 'customers' && !selfService ? <CustomerDirectory onStartIntake={() => { setIntakeStartView('overview'); setView('intake') }} onOpenReport={() => setView('analysis')} onOpenCashFlow={() => setView('cashflow')} /> : null}
         {view === 'cashflow' ? <CashFlowManager selfService={selfService} onOpenCustomer={() => { setIntakeStartView('overview'); setView('intake') }} /> : null}
+        {view === 'insurance' && !selfService ? <Suspense fallback={<div role="status">正在加载储蓄险计算工具…</div>}><SavingsInsuranceCalculator advisor={accessUser ?? 'advisor'} /></Suspense> : null}
         {view === 'analysis' ? <Suspense fallback={<div className="report-skeleton" aria-label="正在生成分析报告"><span /><span /><span /></div>}><AnalysisDashboard onChooseCustomer={() => { if (selfService) { setIntakeStartView('overview'); setView('intake') } else { selectCustomer(''); setView('customers') } }} onOpenIntake={(target) => { setIntakeStartView(target); setView('intake') }} onOpenCashFlow={() => setView('cashflow')} /></Suspense> : null}
       </div>
     </main>
