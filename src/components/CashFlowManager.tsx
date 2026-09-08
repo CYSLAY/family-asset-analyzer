@@ -14,14 +14,14 @@ import {
   buildCashFlowProjection,
   createCashFlowPlanFromCustomer,
   expenseCoverageBand,
-  fillYearlyAmountsBelow,
-  fillYearlyAmountsRange,
   mergeCustomerDataIntoPlan,
 } from '../lib/cashFlowPlan'
 import { useCustomerStore } from '../stores/customerStore'
 import { PrivateControl, PrivateText } from '../lib/privacy'
 import type { CashFlowPlan } from '../types/domain'
 import { insuranceSelection, SAVINGS_INSURANCE_PRODUCTS, type SavingsInsuranceProduct } from '../lib/savingsInsurance'
+import { applyCashFlowFill, undoCashFlowFill, type CashFlowFillUndo } from '../lib/cashFlowFill'
+import { CashFlowFillDialog } from './CashFlowFillDialog'
 
 interface Props {
   onOpenCustomer: () => void
@@ -38,17 +38,18 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
   const [hideBlankColumns, setHideBlankColumns] = useState(true)
   const [tableExpanded, setTableExpanded] = useState(false)
   const tableDialog = useRef<HTMLDialogElement>(null)
+  const [fillRequest, setFillRequest] = useState<{ customerId: string; plan: CashFlowPlan; kind: 'incomes' | 'expenses'; itemId: string; sourceYear: number; value: number; targetYear?: number } | null>(null)
+  const [fillUndo, setFillUndo] = useState<CashFlowFillUndo | null>(null)
+  const [fillNotice, setFillNotice] = useState('')
+  useEffect(() => { setFillRequest(null); setFillUndo(null); setFillNotice('') }, [selectedCustomerId])
 
   useEffect(() => {
     if (!tableExpanded) return
     tableDialog.current?.showModal()
     const previousOverflow = document.body.style.overflow
-    const closeOnEscape = (event: globalThis.KeyboardEvent) => { if (event.key === 'Escape') setTableExpanded(false) }
     document.body.style.overflow = 'hidden'
-    window.addEventListener('keydown', closeOnEscape)
     return () => {
       document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', closeOnEscape)
     }
   }, [tableExpanded])
 
@@ -63,6 +64,7 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
 
   function updateBaseYear(baseYear: number) {
     if (!plan || !Number.isFinite(baseYear)) return
+    setFillUndo(null)
     const shift = baseYear - plan.baseYear
     savePlan({
       ...plan,
@@ -74,6 +76,12 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
 
   function updateYearAmount(kind: 'incomes' | 'expenses', itemId: string, year: number, value: number) {
     if (!plan) return
+    setFillUndo(undo => {
+      if (!undo || undo.kind !== kind || undo.itemId !== itemId) return undo
+      const previous = { ...undo.previous }
+      delete previous[year]
+      return { ...undo, previous }
+    })
     savePlan({
       ...plan,
       [kind]: plan[kind].map((item) => item.id === itemId
@@ -84,35 +92,22 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
 
   function applyAmountDown(kind: 'incomes' | 'expenses', itemId: string, sourceYear: number, value: number) {
     if (!plan) return
-    const lastYear = plan.baseYear + plan.projectionYears - 1
-    if (!confirmBulkOverwrite(kind, itemId, sourceYear, lastYear, value, '向下填充')) return
-    savePlan({
-      ...plan,
-      [kind]: plan[kind].map((item) => item.id === itemId
-        ? { ...item, yearlyAmounts: fillYearlyAmountsBelow(item.yearlyAmounts, sourceYear, plan.baseYear, plan.projectionYears, value) }
-        : item),
-    })
+    setFillRequest({ customerId: customer!.id, plan, kind, itemId, sourceYear, value })
   }
 
   function fillAmountRange(kind: 'incomes' | 'expenses', itemId: string, sourceYear: number, targetYear: number, value: number) {
     if (!plan || targetYear <= sourceYear) return
-    if (!confirmBulkOverwrite(kind, itemId, sourceYear, targetYear, value, '拖动填充')) return
-    savePlan({
-      ...plan,
-      [kind]: plan[kind].map((item) => item.id === itemId
-        ? { ...item, yearlyAmounts: fillYearlyAmountsRange(item.yearlyAmounts, sourceYear, targetYear, value) }
-        : item),
-    })
+    setFillRequest({ customerId: customer!.id, plan, kind, itemId, sourceYear, targetYear, value })
   }
 
-  function confirmBulkOverwrite(kind: 'incomes' | 'expenses', itemId: string, sourceYear: number, targetYear: number, value: number, action: string) {
-    const itemIndex = plan?.[kind].findIndex((item) => item.id === itemId) ?? -1
-    if (itemIndex < 0) return false
-    const changedExisting = rows.filter((row) => row.year > sourceYear && row.year <= targetYear).filter((row) => {
-      const current = kind === 'incomes' ? row.incomeValues[itemIndex] : row.expenseValues[itemIndex]
-      return Math.abs(current) >= .5 && Math.abs(current - value) >= .5
-    }).length
-    return targetYear > sourceYear && window.confirm(`${action}：${sourceYear + 1}–${targetYear} 年，共 ${targetYear - sourceYear} 格；将替换 ${changedExisting} 个不同的非零金额。仅修改本列，填入 ${formatTableMoney(value)} 元，确认继续？`)
+  function confirmFill(targetYear: number) {
+    if (!fillRequest || !plan || !customer || fillRequest.customerId !== customer.id || fillRequest.plan !== plan) return
+    const result = applyCashFlowFill(plan, customer.id, fillRequest.kind, fillRequest.itemId, fillRequest.sourceYear, targetYear, fillRequest.value)
+    if (!result) return
+    savePlan(result.plan)
+    setFillUndo(result.undo)
+    setFillNotice(`已填充 ${targetYear - fillRequest.sourceYear} 格`)
+    setFillRequest(null)
   }
 
   function selectDisplayYears(years: number) {
@@ -137,6 +132,7 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
   const insurance = insuranceSelection(plan)
   const premium = Math.max(0, plan.savingsInsuranceAnnualPremium ?? 0)
   const firstCashShortfall = rows.find(row => row.insuranceScenarioLiquidBalance < 0)
+  const undoControl = <div className="cashflow-fill-undo"><span role="status">{fillNotice}</span>{fillUndo?.customerId === customer.id && fillUndo.baseYear === plan.baseYear && <button type="button" className="subtle-button" onClick={() => { savePlan(undoCashFlowFill(plan, customer.id, fillUndo)); setFillUndo(null); setFillNotice('已撤销填充，保留后续修改') }}>撤销填充</button>}</div>
 
   return <div className="cashflow-manager-page">
     <ManagerHeading customers={availableCustomers} selectedCustomerId={customer.id} onSelect={selectCustomer} onOpenCustomer={onOpenCustomer} selfService={selfService} />
@@ -178,6 +174,7 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
     </section>
 
     <section className="cashflow-projection-panel">
+      {!tableExpanded && undoControl}
       <div className="cashflow-section-heading">
         <div><CalculatorIcon size={22} /><div><h2>家庭现金流长期预测</h2><p>收入和支出可在表格中逐年直接修改，调整后自动保存并重新计算。</p></div></div>
         <div className="cashflow-projection-actions">
@@ -214,11 +211,13 @@ export function CashFlowManager({ onOpenCustomer, selfService = false }: Props) 
           </div>
         </header>
         <div className="cashflow-expanded-table">
+          {undoControl}
           <ProjectionTable plan={plan} rows={rows.slice(0, displayYears)} hideBlankColumns={hideBlankColumns} onToggleBlankColumns={() => setHideBlankColumns((value) => !value)} onUpdateAmount={updateYearAmount} onApplyDown={applyAmountDown} onFillRange={fillAmountRange} />
         </div>
         <footer className="cashflow-table-dialog-footer"><span>当前显示 {displayYears} 年</span><span>{hideBlankColumns ? '已隐藏空白收入与支出列' : '已展开全部收入与支出列'}</span><span>按 Esc 也可关闭</span></footer>
       </section>
     </dialog> : null}
+    {fillRequest?.customerId === customer.id && <CashFlowFillDialog label={plan[fillRequest.kind].find(item => item.id === fillRequest.itemId)?.label ?? '项目'} sourceYear={fillRequest.sourceYear} lastYear={plan.baseYear + plan.projectionYears - 1} visibleLastYear={Math.min(plan.baseYear + displayYears - 1, plan.baseYear + plan.projectionYears - 1)} initialTarget={fillRequest.targetYear} value={fillRequest.value} stale={fillRequest.plan !== plan} values={rows.map(row => ({ year: row.year, value: (fillRequest.kind === 'incomes' ? row.incomeValues : row.expenseValues)[plan[fillRequest.kind].findIndex(item => item.id === fillRequest.itemId)] ?? 0 }))} onClose={() => setFillRequest(null)} onConfirm={confirmFill} />}
   </div>
 }
 

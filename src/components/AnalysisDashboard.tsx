@@ -173,8 +173,9 @@ function MetricNarrative({ metric }: { metric: MetricResult }) {
 }
 
 function BreakdownTable({ items, total }: { items: BreakdownItem[]; total: number }) {
+  const privacyMode = usePrivacyMode()
   if (!items.length) return <div className="breakdown-empty">暂无可展示的明细</div>
-  return <div className="breakdown-table"><div className="breakdown-head"><span>类别</span><span>金额</span><span>占比</span></div>{items.map((item) => <div className="breakdown-row" key={item.name}><span><i style={{ background: item.color }} />{item.name}</span><strong>{formatMoney(item.value)}</strong><span>{total > 0 ? formatPercent(item.value / total * 100) : '暂无'}</span></div>)}</div>
+  return <div className="breakdown-table"><div className="breakdown-head"><span>类别 / 点击查看来源</span><span>金额</span><span>占比</span></div>{items.map((item) => <details className="breakdown-detail" key={item.name}><summary className="breakdown-row" aria-label={`查看${item.name}的原始数据来源`}><span><i style={{ background: item.color }} />{item.name}<CaretDownIcon size={13} aria-hidden="true" /></span><strong>{formatMoney(item.value)}</strong><span>{total > 0 ? formatPercent(item.value / total * 100) : '暂无'}</span></summary><div className="breakdown-sources"><span>原始数据来源{item.sources.some(source => source.frequency) ? ' · 汇总金额按年折算' : ''}</span><ul>{item.sources.map((source, index) => <li key={index}><span>{displaySourceLabel(source.label, privacyMode)}</span><strong>{formatSourceAmount(source)}</strong></li>)}</ul></div></details>)}</div>
 }
 
 function EChart({ option, empty, compact = false }: { option: ChartOption; empty: boolean; compact?: boolean }) {
@@ -221,13 +222,17 @@ function sourceTooltip(items: BreakdownItem[], params: unknown, privacyMode: boo
   const dataIndex = typeof params === 'object' && params && 'dataIndex' in params ? Number((params as { dataIndex: unknown }).dataIndex) : -1
   const item = items[dataIndex]
   if (!item) return ''
-  const sources = item.sources.map((source) => `<div class="chart-source-row"><span>${escapeHtml(privacyMode && / · /.test(source.label) ? `${PRIVACY_MASK} · ${source.label.split(' · ').slice(1).join(' · ')}` : source.label)}</span><strong>${escapeHtml(formatSourceAmount(source))}</strong></div>`).join('')
+  const sources = item.sources.map((source) => `<div class="chart-source-row"><span>${escapeHtml(displaySourceLabel(source.label, privacyMode))}</span><strong>${escapeHtml(formatSourceAmount(source))}</strong></div>`).join('')
   return `<div class="chart-source-tooltip"><div class="chart-source-total"><span><i style="background:${item.color}"></i>${escapeHtml(item.name)}</span><strong>${escapeHtml(formatMoney(item.value))}</strong></div><div class="chart-source-divider"></div><div class="chart-source-caption">原始数据来源</div>${sources}</div>`
 }
 
 function formatSourceAmount(source: BreakdownSource) {
   const suffix = source.frequency === 'monthly' ? '/月' : source.frequency === 'quarterly' ? '/季度' : source.frequency === 'yearly' ? '/年' : ''
   return `${formatMoney(source.amount)}${suffix}`
+}
+
+function displaySourceLabel(label: string, privacyMode: boolean) {
+  return privacyMode && / · /.test(label) ? `${PRIVACY_MASK} · ${label.split(' · ').slice(1).join(' · ')}` : label
 }
 
 function escapeHtml(value: string) {
