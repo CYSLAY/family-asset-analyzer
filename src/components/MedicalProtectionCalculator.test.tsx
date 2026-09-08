@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { MedicalProtectionCalculator } from './MedicalProtectionCalculator'
 beforeEach(() => sessionStorage.clear())
-afterEach(() => { cleanup(); vi.restoreAllMocks() })
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers() })
 it('keeps cards independent, validates the whole combination and collapses detail', () => {
   render(<MedicalProtectionCalculator advisor="test" />)
   fireEvent.change(screen.getByLabelText('投保翌年岁（ANB）'), { target: { value: '41' } })
@@ -33,4 +33,41 @@ it('preserves unreadable draft and isolates advisors', () => {
   cleanup()
   render(<MedicalProtectionCalculator advisor="other" />)
   expect((screen.getByLabelText('投保翌年岁（ANB）') as HTMLInputElement).value).toBe('')
+})
+it('uses birthday age for premiums and restores the manual age when cleared', () => {
+  vi.useFakeTimers(); vi.setSystemTime(new Date('2026-09-08T04:00:00Z'))
+  render(<MedicalProtectionCalculator advisor="birthday" />)
+  const age = screen.getByLabelText('投保翌年岁（ANB）') as HTMLInputElement
+  fireEvent.change(age, { target: { value: '41' } })
+  fireEvent.change(screen.getByLabelText('投保额（USD）'), { target: { value: '100000' } })
+  const oldPremium = within(screen.getByLabelText('保险 1')).getByText('14,585.00')
+  expect(oldPremium).toBeTruthy()
+  fireEvent.change(screen.getByLabelText('出生日期'), { target: { value: '1990-09-08' } })
+  expect(age.value).toBe('37'); expect(age.readOnly).toBe(true)
+  expect(within(screen.getByLabelText('保险 1')).queryByText('14,585.00')).toBeNull()
+  fireEvent.change(screen.getByLabelText('出生日期'), { target: { value: '2027-01-01' } })
+  expect(screen.getByRole('alert').textContent).toBe('出生日期不能晚于今天')
+  expect(screen.queryByText('首年保费合计')).toBeNull()
+  fireEvent.change(screen.getByLabelText('出生日期'), { target: { value: '' } })
+  expect(age.value).toBe('41'); expect(age.readOnly).toBe(false)
+})
+it('refreshes the auto age at Hong Kong midnight and on returning to the page', () => {
+  vi.useFakeTimers(); vi.setSystemTime(new Date('2026-09-07T15:59:59Z'))
+  render(<MedicalProtectionCalculator advisor="midnight" />)
+  fireEvent.change(screen.getByLabelText('出生日期'), { target: { value: '1990-09-08' } })
+  expect((screen.getByLabelText('投保翌年岁（ANB）') as HTMLInputElement).value).toBe('36')
+  vi.setSystemTime(new Date('2026-09-07T16:00:00Z'))
+  fireEvent.focus(window)
+  expect((screen.getByLabelText('投保翌年岁（ANB）') as HTMLInputElement).value).toBe('37')
+})
+it('accepts legacy drafts without birthday and preserves manual input', () => {
+  render(<MedicalProtectionCalculator advisor="legacy" />)
+  fireEvent.change(screen.getByLabelText('投保翌年岁（ANB）'), { target: { value: '41' } })
+  cleanup()
+  const draft = JSON.parse(sessionStorage.getItem('jojo-medical-v1:legacy')!)
+  delete draft.birthday
+  sessionStorage.setItem('jojo-medical-v1:legacy', JSON.stringify(draft))
+  render(<MedicalProtectionCalculator advisor="legacy" />)
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect((screen.getByLabelText('投保翌年岁（ANB）') as HTMLInputElement).value).toBe('41')
 })

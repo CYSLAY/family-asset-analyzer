@@ -5,14 +5,15 @@ import { calculateMedical, combineMedical, displayCurrency, insuredCurrency, MED
   type MedicalProduct, type MedicalYear } from '../lib/medicalCalculator'
 import './MedicalProtectionCalculator.css'
 import { useUnsavedChanges } from '../lib/unsavedChanges'
+import { ageNextBirthday, hongKongDate } from '../lib/insuranceAge'
 
 const cardSchema = z.object({ id: z.string(), product: z.enum(['CIM3', 'CIE3', 'CIP2']), amount: z.string().max(40), term: z.number(), currency: z.enum(['USD', 'HKD', 'HKD-U', 'RMB-U']) })
-const draftSchema = z.object({ age: z.string().max(10), gender: z.enum(['M', 'F']), smoker: z.enum(['N', 'S']), region: z.enum(['A', 'B']),
+const draftSchema = z.object({ birthday: z.string().max(10).default(''), age: z.string().max(10), gender: z.enum(['M', 'F']), smoker: z.enum(['N', 'S']), region: z.enum(['A', 'B']),
   hkd: z.string().max(40), rmb: z.string().max(40), cards: z.array(cardSchema).max(30) }).refine(d => new Set(d.cards.map(c => c.id)).size === d.cards.length)
 type Card = z.infer<typeof cardSchema>
 type Draft = z.infer<typeof draftSchema>
 const newCard = (): Card => ({ id: crypto.randomUUID(), product: 'CIM3', amount: '', term: 5, currency: 'USD' })
-const defaults = (): Draft => ({ age: '', gender: 'M', smoker: 'N', region: 'A', hkd: String(MEDICAL_FX.hkdPerUsd), rmb: String(MEDICAL_FX.rmbPerUsd), cards: [newCard()] })
+const defaults = (): Draft => ({ birthday: '', age: '', gender: 'M', smoker: 'N', region: 'A', hkd: String(MEDICAL_FX.hkdPerUsd), rmb: String(MEDICAL_FX.rmbPerUsd), cards: [newCard()] })
 const money = (n: number) => n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const numeric = (text: string) => text.trim() && /^\d+(\.\d+)?$/.test(text.trim()) ? Number(text) : NaN
 type Outcome = { result: ReturnType<typeof calculateMedical>; error?: never } | { result?: never; error: string }
@@ -26,6 +27,20 @@ export function MedicalProtectionCalculator({ advisor }: { advisor: string }) {
     } catch { return { draft: defaults(), blocked: true } }
   })
   const [draft, setDraft] = useState(initial.draft)
+  const [today, setToday] = useState(() => hongKongDate())
+  useEffect(() => {
+    const refresh = () => setToday(hongKongDate())
+    const timer = window.setInterval(refresh, 60000)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh) }
+  }, [])
+  const birthdayAge = useMemo(() => {
+    if (!draft.birthday) return { value: '', error: '' }
+    try { return { value: String(ageNextBirthday(draft.birthday, today)), error: '' } }
+    catch (error) { return { value: '', error: error instanceof Error ? error.message : '请检查出生日期' } }
+  }, [draft.birthday, today])
+  const effectiveAge = draft.birthday ? birthdayAge.value : draft.age
   const [storageError, setStorageError] = useState(initial.blocked ? '会话草稿无法读取，原记录未被覆盖。本次修改仅在当前页面保留。' : '')
   useUnsavedChanges(Boolean(storageError) && draft !== initial.draft)
   useEffect(() => {
@@ -34,10 +49,12 @@ export function MedicalProtectionCalculator({ advisor }: { advisor: string }) {
     catch { setStorageError('浏览器无法暂存，本次修改仅在当前页面保留。') }
   }, [draft, initial.blocked, storageKey])
   const outcomes = useMemo<Outcome[]>(() => draft.cards.map(card => {
-    try { return { result: calculateMedical({ age: numeric(draft.age), gender: draft.gender, smoker: draft.smoker, region: draft.region },
+    try {
+      if (birthdayAge.error) throw Error(birthdayAge.error)
+      return { result: calculateMedical({ age: numeric(effectiveAge), gender: draft.gender, smoker: draft.smoker, region: draft.region },
       { ...card, amount: numeric(card.amount) }, { hkdPerUsd: numeric(draft.hkd), rmbPerUsd: numeric(draft.rmb) }) } }
     catch (error) { return { error: error instanceof Error ? error.message : '暂时无法计算，请检查参数' } }
-  }), [draft])
+  }), [draft, effectiveAge, birthdayAge.error])
   const summary = outcomes.length && outcomes.every(o => o.result) ? combineMedical(outcomes.map(o => o.result!)) : null
   function updateCard(id: string, patch: Partial<Card>) { setDraft(d => ({ ...d, cards: d.cards.map(c => c.id === id ? { ...c, ...patch } : c) })) }
   function remove(card: Card) {
@@ -49,12 +66,16 @@ export function MedicalProtectionCalculator({ advisor }: { advisor: string }) {
     {storageError && <p className="medical-error" role="alert">{storageError}</p>}
     <section className="medical-panel" aria-labelledby="medical-profile-title">
       <h2 id="medical-profile-title">客户基础信息</h2>
-      <div className="medical-fields">
-        <label>投保翌年岁（ANB）<input inputMode="numeric" value={draft.age} placeholder="填写翌年生日年龄" aria-invalid={!!draft.age && (!Number.isInteger(numeric(draft.age)) || numeric(draft.age) < 1 || numeric(draft.age) > 75)} onChange={e => setDraft({ ...draft, age: e.target.value })} /></label>
+      <div className="medical-fields medical-profile-fields">
+        <label>出生日期<input type="date" name="medical-birthday" autoComplete="off" max={today} value={draft.birthday} aria-invalid={!!birthdayAge.error} aria-describedby={birthdayAge.error ? 'medical-birthday-error' : 'medical-age-note'} onChange={e => setDraft({ ...draft, birthday: e.target.value })} /></label>
+        <label>投保翌年岁（ANB）<input inputMode="numeric" value={effectiveAge} readOnly={!!draft.birthday} aria-describedby="medical-age-note" placeholder="填写翌年生日年龄" aria-invalid={!!effectiveAge && (!Number.isInteger(numeric(effectiveAge)) || numeric(effectiveAge) < 1 || numeric(effectiveAge) > 75)} onChange={e => { if (!draft.birthday) setDraft({ ...draft, age: e.target.value }) }} /></label>
         <label>性别<select value={draft.gender} onChange={e => setDraft({ ...draft, gender: e.target.value as Draft['gender'] })}><option value="M">男</option><option value="F">女</option></select></label>
         <label>吸烟情况<select value={draft.smoker} onChange={e => setDraft({ ...draft, smoker: e.target.value as Draft['smoker'] })}><option value="N">不吸烟</option><option value="S">吸烟</option></select></label>
         <label>地区类别<select value={draft.region} onChange={e => setDraft({ ...draft, region: e.target.value as Draft['region'] })}><option value="A">A 类</option><option value="B">B 类</option></select></label>
       </div>
+      {birthdayAge.error && <p id="medical-birthday-error" className="medical-error" role="alert">{birthdayAge.error}</p>}
+      <p id="medical-age-note" className="medical-note">{draft.birthday ? `按香港日期 ${today} 自动计算下次生日年龄；清空生日可手动填写。` : '生日为选填项；未填生日时，按手动填写的翌年岁测算。'} <a href="https://www.prudential.com.hk/sc/products/health/critical-illness/pruhealth-critical-illness-extended-care-iii/" target="_blank" rel="noreferrer">年龄口径参考</a></p>
+      {draft.birthday.endsWith('-02-29') && <p className="medical-note">闰日生日在非闰年按 3 月 1 日切换年龄测算，正式投保请核对保险公司口径。</p>}
       <p className="medical-note">地区类别沿用原表 A/B 定义，请按承保口径确认；CIE3 不使用此项。</p>
     </section>
     {draft.cards.map((card, index) => <section className="medical-panel" key={card.id} aria-label={`保险 ${index + 1}`}>
